@@ -1,0 +1,296 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Secciones rail — Compras -->
+        <record id="hub_section_purchase_summary" model="sg.hub.section">
+            <field name="app">purchase</field>
+            <field name="code">summary</field>
+            <field name="name">Resumen</field>
+            <field name="icon">fa-th-large</field>
+            <field name="sequence">1</field>
+        </record>
+        <record id="hub_section_purchase_orders" model="sg.hub.section">
+            <field name="app">purchase</field>
+            <field name="code">orders</field>
+            <field name="name">Órdenes</field>
+            <field name="icon">fa-file-text</field>
+            <field name="sequence">2</field>
+        </record>
+        <record id="hub_section_purchase_vendors" model="sg.hub.section">
+            <field name="app">purchase</field>
+            <field name="code">vendors</field>
+            <field name="name">Proveedores</field>
+            <field name="icon">fa-truck</field>
+            <field name="sequence">3</field>
+        </record>
+        <record id="hub_section_purchase_reporting" model="sg.hub.section">
+            <field name="app">purchase</field>
+            <field name="code">reporting</field>
+            <field name="name">Informes</field>
+            <field name="icon">fa-bar-chart</field>
+            <field name="sequence">4</field>
+        </record>
+        <record id="hub_section_purchase_config" model="sg.hub.section">
+            <field name="app">purchase</field>
+            <field name="code">config</field>
+            <field name="name">Configuración</field>
+            <field name="icon">fa-cog</field>
+            <field name="sequence">5</field>
+        </record>
+
+        <!-- Cards — Resumen -->
+        <record id="hub_card_purchase_summary_po" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="label">Órdenes de compra</field>
+            <field name="hint">OC confirmadas</field>
+            <field name="icon">fa-check-circle</field>
+            <field name="enter_label">Ver OC →</field>
+            <field name="action_id" ref="purchase.purchase_form_action"/>
+            <field name="domain">[('state', '=', 'purchase')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'purchase')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_summary_rfq" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">20</field>
+            <field name="label">Solicitudes abiertas</field>
+            <field name="hint">RFQ borrador y enviadas</field>
+            <field name="icon">fa-file-text-o</field>
+            <field name="enter_label">Ver RFQ →</field>
+            <field name="action_id" ref="purchase.purchase_rfq"/>
+            <field name="domain">[('state', 'in', ('draft', 'sent'))]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', 'in', ('draft', 'sent'))]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_summary_to_approve" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">30</field>
+            <field name="label">Por aprobar</field>
+            <field name="hint">Pendientes de aprobación</field>
+            <field name="icon">fa-hourglass-half</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Revisar →</field>
+            <field name="action_id" ref="purchase.purchase_rfq"/>
+            <field name="domain">[('state', '=', 'to approve')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'to approve')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_summary_to_receive" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">40</field>
+            <field name="label">Por recibir</field>
+            <field name="hint">Recepciones pendientes</field>
+            <field name="icon">fa-inbox</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver recepciones →</field>
+            <field name="action_id" ref="purchase.purchase_form_action"/>
+            <field name="domain">[('state', '=', 'purchase'), ('receipt_status', '=', 'pending')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'purchase'), ('receipt_status', '=', 'pending')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_summary_vendors" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">50</field>
+            <field name="label">Proveedores</field>
+            <field name="hint">Contactos con rol proveedor</field>
+            <field name="icon">fa-truck</field>
+            <field name="enter_label">Ver proveedores →</field>
+            <field name="action_id" ref="account.res_partner_action_supplier"/>
+            <field name="metric_model">res.partner</field>
+            <field name="metric_domain">[('supplier_rank', '>', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_summary_amount_month" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">60</field>
+            <field name="label">Comprado hoy</field>
+            <field name="hint">Monto OC confirmadas hoy</field>
+            <field name="icon">fa-line-chart</field>
+            <field name="enter_label">Ver pedidos →</field>
+            <field name="action_id" ref="purchase.purchase_form_action"/>
+            <field name="domain">[('state', '=', 'purchase')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'purchase')]</field>
+            <field name="metric_field">amount_total</field>
+            <field name="metric_aggregate">sum</field>
+            <field name="metric_date_field">date_order</field>
+            <field name="metric_date_scope">today</field>
+            <field name="metric_suffix"> $</field>
+        </record>
+
+        <!-- Cards — Órdenes -->
+        <record id="hub_card_purchase_orders_rfq" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">10</field>
+            <field name="label">Solicitudes de cotización</field>
+            <field name="icon">fa-file-text-o</field>
+            <field name="action_id" ref="purchase.purchase_rfq"/>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', 'in', ('draft', 'sent'))]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_orders_po" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">20</field>
+            <field name="label">Órdenes de compra</field>
+            <field name="icon">fa-shopping-basket</field>
+            <field name="action_id" ref="purchase.purchase_form_action"/>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'purchase')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_orders_draft" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">30</field>
+            <field name="label">Borradores RFQ</field>
+            <field name="icon">fa-pencil</field>
+            <field name="variant">warning</field>
+            <field name="action_id" ref="purchase.purchase_rfq"/>
+            <field name="domain">[('state', '=', 'draft')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'draft')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_orders_sent" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">40</field>
+            <field name="label">RFQ enviadas</field>
+            <field name="icon">fa-paper-plane</field>
+            <field name="action_id" ref="purchase.purchase_rfq"/>
+            <field name="domain">[('state', '=', 'sent')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', '=', 'sent')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_orders_partial" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">50</field>
+            <field name="label">Recepción parcial</field>
+            <field name="icon">fa-adjust</field>
+            <field name="action_id" ref="purchase.purchase_form_action"/>
+            <field name="domain">[('receipt_status', '=', 'partial')]</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('receipt_status', '=', 'partial')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_orders_history" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">orders</field>
+            <field name="sequence">60</field>
+            <field name="label">Historial de compras</field>
+            <field name="icon">fa-history</field>
+            <field name="action_id" ref="purchase.action_purchase_history"/>
+            <field name="metric_model">purchase.order.line</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Proveedores -->
+        <record id="hub_card_purchase_vendors_all" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">vendors</field>
+            <field name="sequence">10</field>
+            <field name="label">Todos los proveedores</field>
+            <field name="icon">fa-truck</field>
+            <field name="action_id" ref="account.res_partner_action_supplier"/>
+            <field name="metric_model">res.partner</field>
+            <field name="metric_domain">[('supplier_rank', '>', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_vendors_with_po" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">vendors</field>
+            <field name="sequence">20</field>
+            <field name="label">Con órdenes de compra</field>
+            <field name="icon">fa-handshake-o</field>
+            <field name="action_id" ref="account.res_partner_action_supplier"/>
+            <field name="domain">[('purchase_order_count', '>', 0)]</field>
+            <field name="metric_model">res.partner</field>
+            <field name="metric_domain">[('purchase_order_count', '>', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Informes -->
+        <record id="hub_card_purchase_report_all" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">reporting</field>
+            <field name="sequence">10</field>
+            <field name="label">Análisis de compras</field>
+            <field name="icon">fa-bar-chart</field>
+            <field name="action_id" ref="purchase.action_purchase_order_report_all"/>
+            <field name="metric_model">purchase.report</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Configuración -->
+        <record id="hub_card_purchase_cfg_pricelists" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">config</field>
+            <field name="sequence">10</field>
+            <field name="label">Listas de precio proveedor</field>
+            <field name="icon">fa-list-alt</field>
+            <field name="action_id" ref="product.product_supplierinfo_type_action"/>
+            <field name="metric_model">product.supplierinfo</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_cfg_categories" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">config</field>
+            <field name="sequence">20</field>
+            <field name="label">Categorías de producto</field>
+            <field name="icon">fa-folder-open</field>
+            <field name="action_id" ref="product.product_category_action_form"/>
+            <field name="metric_model">product.category</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_cfg_products" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">config</field>
+            <field name="sequence">30</field>
+            <field name="label">Productos comprables</field>
+            <field name="icon">fa-cube</field>
+            <field name="action_id" ref="purchase.product_normal_action_puchased"/>
+            <field name="metric_model">product.template</field>
+            <field name="metric_domain">[('purchase_ok', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_purchase_cfg_uom" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">config</field>
+            <field name="sequence">40</field>
+            <field name="label">Unidades de medida</field>
+            <field name="icon">fa-balance-scale</field>
+            <field name="action_id" ref="uom.product_uom_form_action"/>
+            <field name="metric_model">uom.uom</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+    </data>
+</odoo>

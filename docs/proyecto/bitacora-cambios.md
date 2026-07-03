@@ -221,6 +221,25 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Hub Compras (réplica Inventario/Ventas)
+
+**Área:** tema · compras  
+**Motivo:** replicar App Hub Shell para app Compras (plan hub-rail-kpi-ingreso H5).
+
+**Archivos:**
+- `custom_addons/servigas_core/data/hub_purchase_data.xml`
+- `custom_addons/servigas_core/static/src/js/hubs/purchase_hub.*`
+- `custom_addons/servigas_core/views/hub_menus.xml`
+
+**Cambios:**
+- Menú Compras → **Resumen** (`servigas_purchase_hub`).
+- 5 secciones rail + 19 KPI cards (RFQ, OC, recepciones, proveedores, informes).
+- Dependencia `purchase`; métricas con `receipt_status` (purchase_stock).
+
+**Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Compras → Resumen.
+
+---
+
 ### 2026-07-03 — Hub Ventas (réplica Inventario)
 
 **Área:** tema · ventas  

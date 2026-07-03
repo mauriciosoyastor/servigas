@@ -1,6 +1,6 @@
 {
     "name": "Servigas Core",
-    "summary": "Tema Liquid Glass v2, hubs Inventario/Ventas y extensiones base",
+    "summary": "Tema Liquid Glass v2, hubs Inventario/Ventas/Compras",
     "description": """
 Módulo base de Servigas: assets SCSS (marca llama, tipografía Montserrat),
 personalización POS y backend Odoo 19, hubs con rail y KPI cards de ingreso.
@@ -8,7 +8,7 @@ personalización POS y backend Odoo 19, hubs con rail y KPI cards de ingreso.
     "author": "Servigas",
     "website": "https://github.com/mauriciosoyastor/servigas",
     "category": "Hidden",
-    "version": "19.0.1.2.0",
+    "version": "19.0.1.3.0",
     "license": "LGPL-3",
     "depends": [
         "base",
@@ -17,11 +17,13 @@ personalización POS y backend Odoo 19, hubs con rail y KPI cards de ingreso.
         "point_of_sale",
         "stock",
         "sale_management",
+        "purchase",
     ],
     "data": [
         "security/ir.model.access.csv",
         "data/hub_inventory_data.xml",
         "data/hub_sales_data.xml",
+        "data/hub_purchase_data.xml",
         "views/hub_menus.xml",
     ],
     "assets": {
@@ -51,6 +53,9 @@ personalización POS y backend Odoo 19, hubs con rail y KPI cards de ingreso.
             "servigas_core/static/src/js/hubs/sales_hub.xml",
             "servigas_core/static/src/js/hubs/sales_hub.js",
             "servigas_core/static/src/js/hubs/sales_hub_action.js",
+            "servigas_core/static/src/js/hubs/purchase_hub.xml",
+            "servigas_core/static/src/js/hubs/purchase_hub.js",
+            "servigas_core/static/src/js/hubs/purchase_hub_action.js",
         ],
         "point_of_sale._assets_pos": [
             (
