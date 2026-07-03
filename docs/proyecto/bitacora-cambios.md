@@ -41,6 +41,7 @@
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
 | Web pública (`web/`) | Iniciado | Astro scaffold, sin integrar aún |
+| Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 ---
 
@@ -129,6 +130,38 @@
 
 ---
 
+### 2026-07-03 — Protección de rama `main` (GitHub Rulesets)
+
+**Área:** infra  
+**Motivo:** evitar pushes directos, force-push y borrado accidental de `main`; todo cambio debe entrar por pull request.
+
+**Archivos:**
+- `infra/github/rulesets/main-protection.json`
+- `infra/github/apply-rulesets.sh`
+- `infra/github/verify-rulesets.sh`
+- `infra/github/README.md`
+
+**Cambios:**
+- Ruleset **Protección main — Servigas** definido como JSON versionado.
+- Reglas: prohibir borrado de rama, bloquear force-push, exigir PR con 1 aprobación, descartar reviews obsoletas y resolver conversaciones.
+- Scripts `apply-rulesets.sh` (crear/actualizar vía `gh api`) y `verify-rulesets.sh` (auditar estado).
+- Guía manual para la UI de GitHub (Settings → Rules → Rulesets).
+
+**Verificación:**
+```bash
+chmod +x infra/github/apply-rulesets.sh infra/github/verify-rulesets.sh
+./infra/github/apply-rulesets.sh    # requiere gh con permisos admin en el repo
+./infra/github/verify-rulesets.sh   # debe listar deletion, non_fast_forward, pull_request
+```
+Alternativa manual: seguir `infra/github/README.md` y confirmar en GitHub que el ruleset está **Active** sobre `main`.
+
+**Automatización:**
+- Ejecutar `apply-rulesets.sh` al bootstrap de repos nuevos (mismo JSON, cambiar `GITHUB_OWNER` / `GITHUB_REPO`).
+- Cuando exista CI, extender JSON con `required_status_checks` (ver backlog A8).
+- Plantilla Terraform/GitHub Provider opcional para orgs con varios repos.
+
+---
+
 ## Mapa Odoo → Servigas (referencia para scripts)
 
 Útil al generar temas para otros clientes Odoo Community/Enterprise.
@@ -177,6 +210,7 @@ Prioridad sugerida para cuando haya un segundo proyecto Odoo con marca propia.
 | A5 | `odoo-bin -u` + reload assets en un comando dev | todas | S | Medio |
 | A6 | Import catálogo Excel → plantilla parametrizada | fundación datos | L | Alto |
 | A7 | Planilla puente Factura Web → generador por cliente | CONTEXT | M | Medio |
+| A8 | Ruleset `main` + status checks cuando exista CI | 2026-07-03 infra | S | Alto |
 
 **Leyenda esfuerzo:** S = horas · M = 1–2 días · L = varios días
 
@@ -218,6 +252,7 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 8. [ ] `docs/design/<marca>-brand.md` — análisis de identidad
 9. [ ] Entrada en esta bitácora (o bitácora del nuevo repo)
 10. [ ] Actualizar `CONTEXT.md` del proyecto
+11. [ ] `./infra/github/apply-rulesets.sh` — proteger `main` en GitHub
 
 ---
 
@@ -233,4 +268,4 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
-*Última actualización: 2026-07-03*
+*Última actualización: 2026-07-03 (infra GitHub main)*
