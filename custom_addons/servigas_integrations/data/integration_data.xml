@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="integration_factura_web" model="servigas.integration">
+            <field name="name">Factura Web</field>
+            <field name="sequence">10</field>
+            <field name="integration_type">factura_web</field>
+            <field name="mode">manual</field>
+            <field name="status">active</field>
+            <field name="color">2</field>
+            <field name="description">Puente manual entre Odoo y Factura Web para la facturación fiscal temporal.</field>
+            <field name="process_notes">Exportar ventas desde Odoo y completar la planilla puente en datos/import/planilla_puente_factura_web.xlsx antes de cargar en Factura Web.</field>
+            <field name="resource_path">datos/import/planilla_puente_factura_web.xlsx</field>
+        </record>
+
+        <record id="integration_supplier_portals" model="servigas.integration">
+            <field name="name">Portales de proveedores</field>
+            <field name="sequence">20</field>
+            <field name="integration_type">supplier_portal</field>
+            <field name="mode">manual</field>
+            <field name="status">active</field>
+            <field name="color">4</field>
+            <field name="description">Sincronización periódica con portales web de 2–3 marcas de repuestos.</field>
+            <field name="process_notes">Descargar listados desde cada portal, consolidar en Excel y actualizar catálogo o compras según el procedimiento de cada marca.</field>
+            <field name="resource_path">datos/import/</field>
+        </record>
+    </data>
+</odoo>

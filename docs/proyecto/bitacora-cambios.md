@@ -129,6 +129,31 @@
 
 ---
 
+### 2026-07-03 — Panel de integraciones como pantalla de inicio
+
+**Área:** integraciones · UX  
+**Motivo:** al ingresar a Odoo los usuarios veían Conversaciones (Discuss), que no usan; deben aterrizar en el panel de integraciones Servigas.
+
+**Archivos:**
+- `custom_addons/servigas_integrations/` *(módulo nuevo)*
+- `CONTEXT.md`
+- `README.md`
+
+**Cambios:**
+- Módulo `servigas_integrations` con kanban de Factura Web y portales de proveedores.
+- `action_id` por defecto en plantilla de usuario → panel de integraciones.
+- `post_init_hook` reasigna usuarios internos que tenían Discuss como home.
+- Menú raíz de Discuss desactivado (`mail.menu_root_discuss`).
+
+**Verificación:**
+1. `odoo-bin -c ../config/servigas.conf -d servigas_dev -i servigas_integrations --stop-after-init`
+2. Iniciar sesión → debe abrir **Integraciones** (kanban), no Conversaciones.
+3. Confirmar que Discuss no aparece en el menú principal.
+
+**Automatización:** plantilla de módulo `*_integrations` con home action + ocultar Discuss reutilizable en otros Odoo operativos.
+
+---
+
 ## Mapa Odoo → Servigas (referencia para scripts)
 
 Útil al generar temas para otros clientes Odoo Community/Enterprise.

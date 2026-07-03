@@ -40,6 +40,7 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Área | Módulos |
 |------|---------|
 | Core custom | `servigas_core` (estilos Liquid Glass, extensiones UI) |
+| Integraciones | `servigas_integrations` (panel Factura Web / portales, pantalla de inicio) |
 | Operación | `stock`, `sale_management`, `point_of_sale`, `purchase`, `account` |
 | Localización (fase final) | `l10n_ar` + EDI |
 
