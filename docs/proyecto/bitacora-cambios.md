@@ -221,6 +221,26 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Hub Facturación (réplica hubs operativos)
+
+**Área:** tema · contabilidad  
+**Motivo:** replicar App Hub Shell para app Facturación / `account` (plan hub-rail-kpi-ingreso).
+
+**Archivos:**
+- `custom_addons/servigas_core/data/hub_accounting_data.xml`
+- `custom_addons/servigas_core/static/src/js/hubs/accounting_hub.*`
+- `custom_addons/servigas_core/views/hub_menus.xml`
+
+**Cambios:**
+- Menú Facturación → **Resumen** (`servigas_accounting_hub`), sequence 0.
+- 5 secciones: Resumen, Clientes, Proveedores, Informes, Configuración.
+- 23 KPI cards: por cobrar/pagar, borradores, pagos, facturado hoy, análisis, plan contable.
+- Dependencia `account`.
+
+**Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Facturación → Resumen.
+
+---
+
 ### 2026-07-03 — Hub Compras (réplica Inventario/Ventas)
 
 **Área:** tema · compras  

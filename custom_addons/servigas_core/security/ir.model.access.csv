@@ -3,7 +3,9 @@ access_sg_hub_section_user,sg.hub.section user,model_sg_hub_section,base.group_u
 access_sg_hub_section_stock_manager,sg.hub.section stock manager,model_sg_hub_section,stock.group_stock_manager,1,1,1,1
 access_sg_hub_section_sale_manager,sg.hub.section sale manager,model_sg_hub_section,sales_team.group_sale_manager,1,1,1,1
 access_sg_hub_section_purchase_manager,sg.hub.section purchase manager,model_sg_hub_section,purchase.group_purchase_manager,1,1,1,1
+access_sg_hub_section_account_manager,sg.hub.section account manager,model_sg_hub_section,account.group_account_manager,1,1,1,1
 access_sg_hub_card_user,sg.hub.card user,model_sg_hub_card,base.group_user,1,0,0,0
 access_sg_hub_card_stock_manager,sg.hub.card stock manager,model_sg_hub_card,stock.group_stock_manager,1,1,1,1
 access_sg_hub_card_sale_manager,sg.hub.card sale manager,model_sg_hub_card,sales_team.group_sale_manager,1,1,1,1
 access_sg_hub_card_purchase_manager,sg.hub.card purchase manager,model_sg_hub_card,purchase.group_purchase_manager,1,1,1,1
+access_sg_hub_card_account_manager,sg.hub.card account manager,model_sg_hub_card,account.group_account_manager,1,1,1,1
