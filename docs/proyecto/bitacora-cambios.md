@@ -221,6 +221,30 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Hub Inventario MVP (rail + KPI cards de ingreso)
+
+**Área:** tema · inventario  
+**Motivo:** implementar patrón App Hub Shell — rail de secciones + KPI cards clicables (plan hub-rail-kpi-ingreso H0–H3).
+
+**Archivos:**
+- `custom_addons/servigas_core/static/src/scss/servigas_hub.scss`
+- `custom_addons/servigas_core/static/src/js/**` (servicio, componentes, hub)
+- `custom_addons/servigas_core/models/sg_hub_card.py`, `sg_hub_section.py`
+- `custom_addons/servigas_core/data/hub_inventory_data.xml`
+- `custom_addons/servigas_core/views/hub_menus.xml`
+- `custom_addons/servigas_core/__manifest__.py` (v19.0.1.1.0)
+
+**Cambios:**
+- Menú Inventario → **Resumen** (`ir.actions.client` `servigas_inventory_hub`).
+- Rail izq: 5 secciones; centro: KPI cards con métricas RPC y `doAction`.
+- Modelo `sg.hub.card` configurable; 20+ cards de datos XML.
+
+**Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Inventario → Resumen.
+
+**Automatización:** replicar `hub_inventory_data.xml` para Ventas/Compras.
+
+---
+
 ### 2026-07-03 — Plan hub: rail secciones + KPI cards de ingreso
 
 **Área:** docs · tema  

@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="action_inventory_hub" model="ir.actions.client">
+            <field name="name">Resumen</field>
+            <field name="tag">servigas_inventory_hub</field>
+            <field name="target">current</field>
+        </record>
+
+        <menuitem id="menu_inventory_hub"
+                  name="Resumen"
+                  parent="stock.menu_stock_root"
+                  action="action_inventory_hub"
+                  sequence="1"
+                  groups="stock.group_stock_user"/>
+
+    </data>
+</odoo>

@@ -1,0 +1,294 @@
+// Servigas — App Hub Shell (rail secciones + KPI cards de ingreso)
+// Cargar después de servigas_tokens.scss en web.assets_backend.
+
+.o_action_manager .o_action .sg-app-shell {
+    height: 100%;
+}
+
+.sg-app-shell {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    background: var(--sg-paper);
+    font-family: var(--sg-font-family);
+
+    &__rail {
+        flex-shrink: 0;
+        z-index: 2;
+    }
+
+    &__main {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    &__header {
+        padding: 1.25rem 1.5rem 0.5rem;
+        max-width: 80rem;
+        margin-inline: auto;
+        width: 100%;
+    }
+
+    &__title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--sg-text-on-light);
+        margin: 0;
+    }
+
+    &__subtitle {
+        font-size: 0.875rem;
+        color: rgba(26, 26, 26, 0.55);
+        margin: 0.25rem 0 0;
+    }
+
+    &__scroll {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+}
+
+.sg-section-rail {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: linear-gradient(180deg, $sg-bg-charcoal 0%, $sg-bg-deep 100%);
+    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    width: var(--sg-rail-width-collapsed);
+    transition: width var(--sg-rail-transition);
+    overflow: hidden;
+
+    &--expanded {
+        width: var(--sg-rail-width-expanded);
+    }
+
+    &__brand {
+        padding: 1rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        color: $sg-flame-orange;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    &__nav {
+        flex: 1;
+        padding: 0.5rem 0;
+        overflow-y: auto;
+    }
+
+    &__item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.75rem 1rem;
+        color: var(--sg-text-muted-dark);
+        cursor: pointer;
+        border-left: 3px solid transparent;
+        transition: background 150ms ease, color 150ms ease;
+        white-space: nowrap;
+
+        &:hover {
+            color: var(--sg-text-on-dark);
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        &--active {
+            color: var(--sg-text-on-dark);
+            border-left-color: $sg-flame-deep;
+            background: rgba($sg-flame-deep, 0.18);
+        }
+    }
+
+    &__icon {
+        width: 1.25rem;
+        text-align: center;
+        flex-shrink: 0;
+        font-size: 1rem;
+    }
+
+    &__label {
+        font-size: 0.9rem;
+        font-weight: 500;
+        opacity: 0;
+        transition: opacity var(--sg-rail-transition);
+
+        .sg-section-rail--expanded & {
+            opacity: 1;
+        }
+    }
+
+    &__toggle {
+        margin-top: auto;
+        padding: 0.75rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        color: var(--sg-text-muted-dark);
+        background: transparent;
+        border-left: none;
+        border-right: none;
+        border-bottom: none;
+        cursor: pointer;
+        text-align: center;
+        width: 100%;
+
+        &:hover {
+            color: var(--sg-text-on-dark);
+            background: rgba(255, 255, 255, 0.06);
+        }
+    }
+}
+
+.sg-entry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    padding: 1rem 1.5rem 2rem;
+    max-width: 80rem;
+    margin-inline: auto;
+}
+
+.sg-entry-grid--loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.sg-entry-card {
+    @include sg-glass-surface($elevated: true, $on-dark: false);
+    cursor: pointer;
+    padding: 1.25rem;
+    transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease;
+    border: 1px solid var(--sg-glass-border);
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba($sg-flame-deep, 0.12);
+        border-color: rgba($sg-flame-deep, 0.35);
+    }
+
+    &--warning .sg-entry-card__value {
+        color: $sg-flame-rust;
+    }
+
+    &__icon {
+        font-size: 1.1rem;
+        color: $sg-flame-orange;
+        margin-bottom: 0.5rem;
+    }
+
+    &__value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--sg-flame-deep);
+        line-height: 1.1;
+        min-height: 2.2rem;
+    }
+
+    &__value--loading {
+        display: inline-block;
+        width: 4rem;
+        height: 2rem;
+        border-radius: 6px;
+        background: linear-gradient(
+            90deg,
+            rgba($sg-flame-deep, 0.08) 0%,
+            rgba($sg-flame-deep, 0.18) 50%,
+            rgba($sg-flame-deep, 0.08) 100%
+        );
+        background-size: 200% 100%;
+        animation: sg-entry-shimmer 1.2s ease-in-out infinite;
+    }
+
+    &__label {
+        font-size: 0.95rem;
+        font-weight: 600;
+        margin-top: 0.35rem;
+        color: var(--sg-text-on-light);
+    }
+
+    &__hint {
+        font-size: 0.8rem;
+        opacity: 0.6;
+        margin-top: 0.2rem;
+    }
+
+    &__enter {
+        font-size: 0.8rem;
+        color: var(--sg-flame-deep);
+        margin-top: 0.75rem;
+        font-weight: 500;
+    }
+}
+
+.sg-hub-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.95rem;
+}
+
+.sg-view-enter {
+    animation: sg-view-fade-in 280ms ease;
+}
+
+.sg-stagger-item {
+    animation: sg-view-fade-in 320ms ease backwards;
+}
+
+@for $i from 1 through 8 {
+    .sg-stagger-item:nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 45ms};
+    }
+}
+
+@keyframes sg-view-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes sg-entry-shimmer {
+    0% {
+        background-position: 100% 0;
+    }
+    100% {
+        background-position: -100% 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sg-entry-card,
+    .sg-section-rail,
+    .sg-view-enter,
+    .sg-stagger-item,
+    .sg-entry-card__value--loading {
+        animation: none !important;
+        transition: none !important;
+    }
+
+    .sg-entry-card:hover {
+        transform: none;
+    }
+}
+
+@media (max-width: 768px) {
+    .sg-section-rail:not(.sg-section-rail--expanded) {
+        width: var(--sg-rail-width-collapsed);
+    }
+
+    .sg-entry-grid {
+        grid-template-columns: 1fr;
+        padding-inline: 1rem;
+    }
+}

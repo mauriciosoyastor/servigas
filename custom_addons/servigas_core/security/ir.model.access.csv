@@ -1,2 +1,5 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
-access_servigas_core_servigas_core,servigas_core.servigas_core,model_servigas_core_servigas_core,base.group_user,1,1,1,1
+access_sg_hub_section_user,sg.hub.section user,model_sg_hub_section,base.group_user,1,0,0,0
+access_sg_hub_section_manager,sg.hub.section manager,model_sg_hub_section,stock.group_stock_manager,1,1,1,1
+access_sg_hub_card_user,sg.hub.card user,model_sg_hub_card,base.group_user,1,0,0,0
+access_sg_hub_card_manager,sg.hub.card manager,model_sg_hub_card,stock.group_stock_manager,1,1,1,1
