@@ -1,4 +1,6 @@
 import logging
+from datetime import timedelta
+
 from odoo import api, fields, models, _
 from odoo.tools.safe_eval import safe_eval
 
@@ -57,6 +59,32 @@ class SgHubCard(models.Model):
         string="Sufijo valor",
         help="Ej: $, u., %",
     )
+    metric_date_field = fields.Char(
+        string="Campo fecha métrica",
+        help="Ej: date_order. Usar con alcance de fecha.",
+    )
+    metric_date_scope = fields.Selection(
+        [
+            ("none", "Sin filtro fecha"),
+            ("today", "Hoy"),
+        ],
+        string="Alcance fecha métrica",
+        default="none",
+    )
+
+    def _metric_domain_resolved(self):
+        self.ensure_one()
+        domain = list(self._eval_domain(self.metric_domain))
+        if self.metric_date_scope == "today" and self.metric_date_field:
+            today = fields.Date.context_today(self)
+            tomorrow = today + timedelta(days=1)
+            domain.extend(
+                [
+                    (self.metric_date_field, ">=", today),
+                    (self.metric_date_field, "<", tomorrow),
+                ]
+            )
+        return domain
 
     def _eval_domain(self, domain_str):
         if not domain_str:
@@ -96,7 +124,7 @@ class SgHubCard(models.Model):
         if not self.metric_model or self.metric_model not in self.env:
             return None
         Model = self.env[self.metric_model]
-        domain = self._eval_domain(self.metric_domain)
+        domain = self._metric_domain_resolved()
         try:
             if self.metric_aggregate == "sum" and self.metric_field:
                 data = Model.read_group(domain, [self.metric_field], [])

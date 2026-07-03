@@ -221,6 +221,27 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Hub Ventas (réplica Inventario)
+
+**Área:** tema · ventas  
+**Motivo:** replicar App Hub Shell para app Ventas (plan hub-rail-kpi-ingreso H4).
+
+**Archivos:**
+- `custom_addons/servigas_core/data/hub_sales_data.xml`
+- `custom_addons/servigas_core/static/src/js/hubs/sales_hub.*`
+- `custom_addons/servigas_core/views/hub_menus.xml`
+- `custom_addons/servigas_core/models/sg_hub_card.py` (filtro métrica «hoy»)
+
+**Cambios:**
+- Menú Ventas → **Resumen** (`servigas_sales_hub`).
+- 5 secciones rail + 22 KPI cards (pedidos, clientes, informes, config).
+- Métricas «hoy» vía `metric_date_scope` en `sg.hub.card`.
+- Dependencia `sale_management`.
+
+**Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Ventas → Resumen.
+
+---
+
 ### 2026-07-03 — Hub Inventario MVP (rail + KPI cards de ingreso)
 
 **Área:** tema · inventario  
