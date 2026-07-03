@@ -77,15 +77,18 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Doc | Contenido |
 |-----|-----------|
 | [docs/design/liquid-glass-odoo.md](docs/design/liquid-glass-odoo.md) | Guía de implementación Odoo (tokens `--sg-*`, SCSS, POS, checklist) |
+| [docs/design/servigas-brand.md](docs/design/servigas-brand.md) | Identidad visual (llama, Montserrat, paleta) |
 | [docs/adr/0001-liquid-glass-odoo-frontend.md](docs/adr/0001-liquid-glass-odoo-frontend.md) | ADR — por qué Liquid Glass y cómo se implementa en `servigas_core` |
+| [docs/proyecto/bitacora-cambios.md](docs/proyecto/bitacora-cambios.md) | **Bitácora viva** — cambios, verificación y backlog de automatización |
 
 ### Reglas rápidas para agentes
 
 1. **Skill:** leer `liquid-glass-v2-routes` antes de tocar frontend.
-2. **Prefijo CSS:** `--sg-*` / `.sg-*` — nunca `.crm-dashboard-*` de Astor en Odoo.
-3. **Implementación:** `servigas_core/static/src/scss/` + `assets` en manifest.
-4. **Patrones:** lista densa sin glass por fila; glass en KPIs, command bar y paneles; POS prioritario.
-5. **No copiar** CSS del CRM Astro — adaptar patrones a DOM Odoo / OWL.
+2. **Bitácora:** actualizar [docs/proyecto/bitacora-cambios.md](docs/proyecto/bitacora-cambios.md) al cerrar trabajo de tema, datos o infra.
+3. **Prefijo CSS:** `--sg-*` / `.sg-*` — nunca `.crm-dashboard-*` de Astor en Odoo.
+4. **Implementación:** `servigas_core/static/src/scss/` + `assets` en manifest.
+5. **Patrones:** lista densa sin glass por fila; glass en KPIs, command bar y paneles; POS prioritario.
+6. **No copiar** CSS del CRM Astro — adaptar patrones a DOM Odoo / OWL.
 
 ### Referencia origen (repo Astor)
 
@@ -103,8 +106,9 @@ Tokens: `astorproptech/docs/design/tokens.md`
 - [x] Catálogo 8.767 productos importado en `servigas_dev`
 - [x] Idioma Español (AR)
 - [x] POS «Mostrador Servigas» con descuento manual
+- [x] Tema Servigas en `servigas_core` (tokens, POS, backend, variables primarias, navbar sin morado)
+- [ ] Actualizar módulo en BD y validar visualmente (`odoo-bin -u servigas_core`)
 - [ ] Venta de prueba POS validada
 - [ ] Stock masivo (conteo físico)
 - [ ] Ubicaciones internas configuradas
-- [ ] Assets Liquid Glass en `servigas_core`
 - [ ] AFIP / facturación en Odoo

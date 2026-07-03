@@ -1,33 +1,48 @@
 {
-    'name': "servigas_core",
-
-    'summary': "Short (1 phrase/line) summary of the module's purpose",
-
-    'description': """
-Long description of module's purpose
+    "name": "Servigas Core",
+    "summary": "Tema Liquid Glass v2, identidad visual y extensiones base para Servigas",
+    "description": """
+Módulo base de Servigas: assets SCSS (marca llama, tipografía Montserrat),
+personalización POS y backend Odoo 19.
     """,
-
-    'author': "My Company",
-    'website': "https://www.yourcompany.com",
-
-    # Categories can be used to filter modules in modules listing
-    # Check https://github.com/odoo/odoo/blob/15.0/odoo/addons/base/data/ir_module_category_data.xml
-    # for the full list
-    'category': 'Uncategorized',
-    'version': '0.1',
-
-    # any module necessary for this one to work correctly
-    'depends': ['base'],
-
-    # always loaded
-    'data': [
-        # 'security/ir.model.access.csv',
-        'views/views.xml',
-        'views/templates.xml',
+    "author": "Servigas",
+    "website": "https://github.com/mauriciosoyastor/servigas",
+    "category": "Hidden",
+    "version": "19.0.1.0.0",
+    "license": "LGPL-3",
+    "depends": ["base", "web", "point_of_sale", "stock"],
+    "data": [
+        "views/views.xml",
+        "views/templates.xml",
     ],
-    # only loaded in demonstration mode
-    'demo': [
-        'demo/demo.xml',
+    "demo": [
+        "demo/demo.xml",
     ],
+    "assets": {
+        "web._assets_primary_variables": [
+            (
+                "after",
+                "web/static/src/webclient/navbar/navbar.variables.scss",
+                "servigas_core/static/src/scss/servigas_primary_variables.scss",
+            ),
+        ],
+        "web.assets_backend": [
+            (
+                "before",
+                "web/static/src/scss/bootstrap_overridden.scss",
+                "servigas_core/static/src/scss/servigas_tokens.scss",
+            ),
+            "servigas_core/static/src/scss/servigas_backend.scss",
+        ],
+        "point_of_sale._assets_pos": [
+            (
+                "after",
+                "point_of_sale/static/src/app/pos_app.scss",
+                "servigas_core/static/src/scss/servigas_tokens.scss",
+            ),
+            "servigas_core/static/src/scss/servigas_pos.scss",
+        ],
+    },
+    "installable": True,
+    "application": False,
 }
-

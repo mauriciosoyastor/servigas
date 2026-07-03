@@ -1,0 +1,145 @@
+// Servigas — Punto de venta (tema oscuro + Liquid Glass)
+// Cargar después de servigas_tokens.scss en point_of_sale._assets_pos.
+
+.pos {
+    font-family: var(--sg-font-family);
+    background: $sg-bg-ambient !important;
+    background-color: $sg-bg-deep !important;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .pos-topheader {
+    @include sg-glass-surface($elevated: true, $on-dark: true);
+    background-color: rgba(26, 26, 26, 0.75) !important;
+    border-bottom-color: var(--sg-glass-border) !important;
+    border-radius: 0;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+}
+
+.pos .pos-logo {
+    background-image: var(--navbar-logo);
+    background-size: contain;
+    min-width: 7rem;
+    height: 2.5rem;
+}
+
+.pos .pos-topheader,
+.pos .pos-topheader .btn,
+.pos .pos-topheader .dropdown-toggle {
+    color: var(--sg-text-on-dark);
+}
+
+.pos .rightpane,
+.pos .leftpane {
+    background: transparent;
+}
+
+.pos input[type="text"],
+.pos input[type="number"],
+.pos .form-control,
+.pos .form-select {
+    font-family: var(--sg-font-family);
+    border-radius: $sg-radius-card;
+    border-color: var(--sg-glass-border);
+}
+
+.pos .pos-search-bar input,
+.pos .product-screen .search input,
+.pos .search-bar input {
+    @include sg-glass-surface($elevated: true, $on-dark: true);
+    color: var(--sg-text-on-dark);
+    font-size: 1.05rem;
+    padding: 0.65rem 1rem;
+    border-radius: $sg-radius-pill;
+
+    &::placeholder {
+        color: var(--sg-text-muted-dark);
+    }
+
+    &:focus {
+        outline: 2px solid rgba($sg-flame-orange, 0.55);
+        outline-offset: 2px;
+    }
+}
+
+.pos .rightpane .product {
+    @include sg-glass-surface($elevated: false, $on-dark: true);
+    border-bottom-width: 3px !important;
+    border-bottom-color: transparent !important;
+    color: var(--sg-text-on-dark);
+    transition: border-color 150ms ease, transform 150ms ease;
+
+    &:hover {
+        border-color: rgba($sg-flame-orange, 0.35) !important;
+        --btn-hover-bg: rgba(255, 255, 255, 0.06);
+    }
+}
+
+.pos .product-name {
+    font-weight: 500;
+    font-size: 0.85rem;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .category-button,
+.pos .breadcrumb-button {
+    font-family: var(--sg-font-family);
+    font-weight: 500;
+    border-radius: $sg-radius-pill;
+    border: 1px solid var(--sg-glass-border);
+    background: var(--sg-glass-fill);
+    color: var(--sg-text-on-dark);
+
+    &.active,
+    &:active {
+        background: $sg-flame-gradient;
+        border-color: transparent;
+        color: var(--sg-text-on-dark);
+    }
+}
+
+.pos .leftpane {
+    @include sg-glass-surface($elevated: false, $on-dark: true);
+    border-right: 1px solid var(--sg-glass-border) !important;
+    margin: 0.5rem;
+    margin-right: 0;
+    border-radius: $sg-radius-card;
+}
+
+.pos .order-container,
+.pos .order {
+    color: var(--sg-text-on-dark);
+}
+
+.pos .pay-order-button,
+.pos .button.validation {
+    @include sg-flame-cta;
+    border-radius: $sg-radius-card !important;
+    font-family: var(--sg-font-family);
+    text-transform: none;
+    letter-spacing: 0.03em;
+    min-height: 70px;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.pos .btn-primary:not(.pay-order-button) {
+    background-color: $sg-flame-deep;
+    border-color: $sg-flame-deep;
+    color: $sg-text-on-dark;
+
+    &:hover {
+        background-color: $sg-flame-rust;
+        border-color: $sg-flame-rust;
+    }
+}
+
+.pos .numpad .btn {
+    font-family: var(--sg-font-family);
+    font-weight: 500;
+}
+
+.pos .modal-content {
+    @include sg-glass-surface($elevated: true, $on-dark: false);
+    font-family: var(--sg-font-family);
+}

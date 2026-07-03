@@ -51,7 +51,9 @@ servigas_core/
 
 ## Tokens — namespace Servigas (`--sg-*`)
 
-Mapeo desde tokens CRM Astor (`docs/design/tokens.md` en repo astorproptech):
+**Marca:** ver [servigas-brand.md](./servigas-brand.md) (logo llama, Montserrat, paleta carbón + naranja).
+
+Mapeo conceptual desde tokens CRM Astor (`docs/design/tokens.md` en repo astorproptech):
 
 | Token Astor (referencia) | Token Servigas | Uso en Odoo |
 |--------------------------|----------------|-------------|
@@ -71,20 +73,13 @@ Mapeo desde tokens CRM Astor (`docs/design/tokens.md` en repo astorproptech):
 ### Ejemplo token base
 
 ```scss
-// servigas_tokens.scss
+// servigas_tokens.scss — ver implementación real en servigas_core
 :root {
-  --sg-paper: #f5f4f1;
-  --sg-canvas: #ebeae6;
-  --sg-glass-fill: rgba(255, 255, 255, 0.55);
-  --sg-glass-fill-strong: rgba(255, 255, 255, 0.72);
-  --sg-glass-blur: 16px;
-  --sg-glass-border: rgba(255, 255, 255, 0.35);
-  --sg-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-  --sg-accent: #b5ff00;
-  --sg-accent-alt: #8620f2;
-  --sg-primary: #111111;
-  --sg-radius-card: 12px;
-  --sg-radius-pill: 999px;
+  --sg-flame-gradient: linear-gradient(135deg, #FFD600, #F57C00, #E64A19);
+  --sg-paper: #f7f5f2;
+  --sg-flame-deep: #e64a19;
+  --sg-font-family: "Montserrat", "Segoe UI", sans-serif;
+  /* … ver servigas_tokens.scss */
 }
 ```
 
