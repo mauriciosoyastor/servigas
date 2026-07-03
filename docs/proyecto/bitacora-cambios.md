@@ -221,10 +221,31 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Plan Liquid Glass KPI cards por ruta
+
+**Área:** docs · tema  
+**Motivo:** evaluar todas las rutas y botones Odoo para modernización UI con KPI cards estratégicas (ADR 0001).
+
+**Archivos:**
+- `docs/proyecto/plan-liquid-glass-kpi-routes.md` *(nuevo)*
+
+**Cambios:**
+- Inventario completo de rutas: Inventario, POS, Ventas, Compras, Facturación, Ajustes.
+- Taxonomía de 16 tipos de botón con decisión KPI vs flame CTA.
+- 7 fases de implementación (SCSS → POS → Hub OWL → forms → strips → hubs → informes).
+- Matriz esfuerzo/impacto y KPIs de datos por modelo Odoo.
+
+**Verificación:** revisar plan con stakeholder; iniciar Fase 0 al aprobar.
+
+**Automatización:** plantilla `SgKpiCard` reutilizable para futuros clientes Odoo con marca propia.
+
+---
+
 ## Pendientes documentados (no implementados)
 
 | Tema | Notas |
 |------|-------|
+| Plan KPI routes | Ver [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) — Fase 0 pendiente |
 | Montserrat en Odoo | Falta cargar Google Font en backend/POS si no está en sistema |
 | Modo oscuro Odoo (`web.assets_web_dark`) | Tokens glass para dark mode no definidos |
 | Web Astro (`web/`) | Scaffold separado; integración con marca pendiente |
@@ -233,4 +254,4 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
-*Última actualización: 2026-07-03*
+*Última actualización: 2026-07-03 (plan KPI routes)*
