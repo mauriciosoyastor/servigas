@@ -1,0 +1,31 @@
+﻿{
+  "folders": [
+    {
+      "name": "Odoo 19 (runtime)",
+      "path": "../odoo-workspace/odoo-19"
+    },
+    {
+      "name": "servigas",
+      "path": "."
+    }
+  ],
+  "settings": {
+    "python.defaultInterpreterPath": "${workspaceFolder:Odoo 19 (runtime)}/.venv/Scripts/python.exe",
+    "files.exclude": {
+      "**/__pycache__": true,
+      "**/*.pyc": true
+    },
+    "search.exclude": {
+      "**/node_modules": true,
+      "**/odoo-workspace/odoo-19/addons": true,
+      "**/odoo-workspace/odoo-19/odoo/addons": true
+    }
+  },
+  "extensions": {
+    "recommendations": [
+      "ms-python.python",
+      "astro-build.astro-vscode"
+    ]
+  }
+}
+

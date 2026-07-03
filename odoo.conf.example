@@ -1,0 +1,15 @@
+﻿[options]
+; Plantilla de referencia â€” NO commitear secretos reales.
+; La config activa vive en el host:
+;   Desktop/odoo-workspace/config/servigas.conf
+;
+; Rutas relativas al archivo .conf (carpeta config/).
+; Uso:
+;   cd Desktop/odoo-workspace/odoo-19
+;   python odoo-bin -c ../config/servigas.conf
+
+db_name = servigas_dev
+xmlrpc_port = 8070
+
+addons_path = ../../servigas/custom_addons,../odoo-19/addons,../odoo-19/odoo/addons
+
