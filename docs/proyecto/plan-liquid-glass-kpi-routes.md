@@ -1,7 +1,7 @@
 # Plan — Liquid Glass v2 con KPI cards estratégicas
 
 **Estado:** planificado · **Fecha:** 2026-07-03  
-**Relacionado:** [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [ADR 0001](../adr/0001-liquid-glass-odoo-frontend.md) · [bitacora-cambios.md](./bitacora-cambios.md)
+**Relacionado:** [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [ADR 0001](../adr/0001-liquid-glass-odoo-frontend.md) · [bitacora-cambios.md](./bitacora-cambios.md) · [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md)
 
 ---
 

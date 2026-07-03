@@ -221,6 +221,26 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Plan rail expandible para interacciones Odoo
+
+**Área:** docs · tema  
+**Motivo:** evaluar y planificar barra lateral expandible para interacciones secundarias (KPIs, filtros, navegación) complementaria al plan KPI cards.
+
+**Archivos:**
+- `docs/proyecto/plan-rail-expandible-odoo.md` *(nuevo)*
+- `docs/proyecto/plan-liquid-glass-kpi-routes.md` *(enlace cruzado)*
+
+**Cambios:**
+- Evaluación variantes A (rail izq global), B (rail der contextual), C (ViewShell completo).
+- Decisión: variante B+C híbrido progresivo; sin rail en POS ni forms con chatter.
+- Mapa de interacciones Odoo por ruta; 6 fases R0–R6; integración con SgKpiCard.
+
+**Verificación:** revisar con stakeholder; piloto en Hub Inventario (R2) tras componente base (R1).
+
+**Automatización:** modelo `servigas.rail.config` para activar rail por acción sin hardcode JS.
+
+---
+
 ### 2026-07-03 — Plan Liquid Glass KPI cards por ruta
 
 **Área:** docs · tema  
@@ -246,6 +266,7 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 | Tema | Notas |
 |------|-------|
 | Plan KPI routes | Ver [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) — Fase 0 pendiente |
+| Plan rail expandible | Ver [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) — R0 pendiente |
 | Montserrat en Odoo | Falta cargar Google Font en backend/POS si no está en sistema |
 | Modo oscuro Odoo (`web.assets_web_dark`) | Tokens glass para dark mode no definidos |
 | Web Astro (`web/`) | Scaffold separado; integración con marca pendiente |
