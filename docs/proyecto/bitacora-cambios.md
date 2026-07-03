@@ -35,16 +35,40 @@
 
 | Área | Estado | Notas |
 |------|--------|-------|
-| Identidad visual | En curso | Tokens llama + Montserrat definidos |
-| Backend Odoo | En curso | Navbar y acentos sin morado Odoo |
+| Identidad visual | Hecho | Tokens llama + Montserrat (`servigas_tokens.scss`) |
+| Backend Odoo | Hecho | Navbar, acentos flame, `servigas_hub.scss` |
+| Hubs App Shell | **Hecho** | Inventario, Ventas, Compras, Facturación (`v19.0.1.4.0`) |
 | POS | En curso | Tema oscuro + glass en header |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
 | Web pública (`web/`) | Iniciado | Astro scaffold, sin integrar aún |
 
+**Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
+
 ---
 
 ## Entradas
+
+### 2026-07-03 — Bitácora: kit automatización hubs App Shell
+
+**Área:** docs  
+**Motivo:** documentar cómo replicar rails + KPI cards en futuros proyectos Odoo sin reimplementar desde cero.
+
+**Archivos:**
+- `docs/proyecto/bitacora-cambios.md` *(este archivo)*
+
+**Cambios:**
+- Sección **Kit reutilizable — App Hub Shell** (checklist, mapa 4 apps, contrato `sg.hub.card`).
+- Propuesta **`hub.yaml`** + comando `scaffold_odoo_hub.py` (backlog A8–A9).
+- Refactor **hub OWL genérico** (A10), skill Cursor (A11), tests smoke (A12).
+- Tabla errores frecuentes y verificación estándar.
+- Resumen ejecutivo actualizado: hubs **Hecho** en v19.0.1.4.0.
+
+**Verificación:** agente o humano sigue checklist «Por cada app Odoo» en nuevo repo.
+
+**Automatización:** implementar A8–A12 en repo `odoo-hub-scaffold` o script en `scripts/`.
+
+---
 
 ### 2026-07-03 — Fundación del tema Liquid Glass en `servigas_core`
 
@@ -177,8 +201,231 @@ Prioridad sugerida para cuando haya un segundo proyecto Odoo con marca propia.
 | A5 | `odoo-bin -u` + reload assets en un comando dev | todas | S | Medio |
 | A6 | Import catálogo Excel → plantilla parametrizada | fundación datos | L | Alto |
 | A7 | Planilla puente Factura Web → generador por cliente | CONTEXT | M | Medio |
+| **A8** | **`hub.yaml` → `hub_<app>_data.xml` + menú + JS hub** | **2026-07-03 hubs** | **M** | **Alto** |
+| **A9** | **Script `scaffold-odoo-hub <app>`** (secciones + cards base) | **2026-07-03 hubs** | **M** | **Alto** |
+| **A10** | **Hub OWL genérico `SgAppHub` (un JS, N apps por config)** | **2026-07-03 hubs** | **M** | **Alto** |
+| **A11** | **Skill Cursor `odoo-liquid-glass-hubs`** | **2026-07-03 hubs** | **S** | **Alto** |
+| **A12** | **Test smoke hubs: RPC `get_hub_payload` + menú Resumen** | **2026-07-03 hubs** | **M** | **Medio** |
 
-**Leyenda esfuerzo:** S = horas · M = 1–2 días · L = varios días
+**Leyenda esfuerzo:** S = horas · M = 1–2 iteraciones agente · L = varios días
+
+---
+
+## Kit reutilizable — App Hub Shell (nuevo proyecto Odoo)
+
+Checklist para replicar el patrón **rail + KPI cards de ingreso** en otro cliente. Tiempo estimado manual: **1 app piloto + 30–45 min por app adicional** si se copia la estructura Servigas.
+
+### Prerrequisitos (una sola vez por proyecto)
+
+1. [ ] Módulo `*_core` con tema Liquid Glass (tokens, backend, hub SCSS)
+2. [ ] Modelos `sg.hub.section` y `sg.hub.card` (copiar de Servigas o extraer a módulo `web_hub_base`)
+3. [ ] Componentes OWL compartidos: `SgSectionRail`, `SgEntryCard`, servicio `sg_hub`
+4. [ ] `servigas_hub.scss` (o `<marca>_hub.scss`) en `web.assets_backend`
+5. [ ] `security/ir.model.access.csv` con grupo manager por app
+
+### Por cada app Odoo (stock, sale, purchase, account, …)
+
+| Paso | Qué hacer | Archivo / artefacto |
+|------|-----------|---------------------|
+| 1 | Definir `app` en selection (`inventory`, `sales`, …) | `models/sg_hub_*.py` |
+| 2 | Crear 5 secciones rail (Resumen + 4 dominio) | `data/hub_<app>_data.xml` |
+| 3 | Crear 15–25 cards con `action_id` XML válido | idem |
+| 4 | Registrar `ir.actions.client` + menú «Resumen» `sequence=0/1` | `views/hub_menus.xml` |
+| 5 | Hub OWL: copiar `*_hub.js` + `.xml` + `*_action.js` | `static/src/js/hubs/` |
+| 6 | Añadir dependencia Odoo + assets en manifest | `__manifest__.py` |
+| 7 | `odoo-bin -u <modulo> -d <bd>` y probar cards | — |
+
+### Mapa Servigas implementado (referencia)
+
+| App `sg.hub.*` | Módulo Odoo | Menú padre XML | Client tag | Cards | Grupo menú |
+|----------------|-------------|----------------|------------|-------|------------|
+| `inventory` | `stock` | `stock.menu_stock_root` | `servigas_inventory_hub` | 20+ | `stock.group_stock_user` |
+| `sales` | `sale_management` | `sale.sale_menu_root` | `servigas_sales_hub` | 22 | `sales_team.group_sale_salesman` |
+| `purchase` | `purchase` | `purchase.menu_purchase_root` | `servigas_purchase_hub` | 19 | `purchase.group_purchase_user` |
+| `accounting` | `account` | `account.menu_finance` | `servigas_accounting_hub` | 23 | `account.group_account_invoice` |
+
+**No implementar hub en:** POS (UI propia), Ajustes (`res.config.settings`), listas/form estándar.
+
+### Archivos núcleo (copiar tal cual entre proyectos)
+
+```
+<modulo>_core/
+├── models/
+│   ├── sg_hub_section.py
+│   └── sg_hub_card.py          # incluye get_hub_payload + métricas
+├── data/
+│   └── hub_<app>_data.xml      # ÚNICO archivo custom por app
+├── views/
+│   └── hub_menus.xml           # append por app
+└── static/src/
+    ├── scss/<marca>_hub.scss   # una vez
+    └── js/
+        ├── services/sg_hub_service.js
+        ├── components/         # SgSectionRail, SgEntryCard
+        └── hubs/
+            ├── <app>_hub.js      # ~60 líneas; cambiar appLabel + loadHub("app")
+            ├── <app>_hub.xml     # título de app
+            └── <app>_hub_action.js  # registry.add("servigas_<app>_hub", ...)
+```
+
+### Contrato `sg.hub.card` (campos para YAML futuro)
+
+| Campo | Obligatorio | Uso |
+|-------|-------------|-----|
+| `app` | sí | `inventory` \| `sales` \| `purchase` \| `accounting` |
+| `section` | sí | código sección (`summary`, `orders`, …) |
+| `show_in_summary` | no | aparece en Resumen |
+| `label`, `hint`, `icon`, `enter_label` | sí / no | UI card |
+| `action_id` | sí | `ir.actions.act_window` (ref XML módulo Odoo) |
+| `domain`, `context` | no | filtro al abrir vista |
+| `metric_model`, `metric_domain` | sí p/métrica | `search_count` / `read_group` |
+| `metric_aggregate` | no | `count` (default) \| `sum` |
+| `metric_field` | si sum | ej. `amount_total` |
+| `metric_date_field` + `metric_date_scope` | no | `today` para KPIs del día |
+| `metric_suffix` | no | ej. ` $` |
+| `variant` | no | `warning` para alertas |
+
+### Propuesta `hub.yaml` (borrador para A8)
+
+Archivo declarativo por app; un generador Jinja emitiría `hub_<app>_data.xml` y fragmentos de menú/JS.
+
+```yaml
+# hubs/inventory.yaml — ejemplo
+app: inventory
+odoo_module: stock
+menu_parent: stock.menu_stock_root
+menu_groups: stock.group_stock_user
+client_tag: servigas_inventory_hub
+title: Inventario
+
+sections:
+  - code: summary
+    name: Resumen
+    icon: fa-th-large
+    sequence: 1
+  - code: products
+    name: Productos
+    icon: fa-cube
+    sequence: 2
+  # …
+
+cards:
+  - id: catalog
+    section: summary
+    show_in_summary: true
+    sequence: 10
+    label: Productos
+    hint: Plantillas activas
+    icon: fa-cube
+    enter_label: Ver catálogo →
+    action_xml_id: stock.product_template_action_product
+    metric:
+      model: product.template
+      domain: "[('active', '=', True)]"
+      aggregate: count
+  - id: low_stock
+    section: summary
+    show_in_summary: true
+    variant: warning
+    action_xml_id: stock.stock_product_normal_action
+    domain: "[('is_storable', '=', True), ('qty_available', '<=', 0)]"
+    metric:
+      model: product.product
+      domain: "[('is_storable', '=', True), ('qty_available', '<=', 0)]"
+  - id: sales_today
+    section: summary
+    metric:
+      model: sale.order
+      domain: "[('state', '=', 'sale')]"
+      aggregate: sum
+      field: amount_total
+      date_field: date_order
+      date_scope: today
+      suffix: " $"
+```
+
+**Comando objetivo (A9):**
+
+```bash
+python scripts/scaffold_odoo_hub.py \
+  --module servigas_core \
+  --config hubs/inventory.yaml \
+  --odoo-version 19
+```
+
+Salida esperada: `data/hub_inventory_data.xml`, entradas en `hub_menus.xml`, stubs JS si no existe hub genérico.
+
+### Refactor recomendado (A10) — un solo componente OWL
+
+Hoy cada app tiene `*_hub.js` casi idéntico. Para automatizar:
+
+```javascript
+// hubs/generic_hub.js — propuesta
+export function buildHubComponent({ templateName, appId, title }) {
+    return class extends Component {
+        // setup igual; loadHub(appId, section); title en template
+    };
+}
+```
+
+O pasar `app` y `title` vía `ir.actions.client` `params` en XML:
+
+```xml
+<record id="action_inventory_hub" model="ir.actions.client">
+    <field name="tag">servigas_app_hub</field>
+    <field name="context">{'hub_app': 'inventory', 'hub_title': 'Inventario'}</field>
+</record>
+```
+
+Así **nuevas apps = solo YAML/XML de datos**, sin JS nuevo.
+
+### Verificación estándar (checklist A12)
+
+```bash
+# 1. Actualizar módulo
+odoo-bin -u servigas_core -d servigas_dev
+
+# 2. Por cada app instalada:
+#    - Menú «Resumen» visible como primer ítem
+#    - Rail: 5 secciones cambian cards sin error consola
+#    - Clic card → abre vista Odoo con dominio correcto
+#    - Valores KPI numéricos (no «—» salvo sin permiso)
+#    - Rail colapsa/expande; preferencia persiste tras F5
+
+# 3. RPC directo (debug)
+# En shell Odoo:
+env['sg.hub.card'].get_hub_payload('inventory', 'summary')
+```
+
+### Errores frecuentes al replicar
+
+| Síntoma | Causa | Fix |
+|---------|-------|-----|
+| Menú no aparece | `depends` falta módulo Odoo | Añadir `stock` / `sale_management` / … en manifest |
+| Card abre vista vacía | `action_id` XML id incorrecto para versión Odoo | Verificar en GitHub `odoo/odoo/<version>/addons/` |
+| Métrica «—» | `metric_model` sin permiso o dominio inválido | Probar `search_count` en shell |
+| `receipt_status` falla | `purchase_stock` no instalado | Instalar stock + purchase |
+| Hub en blanco | assets JS no en manifest | Listar `*_hub_action.js` al final del bundle |
+| Duplicar menú Resumen | `sequence` no es 0/1 | Ajustar vs Dashboard nativo |
+
+---
+
+## Kit reutilizable — Tema (copiar a nuevo proyecto)
+
+Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
+
+1. [ ] Módulo `cliente_core` con dependencias `base`, `web`, `point_of_sale`
+2. [ ] `*_tokens.scss` — paleta + mixins glass
+3. [ ] `*_primary_variables.scss` — override `$o-brand-*` en `web._assets_primary_variables`
+4. [ ] `*_backend.scss` — navbar, botones, acentos
+5. [ ] `*_pos.scss` — tema oscuro POS (si aplica mostrador)
+6. [ ] `*_hub.scss` — App Hub Shell (si aplica hubs)
+7. [ ] Logo PNG en `static/src/img/`
+8. [ ] `__manifest__.py` con bundles de assets + data hubs
+9. [ ] Modelos `sg.hub.section` / `sg.hub.card` (si aplica hubs)
+10. [ ] `docs/design/<marca>-brand.md` — análisis de identidad
+11. [ ] Entrada en esta bitácora (o bitácora del nuevo repo)
+12. [ ] Actualizar `CONTEXT.md` del proyecto
 
 ### Propuesta `brand.yaml` (borrador para A1)
 
@@ -204,20 +451,24 @@ Un script Python/Jinja podría emitir `servigas_tokens.scss`, `servigas_primary_
 
 ---
 
-## Kit reutilizable (copiar a nuevo proyecto)
+## Entrada consolidada — Hubs App Shell (2026-07-03)
 
-Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
+**Área:** tema · UI · inventario · ventas · compras · contabilidad  
+**Motivo:** pantalla «Resumen» por app con rail de secciones + KPI cards de ingreso (plan [hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md)).  
+**Versión módulo:** `19.0.1.4.0`
 
-1. [ ] Módulo `cliente_core` con dependencias `base`, `web`, `point_of_sale`
-2. [ ] `*_tokens.scss` — paleta + mixins glass
-3. [ ] `*_primary_variables.scss` — override `$o-brand-*` en `web._assets_primary_variables`
-4. [ ] `*_backend.scss` — navbar, botones, acentos
-5. [ ] `*_pos.scss` — tema oscuro POS (si aplica mostrador)
-6. [ ] Logo PNG en `static/src/img/`
-7. [ ] `__manifest__.py` con los 3 bundles de assets
-8. [ ] `docs/design/<marca>-brand.md` — análisis de identidad
-9. [ ] Entrada en esta bitácora (o bitácora del nuevo repo)
-10. [ ] Actualizar `CONTEXT.md` del proyecto
+**Archivos núcleo (reutilizables):**
+
+| Capa | Paths |
+|------|-------|
+| Modelos | `models/sg_hub_section.py`, `models/sg_hub_card.py` |
+| SCSS | `static/src/scss/servigas_hub.scss`, tokens rail en `servigas_tokens.scss` |
+| OWL compartido | `static/src/js/services/sg_hub_service.js`, `components/sg_*` |
+| Datos por app | `data/hub_inventory_data.xml`, `hub_sales_data.xml`, `hub_purchase_data.xml`, `hub_accounting_data.xml` |
+| Menús | `views/hub_menus.xml` |
+| Hubs JS | `static/src/js/hubs/{inventory,sales,purchase,accounting}_hub*` |
+
+**Automatización para futuros proyectos:** ver sección **Kit reutilizable — App Hub Shell** y backlog **A8–A12** arriba.
 
 ---
 
@@ -239,6 +490,8 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 **Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Facturación → Resumen.
 
+**Automatización:** copiar bloque `hub_accounting_data.xml`; ver mapa apps en Kit Hub Shell.
+
 ---
 
 ### 2026-07-03 — Hub Compras (réplica Inventario/Ventas)
@@ -257,6 +510,8 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 - Dependencia `purchase`; métricas con `receipt_status` (purchase_stock).
 
 **Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Compras → Resumen.
+
+**Automatización:** plantilla sección `orders` + cards RFQ/OC en `hub.yaml`.
 
 ---
 
@@ -278,6 +533,8 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 - Dependencia `sale_management`.
 
 **Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Ventas → Resumen.
+
+**Automatización:** métricas `metric_date_scope: today` reutilizables desde `hub.yaml`.
 
 ---
 
@@ -301,7 +558,7 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 **Verificación:** `odoo-bin -u servigas_core -d servigas_dev` → Inventario → Resumen.
 
-**Automatización:** replicar `hub_inventory_data.xml` para Ventas/Compras.
+**Automatización:** ver **Kit reutilizable — App Hub Shell** y propuesta `hub.yaml` (A8).
 
 ---
 
@@ -369,15 +626,15 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 | Tema | Notas |
 |------|-------|
-| Plan KPI routes | Ver [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) — Fase 0 pendiente |
-| Plan hub rail + KPI ingreso | Ver [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) — H0 pendiente (**MVP**) |
-| Plan rail expandible | Ver [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) — superseded parcialmente por hub |
-| Montserrat en Odoo | Falta cargar Google Font en backend/POS si no está en sistema |
-| Modo oscuro Odoo (`web.assets_web_dark`) | Tokens glass para dark mode no definidos |
-| Web Astro (`web/`) | Scaffold separado; integración con marca pendiente |
+| Automatización hubs A8–A12 | `hub.yaml`, scaffold script, hub OWL genérico, skill Cursor, tests smoke |
+| Hub OWL unificado (`SgAppHub`) | Eliminar 4× `*_hub.js` duplicados (refactor A10) |
+| Rail expandible contextual | Ver [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) — fase R3+ opcional |
+| Montserrat en Odoo | Cargar Google Font en backend/POS |
+| Modo oscuro Odoo (`web.assets_web_dark`) | Tokens glass para dark mode |
+| Web Astro (`web/`) | Integración con marca pendiente |
 | Validación venta POS | CONTEXT — pendiente |
 | Stock masivo / ubicaciones | CONTEXT — pendiente |
 
 ---
 
-*Última actualización: 2026-07-03 (plan KPI routes)*
+*Última actualización: 2026-07-03 (automatización hubs App Shell)*
