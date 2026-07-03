@@ -9,9 +9,15 @@ O en shell interactivo:
 """
 
 import csv
+import sys
 from pathlib import Path
 
-CSV_PATH = Path(r"C:\Users\mauri\OneDrive\Desktop\servigas\datos\import\maestro_import_odoo_final.csv")
+IMPORT_DIR = Path(__file__).parent
+sys.path.insert(0, str(IMPORT_DIR))
+
+from imagenes_producto import IMAGES_DIR, load_image_b64
+
+CSV_PATH = IMPORT_DIR / "maestro_import_odoo_final.csv"
 BATCH_SIZE = 200
 ROOT_CATEGORY = "Repuestos Servigas"
 
@@ -85,6 +91,7 @@ used_barcodes = {
 created = 0
 updated = 0
 skipped = 0
+images_loaded = 0
 stock_lines = []
 
 for index, row in enumerate(rows, start=1):
@@ -111,6 +118,11 @@ for index, row in enumerate(rows, start=1):
         vals["barcode"] = barcode[:128]
         used_barcodes.add(barcode)
 
+    image_b64 = load_image_b64(code)
+    if image_b64:
+        vals["image_1920"] = image_b64
+        images_loaded += 1
+
     if code in existing_codes:
         Product.browse(existing_codes[code]).write(vals)
         updated += 1
@@ -131,6 +143,7 @@ for index, row in enumerate(rows, start=1):
 env.cr.commit()
 print(f"Productos creados: {created}")
 print(f"Productos actualizados: {updated}")
+print(f"Imágenes cargadas: {images_loaded} (desde {IMAGES_DIR})")
 print(f"Omitidos: {skipped}")
 
 if stock_lines:
