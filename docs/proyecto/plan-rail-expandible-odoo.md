@@ -1,7 +1,7 @@
 # Plan — Rail expandible para interacciones Odoo
 
 **Estado:** planificado · **Fecha:** 2026-07-03  
-**Relacionado:** [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) · [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [ADR 0001](../adr/0001-liquid-glass-odoo-frontend.md)
+**Relacionado:** [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) · [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) · [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [ADR 0001](../adr/0001-liquid-glass-odoo-frontend.md)
 
 ---
 

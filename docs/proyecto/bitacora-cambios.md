@@ -221,6 +221,26 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 
 ---
 
+### 2026-07-03 — Plan hub: rail secciones + KPI cards de ingreso
+
+**Área:** docs · tema  
+**Motivo:** unificar rail (navegación por secciones) y KPI cards (puntos de ingreso a subvistas) en patrón App Hub Shell.
+
+**Archivos:**
+- `docs/proyecto/plan-hub-rail-kpi-ingreso.md` *(nuevo)*
+
+**Cambios:**
+- Patrón: rail izq por secciones + grid KPI cards clicables en centro.
+- Inventario completo: 5 secciones, ~20 cards con métricas y acciones Odoo.
+- Esquemas Ventas, Compras, Facturación; modelo `sg.hub.card`; fases H0–H7.
+- Descarta rail derecho en listas v1; hub como única puerta de entrada.
+
+**Verificación:** aprobar piloto Inventario (H3) como MVP.
+
+**Automatización:** modelo `sg.hub.card` editable sin redeploy JS.
+
+---
+
 ### 2026-07-03 — Plan rail expandible para interacciones Odoo
 
 **Área:** docs · tema  
@@ -266,7 +286,8 @@ Checklist mínimo para clonar el enfoque Servigas en otro Odoo:
 | Tema | Notas |
 |------|-------|
 | Plan KPI routes | Ver [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md) — Fase 0 pendiente |
-| Plan rail expandible | Ver [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) — R0 pendiente |
+| Plan hub rail + KPI ingreso | Ver [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) — H0 pendiente (**MVP**) |
+| Plan rail expandible | Ver [plan-rail-expandible-odoo.md](./plan-rail-expandible-odoo.md) — superseded parcialmente por hub |
 | Montserrat en Odoo | Falta cargar Google Font en backend/POS si no está en sistema |
 | Modo oscuro Odoo (`web.assets_web_dark`) | Tokens glass para dark mode no definidos |
 | Web Astro (`web/`) | Scaffold separado; integración con marca pendiente |
