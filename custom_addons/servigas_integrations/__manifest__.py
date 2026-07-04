@@ -19,12 +19,7 @@ proveedores) y define la pantalla de inicio al ingresar a Odoo.
         "data/default_home_action.xml",
         "data/hide_discuss_menu.xml",
     ],
-    "assets": {
-        "web.assets_backend": [
-            "servigas_integrations/static/src/scss/servigas_integrations.scss",
-        ],
-    },
-    "post_init_hook": "post_init_hook",
+    "assets": {},
     "installable": True,
     "application": True,
 }

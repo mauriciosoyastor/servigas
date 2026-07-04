@@ -108,10 +108,9 @@
                 <field name="status"/>
                 <filter string="Activas" name="active" domain="[('status', '=', 'active')]"/>
                 <filter string="Manuales" name="manual" domain="[('mode', '=', 'manual')]"/>
-                <group expand="0" string="Agrupar por">
-                    <filter string="Tipo" name="group_type" context="{'group_by': 'integration_type'}"/>
-                    <filter string="Estado" name="group_status" context="{'group_by': 'status'}"/>
-                </group>
+                <separator/>
+                <filter string="Agrupar por tipo" name="group_type" context="{'group_by': 'integration_type'}"/>
+                <filter string="Agrupar por estado" name="group_status" context="{'group_by': 'status'}"/>
             </search>
         </field>
     </record>
