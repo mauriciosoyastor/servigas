@@ -5,6 +5,8 @@
 
 Este documento es la guía canónica para modificar el frontend de Odoo 19 en Servigas. No copiar CSS del CRM Astro tal cual: **traducir patrones** a SCSS + assets del módulo `servigas_core`.
 
+**Guardrails OWL:** antes de proponer cambios, leer [owl-liquid-glass-boundaries.md](./owl-liquid-glass-boundaries.md) — qué no funciona en OWL/Odoo y alternativas viables.
+
 ---
 
 ## Objetivo UX (igual que dashboard v2)
