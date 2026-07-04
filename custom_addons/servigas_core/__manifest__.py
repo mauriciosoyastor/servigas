@@ -1,22 +1,32 @@
 {
     "name": "Servigas Core",
-    "summary": "Tema Liquid Glass v2, identidad visual y extensiones base para Servigas",
+    "summary": "Tema Liquid Glass v2, hubs Inventario/Ventas/Compras/Facturación",
     "description": """
 Módulo base de Servigas: assets SCSS (marca llama, tipografía Montserrat),
-personalización POS y backend Odoo 19.
+personalización POS y backend Odoo 19, hubs con rail y KPI cards de ingreso.
     """,
     "author": "Servigas",
     "website": "https://github.com/mauriciosoyastor/servigas",
     "category": "Hidden",
-    "version": "19.0.1.0.0",
+    "version": "19.0.1.4.0",
     "license": "LGPL-3",
-    "depends": ["base", "web", "point_of_sale", "stock"],
-    "data": [
-        "views/views.xml",
-        "views/templates.xml",
+    "depends": [
+        "base",
+        "web",
+        "product",
+        "point_of_sale",
+        "stock",
+        "sale_management",
+        "purchase",
+        "account",
     ],
-    "demo": [
-        "demo/demo.xml",
+    "data": [
+        "security/ir.model.access.csv",
+        "data/hub_inventory_data.xml",
+        "data/hub_sales_data.xml",
+        "data/hub_purchase_data.xml",
+        "data/hub_accounting_data.xml",
+        "views/hub_menus.xml",
     ],
     "assets": {
         "web._assets_primary_variables": [
@@ -33,6 +43,24 @@ personalización POS y backend Odoo 19.
                 "servigas_core/static/src/scss/servigas_tokens.scss",
             ),
             "servigas_core/static/src/scss/servigas_backend.scss",
+            "servigas_core/static/src/scss/servigas_hub.scss",
+            "servigas_core/static/src/js/services/sg_hub_service.js",
+            "servigas_core/static/src/js/components/sg_entry_card.xml",
+            "servigas_core/static/src/js/components/sg_entry_card.js",
+            "servigas_core/static/src/js/components/sg_section_rail.xml",
+            "servigas_core/static/src/js/components/sg_section_rail.js",
+            "servigas_core/static/src/js/hubs/inventory_hub.xml",
+            "servigas_core/static/src/js/hubs/inventory_hub.js",
+            "servigas_core/static/src/js/hubs/inventory_hub_action.js",
+            "servigas_core/static/src/js/hubs/sales_hub.xml",
+            "servigas_core/static/src/js/hubs/sales_hub.js",
+            "servigas_core/static/src/js/hubs/sales_hub_action.js",
+            "servigas_core/static/src/js/hubs/purchase_hub.xml",
+            "servigas_core/static/src/js/hubs/purchase_hub.js",
+            "servigas_core/static/src/js/hubs/purchase_hub_action.js",
+            "servigas_core/static/src/js/hubs/accounting_hub.xml",
+            "servigas_core/static/src/js/hubs/accounting_hub.js",
+            "servigas_core/static/src/js/hubs/accounting_hub_action.js",
         ],
         "point_of_sale._assets_pos": [
             (

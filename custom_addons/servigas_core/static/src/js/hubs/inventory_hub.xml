@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.InventoryHub">
+        <div class="sg-app-shell o_action">
+            <SgSectionRail
+                sections="state.sections"
+                activeSection="state.section"
+                expanded="state.expanded"
+                appLabel="appLabel"
+                onSelect.bind="onSectionSelect"
+                onToggle.bind="onToggleRail"
+            />
+            <div class="sg-app-shell__main">
+                <header class="sg-app-shell__header">
+                    <h1 class="sg-app-shell__title">Inventario</h1>
+                    <p class="sg-app-shell__subtitle" t-esc="sectionLabel"/>
+                </header>
+                <div class="sg-app-shell__scroll sg-view-enter">
+                    <t t-if="state.cards.length">
+                        <div t-attf-class="sg-entry-grid {{ state.loading ? 'sg-entry-grid--loading' : '' }}">
+                            <t t-foreach="state.cards" t-as="card" t-key="card.id">
+                                <SgEntryCard
+                                    card="card"
+                                    loading="state.loading"
+                                    onClick.bind="onCardClick"
+                                />
+                            </t>
+                        </div>
+                    </t>
+                    <t t-else="">
+                        <div class="sg-hub-empty">
+                            <t t-if="state.loading">Cargando accesos…</t>
+                            <t t-else="">No hay accesos configurados para esta sección.</t>
+                        </div>
+                    </t>
+                </div>
+            </div>
+        </div>
+    </t>
+
+</templates>

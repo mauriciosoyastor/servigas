@@ -121,6 +121,10 @@ $sg-bg-ambient: radial-gradient(
     --sg-accent: #{$sg-flame-orange};
     --sg-accent-alt: #{$sg-flame-deep};
     --sg-primary: #{$sg-flame-deep};
+
+    --sg-rail-width-collapsed: 3.5rem;
+    --sg-rail-width-expanded: 17.5rem;
+    --sg-rail-transition: 220ms ease;
 }
 
 // --- Tokens POS (tema oscuro = logo) ---
