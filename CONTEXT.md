@@ -67,6 +67,7 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Config Odoo | `../odoo-workspace/config/servigas.conf` |
 | Runtime Odoo 19 | `../odoo-workspace/odoo-19/` |
 | Repo | https://github.com/mauriciosoyastor/servigas |
+| Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 
 ## Sistema de diseño — Liquid Glass v2 (frontend Odoo)
 

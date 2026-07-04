@@ -29,3 +29,13 @@ Thumbs.db
 # Build caches
 *.tsbuildinfo
 
+# Import: imágenes descargadas y caché web (regenerables)
+datos/import/imagenes/*.webp
+datos/import/imagenes/*.jpg
+datos/import/imagenes/*.jpeg
+datos/import/imagenes/*.png
+datos/import/imagenes_originales/*
+!datos/import/imagenes_originales/.gitkeep
+datos/import/cache/*.json
+datos/import/descargar_fotos_report.csv
+
