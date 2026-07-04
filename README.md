@@ -32,7 +32,8 @@ DocumentaciÃ³n del host: [`../odoo-workspace/docs/INICIO-PROYECTO.md`](../odoo
 
 | MÃ³dulo | DescripciÃ³n |
 |--------|-------------|
-| `servigas_core` | â€¦ |
+| `servigas_core` | Tema Liquid Glass, identidad visual backend y POS |
+| `servigas_integrations` | Panel de integraciones y pantalla de inicio al login |
 
 ## Licencia
 

@@ -1,0 +1,69 @@
+// Servigas — Panel de integraciones (Liquid Glass cards)
+
+.sg-integrations-kanban {
+    .o_kanban_renderer {
+        --KanbanRecord-width: 360px;
+    }
+}
+
+.sg-integration-card {
+    background: var(--sg-glass-fill, rgba(255, 255, 255, 0.72));
+    backdrop-filter: blur(var(--sg-glass-blur, 12px));
+    border: 1px solid var(--sg-glass-border, rgba(255, 255, 255, 0.45));
+    border-radius: 16px;
+    box-shadow:
+        inset 0 1px 0 var(--sg-glass-rim, rgba(255, 255, 255, 0.55)),
+        0 8px 24px rgba(26, 26, 26, 0.08);
+    padding: 1rem 1.1rem;
+    min-height: 220px;
+}
+
+.sg-integration-card__header {
+    align-items: flex-start;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.sg-integration-card__title {
+    color: var(--sg-flame-deep, #e64a19);
+    font-size: 1.05rem;
+}
+
+.sg-integration-card__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+}
+
+.sg-integration-card__description,
+.sg-integration-card__notes,
+.sg-integration-card__resource {
+    font-size: 0.92rem;
+    line-height: 1.45;
+}
+
+.sg-integration-card__notes {
+    background: rgba(230, 74, 25, 0.06);
+    border-left: 3px solid var(--sg-flame-deep, #e64a19);
+    border-radius: 0 8px 8px 0;
+    margin-bottom: 0.75rem;
+    padding: 0.55rem 0.75rem;
+}
+
+.sg-integration-card__status--active {
+    background: rgba(46, 125, 50, 0.12);
+    color: #2e7d32;
+}
+
+.sg-integration-card__status--planned {
+    background: rgba(245, 124, 0, 0.12);
+    color: #ef6c00;
+}
+
+.sg-integration-card__status--inactive {
+    background: rgba(97, 97, 97, 0.12);
+    color: #616161;
+}

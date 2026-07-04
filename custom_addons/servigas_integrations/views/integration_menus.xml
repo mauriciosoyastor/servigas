@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="menu_servigas_integrations_root"
+        name="Integraciones"
+        sequence="1"
+        web_icon="servigas_integrations,static/description/icon.png"
+        action="action_servigas_integrations_dashboard"
+    />
+</odoo>
