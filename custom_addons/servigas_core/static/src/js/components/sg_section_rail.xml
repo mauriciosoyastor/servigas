@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgSectionRail">
+        <aside t-attf-class="sg-section-rail {{ props.expanded ? 'sg-section-rail--expanded' : '' }}">
+            <div class="sg-section-rail__brand">
+                <t t-if="props.expanded" t-esc="props.appLabel"/>
+                <t t-else="">SG</t>
+            </div>
+            <nav class="sg-section-rail__nav">
+                <t t-foreach="props.sections" t-as="section" t-key="section.code">
+                    <div
+                        t-attf-class="sg-section-rail__item {{ section.code === props.activeSection ? 'sg-section-rail__item--active' : '' }}"
+                        t-on-click="() => props.onSelect(section.code)"
+                        t-att-title="section.name"
+                        role="button"
+                        tabindex="0"
+                    >
+                        <span class="sg-section-rail__icon">
+                            <i t-attf-class="fa {{ section.icon }}" aria-hidden="true"/>
+                        </span>
+                        <span class="sg-section-rail__label" t-esc="section.name"/>
+                    </div>
+                </t>
+            </nav>
+            <button
+                class="sg-section-rail__toggle"
+                type="button"
+                t-on-click="props.onToggle"
+                t-att-title="props.expanded ? 'Colapsar menú' : 'Expandir menú'"
+                t-att-aria-expanded="props.expanded"
+            >
+                <i t-attf-class="fa {{ props.expanded ? 'fa-angle-left' : 'fa-angle-right' }}" aria-hidden="true"/>
+            </button>
+        </aside>
+    </t>
+
+</templates>

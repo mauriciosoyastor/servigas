@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgEntryCard">
+        <div
+            t-attf-class="sg-entry-card sg-stagger-item {{ props.card.variant === 'warning' ? 'sg-entry-card--warning' : '' }}"
+            t-on-click="() => props.onClick(props.card)"
+            role="button"
+            tabindex="0"
+        >
+            <div class="sg-entry-card__icon">
+                <i t-attf-class="fa {{ props.card.icon }}" aria-hidden="true"/>
+            </div>
+            <div t-attf-class="sg-entry-card__value {{ props.loading ? 'sg-entry-card__value--loading' : '' }}">
+                <t t-if="!props.loading" t-esc="props.card.value"/>
+            </div>
+            <div class="sg-entry-card__label" t-esc="props.card.label"/>
+            <div t-if="props.card.hint" class="sg-entry-card__hint" t-esc="props.card.hint"/>
+            <div class="sg-entry-card__enter" t-esc="props.card.enter_label"/>
+        </div>
+    </t>
+
+</templates>

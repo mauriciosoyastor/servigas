@@ -1,0 +1,287 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+
+        <!-- Secciones rail — Inventario -->
+        <record id="hub_section_inventory_summary" model="sg.hub.section">
+            <field name="app">inventory</field>
+            <field name="code">summary</field>
+            <field name="name">Resumen</field>
+            <field name="icon">fa-th-large</field>
+            <field name="sequence">1</field>
+        </record>
+        <record id="hub_section_inventory_products" model="sg.hub.section">
+            <field name="app">inventory</field>
+            <field name="code">products</field>
+            <field name="name">Productos</field>
+            <field name="icon">fa-cube</field>
+            <field name="sequence">2</field>
+        </record>
+        <record id="hub_section_inventory_operations" model="sg.hub.section">
+            <field name="app">inventory</field>
+            <field name="code">operations</field>
+            <field name="name">Operaciones</field>
+            <field name="icon">fa-exchange</field>
+            <field name="sequence">3</field>
+        </record>
+        <record id="hub_section_inventory_reporting" model="sg.hub.section">
+            <field name="app">inventory</field>
+            <field name="code">reporting</field>
+            <field name="name">Informes</field>
+            <field name="icon">fa-bar-chart</field>
+            <field name="sequence">4</field>
+        </record>
+        <record id="hub_section_inventory_config" model="sg.hub.section">
+            <field name="app">inventory</field>
+            <field name="code">config</field>
+            <field name="name">Configuración</field>
+            <field name="icon">fa-cog</field>
+            <field name="sequence">5</field>
+        </record>
+
+        <!-- Cards — Resumen -->
+        <record id="hub_card_inv_summary_products" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="label">Productos</field>
+            <field name="hint">Plantillas almacenables activas</field>
+            <field name="icon">fa-cube</field>
+            <field name="enter_label">Ver catálogo →</field>
+            <field name="action_id" ref="stock.product_template_action_product"/>
+            <field name="metric_model">product.template</field>
+            <field name="metric_domain">[('active', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_summary_variants" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">20</field>
+            <field name="label">Variantes SKU</field>
+            <field name="hint">Referencias de inventario</field>
+            <field name="icon">fa-tags</field>
+            <field name="enter_label">Ver variantes →</field>
+            <field name="action_id" ref="stock.stock_product_normal_action"/>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('active', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_summary_no_stock" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">30</field>
+            <field name="label">Sin stock</field>
+            <field name="hint">Productos almacenables en cero</field>
+            <field name="icon">fa-exclamation-triangle</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver listado →</field>
+            <field name="action_id" ref="stock.stock_product_normal_action"/>
+            <field name="domain">[('is_storable', '=', True), ('qty_available', '&lt;=', 0)]</field>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('is_storable', '=', True), ('qty_available', '&lt;=', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_summary_transfers" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">40</field>
+            <field name="label">Transferencias</field>
+            <field name="hint">Operaciones no finalizadas</field>
+            <field name="icon">fa-truck</field>
+            <field name="enter_label">Ver transferencias →</field>
+            <field name="action_id" ref="stock.action_picking_tree_all"/>
+            <field name="domain">[('state', 'in', ('confirmed', 'assigned', 'waiting'))]</field>
+            <field name="metric_model">stock.picking</field>
+            <field name="metric_domain">[('state', 'in', ('confirmed', 'assigned', 'waiting'))]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_summary_stock_report" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">50</field>
+            <field name="label">Stock almacenable</field>
+            <field name="hint">Vista de existencias</field>
+            <field name="icon">fa-archive</field>
+            <field name="enter_label">Ver stock →</field>
+            <field name="action_id" ref="stock.action_product_stock_view"/>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('is_storable', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Productos -->
+        <record id="hub_card_inv_products_catalog" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">products</field>
+            <field name="sequence">10</field>
+            <field name="label">Catálogo completo</field>
+            <field name="icon">fa-cube</field>
+            <field name="enter_label">Ingresar →</field>
+            <field name="action_id" ref="stock.product_template_action_product"/>
+            <field name="metric_model">product.template</field>
+            <field name="metric_domain">[('active', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_products_variants" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">products</field>
+            <field name="sequence">20</field>
+            <field name="label">Variantes</field>
+            <field name="icon">fa-tags</field>
+            <field name="enter_label">Ingresar →</field>
+            <field name="action_id" ref="stock.stock_product_normal_action"/>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('active', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_products_categories" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">products</field>
+            <field name="sequence">30</field>
+            <field name="label">Categorías</field>
+            <field name="icon">fa-folder-open</field>
+            <field name="enter_label">Ingresar →</field>
+            <field name="action_id" ref="product.product_category_action_form"/>
+            <field name="metric_model">product.category</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_products_no_price" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">products</field>
+            <field name="sequence">40</field>
+            <field name="label">Sin precio de venta</field>
+            <field name="icon">fa-money</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Revisar →</field>
+            <field name="action_id" ref="stock.product_template_action_product"/>
+            <field name="domain">[('list_price', '=', 0)]</field>
+            <field name="metric_model">product.template</field>
+            <field name="metric_domain">[('list_price', '=', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Operaciones -->
+        <record id="hub_card_inv_ops_all" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">operations</field>
+            <field name="sequence">10</field>
+            <field name="label">Todas las transferencias</field>
+            <field name="icon">fa-list</field>
+            <field name="action_id" ref="stock.action_picking_tree_all"/>
+            <field name="metric_model">stock.picking</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_ops_internal" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">operations</field>
+            <field name="sequence">20</field>
+            <field name="label">Transferencias internas</field>
+            <field name="icon">fa-random</field>
+            <field name="action_id" ref="stock.action_picking_tree_internal"/>
+            <field name="metric_model">stock.picking</field>
+            <field name="metric_domain">[('picking_type_code', '=', 'internal')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_ops_incoming" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">operations</field>
+            <field name="sequence">30</field>
+            <field name="label">Recepciones</field>
+            <field name="icon">fa-sign-in</field>
+            <field name="action_id" ref="stock.action_picking_tree_incoming"/>
+            <field name="metric_model">stock.picking</field>
+            <field name="metric_domain">[('picking_type_code', '=', 'incoming')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_ops_outgoing" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">operations</field>
+            <field name="sequence">40</field>
+            <field name="label">Entregas</field>
+            <field name="icon">fa-sign-out</field>
+            <field name="action_id" ref="stock.action_picking_tree_outgoing"/>
+            <field name="metric_model">stock.picking</field>
+            <field name="metric_domain">[('picking_type_code', '=', 'outgoing')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_ops_quants" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">operations</field>
+            <field name="sequence">50</field>
+            <field name="label">Existencias (quants)</field>
+            <field name="hint">Ajustes y ubicaciones</field>
+            <field name="icon">fa-table</field>
+            <field name="action_id" ref="stock.stock_quant_action"/>
+            <field name="metric_model">stock.quant</field>
+            <field name="metric_domain">[('quantity', '!=', 0)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Informes -->
+        <record id="hub_card_inv_report_stock" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">reporting</field>
+            <field name="sequence">10</field>
+            <field name="label">Informe de stock</field>
+            <field name="icon">fa-bar-chart</field>
+            <field name="action_id" ref="stock.action_product_stock_view"/>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('is_storable', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_report_replenish" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">reporting</field>
+            <field name="sequence">20</field>
+            <field name="label">Reglas reabastecimiento</field>
+            <field name="icon">fa-refresh</field>
+            <field name="action_id" ref="stock.action_orderpoint"/>
+            <field name="metric_model">stock.warehouse.orderpoint</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Cards — Configuración -->
+        <record id="hub_card_inv_cfg_locations" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">config</field>
+            <field name="sequence">10</field>
+            <field name="label">Ubicaciones</field>
+            <field name="icon">fa-map-marker</field>
+            <field name="action_id" ref="stock.action_location_form"/>
+            <field name="metric_model">stock.location</field>
+            <field name="metric_domain">[('usage', '=', 'internal')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_cfg_warehouses" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">config</field>
+            <field name="sequence">20</field>
+            <field name="label">Almacenes</field>
+            <field name="icon">fa-building</field>
+            <field name="action_id" ref="stock.action_warehouse_form"/>
+            <field name="metric_model">stock.warehouse</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_inv_cfg_picking_types" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">config</field>
+            <field name="sequence">30</field>
+            <field name="label">Tipos de operación</field>
+            <field name="icon">fa-cogs</field>
+            <field name="action_id" ref="stock.action_picking_type_list"/>
+            <field name="metric_model">stock.picking.type</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+    </data>
+</odoo>
