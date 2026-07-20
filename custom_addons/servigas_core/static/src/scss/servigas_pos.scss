@@ -1,5 +1,6 @@
 // Servigas — Punto de venta (tema oscuro + Liquid Glass)
 // Cargar después de servigas_tokens.scss en point_of_sale._assets_pos.
+// cache-bust: 19.0.1.20.28 — fix orderline.selected highlight on dark ticket
 
 .pos {
     font-family: var(--sg-font-family);
@@ -8,13 +9,51 @@
     color: var(--sg-text-on-dark);
 }
 
+// Odoo 19 Bootstrap utilities on chrome/panes — ADR 0005
+.pos .pos-topheader.bg-view,
 .pos .pos-topheader {
     @include sg-glass-surface($elevated: true, $on-dark: true);
-    background-color: rgba(26, 26, 26, 0.75) !important;
+    background-color: rgba(26, 26, 26, 0.85) !important;
+    background-image: none !important;
     border-bottom-color: var(--sg-glass-border) !important;
     border-radius: 0;
     backdrop-filter: blur(20px);
     -webkit-backdrop-filter: blur(20px);
+    color: var(--sg-text-on-dark);
+}
+
+.pos .pos-content.bg-100,
+.pos .pos-content {
+    background-color: $sg-bg-deep !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .product-screen .leftpane.bg-view,
+.pos .product-screen .leftpane {
+    @include sg-glass-surface($elevated: false, $on-dark: true);
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    background-image: none !important;
+    border-right: 1px solid var(--sg-glass-border) !important;
+    margin: 0.5rem;
+    margin-right: 0;
+    border-radius: $sg-radius-card;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .product-screen .rightpane.bg-secondary,
+.pos .product-screen .rightpane {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .product-screen .switchpane.bg-view,
+.pos .product-screen .switchpane {
+    background-color: rgba(26, 26, 26, 0.9) !important;
+    background-image: none !important;
+    border-top-color: var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark);
 }
 
 .pos .pos-logo {
@@ -24,16 +63,72 @@
     height: 2.5rem;
 }
 
-.pos .pos-topheader,
-.pos .pos-topheader .btn,
-.pos .pos-topheader .dropdown-toggle {
+.pos .pos-topheader {
     color: var(--sg-text-on-dark);
 }
 
-.pos .rightpane,
-.pos .leftpane {
-    background: transparent;
+// Controles navbar — Odoo usa $variable-prefix: '' → botones leen --btn-bg / --btn-color
+// (forzar solo `color` claro sin pisar --btn-bg deja texto blanco sobre fondos claros).
+.pos .pos-topheader .btn-light,
+.pos .pos-topheader .btn-secondary,
+.pos .pos-topheader .register-label,
+.pos .pos-topheader .orders-button,
+.pos .pos-topheader .oe_status,
+.pos .pos-topheader .dropdown > .btn,
+.pos .floating-order-container .btn,
+.pos .floating-order-container .btn[class*="o_colorlist_item_color_transparent_"] {
+    --btn-bg: #{$sg-bg-charcoal};
+    --btn-color: #{$sg-text-on-dark};
+    --btn-border-color: #{rgba(255, 255, 255, 0.14)};
+    --btn-hover-bg: #{lighten($sg-bg-charcoal, 8%)};
+    --btn-hover-color: #{$sg-text-on-dark};
+    --btn-hover-border-color: #{rgba(255, 255, 255, 0.22)};
+    --btn-active-bg: #{lighten($sg-bg-charcoal, 12%)};
+    --btn-active-color: #{$sg-text-on-dark};
+    --btn-active-border-color: #{rgba($sg-flame-orange, 0.55)};
+    --btn-disabled-bg: #{$sg-bg-charcoal};
+    --btn-disabled-color: #{$sg-text-muted-dark};
+    --bg: #{$sg-bg-charcoal};
+    --hover-bg: #{lighten($sg-bg-charcoal, 8%)};
+    --border-color: #{rgba(255, 255, 255, 0.14)};
+    background-color: #{$sg-bg-charcoal} !important;
+    background-image: none !important;
+    border-color: rgba(255, 255, 255, 0.14) !important;
+    color: #{$sg-text-on-dark} !important;
+
+    &.active,
+    &:active,
+    &:hover,
+    &:focus,
+    &:focus-visible {
+        background-color: lighten($sg-bg-charcoal, 8%) !important;
+        color: #{$sg-text-on-dark} !important;
+    }
+
+    span,
+    i,
+    .fa {
+        color: inherit !important;
+    }
 }
+
+.pos .pos-topheader .btn-light.active,
+.pos .pos-topheader .register-label.active,
+.pos .floating-order-container .btn.active {
+    --btn-bg: #{lighten($sg-bg-charcoal, 10%)};
+    border-color: rgba($sg-flame-orange, 0.55) !important;
+    box-shadow: inset 0 0 0 1px rgba($sg-flame-orange, 0.35);
+}
+
+// ListContainer "+" y tabs sin colorlist
+.pos .pos-leftheader .btn.btn-secondary,
+.pos .pos-leftheader .btn.btn-light {
+    --btn-bg: #{$sg-bg-charcoal};
+    --btn-color: #{$sg-text-on-dark};
+    background-color: #{$sg-bg-charcoal} !important;
+    color: #{$sg-text-on-dark} !important;
+}
+
 
 .pos input[type="text"],
 .pos input[type="number"],
@@ -44,42 +139,121 @@
     border-color: var(--sg-glass-border);
 }
 
+// Command bar — búsqueda productos (Odoo 19 Input en navbar)
+.pos .pos-rightheader .input-container.bg-view,
+.pos .pos-rightheader .input-container,
+.pos .pos-rightheader .input-group .form-control,
 .pos .pos-search-bar input,
 .pos .product-screen .search input,
-.pos .search-bar input {
+.pos .search-bar input,
+.pos .pos-search-bar .sg-command-bar,
+.pos .sg-command-bar {
     @include sg-glass-surface($elevated: true, $on-dark: true);
-    color: var(--sg-text-on-dark);
-    font-size: 1.05rem;
-    padding: 0.65rem 1rem;
+    --background-color: #{rgba(255, 255, 255, 0.1)};
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark) !important;
+    font-size: 1.15rem;
+    font-weight: 500;
+    padding: 0.75rem 1.15rem;
     border-radius: $sg-radius-pill;
+    min-height: 2.75rem;
+    width: 100%;
+    border: 1px solid var(--sg-glass-border) !important;
+
+    .o_input,
+    input {
+        color: var(--sg-text-on-dark) !important;
+        background: transparent !important;
+
+        &::placeholder {
+            color: var(--sg-text-muted-dark);
+        }
+    }
 
     &::placeholder {
         color: var(--sg-text-muted-dark);
     }
 
+    &:focus-within,
     &:focus {
         outline: 2px solid rgba($sg-flame-orange, 0.55);
         outline-offset: 2px;
     }
 }
 
+// Categorías — pills horizontales (patrón subnav)
+.pos .category-list,
+.pos .product-list-scroller {
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+        display: none;
+    }
+}
+
+// Product card — tile del grid (ADR 0012 Fase A / surface product-card)
 .pos .rightpane .product {
     @include sg-glass-surface($elevated: false, $on-dark: true);
     border-bottom-width: 3px !important;
     border-bottom-color: transparent !important;
     color: var(--sg-text-on-dark);
+    text-transform: none;
+    overflow: hidden;
     transition: border-color 150ms ease, transform 150ms ease;
 
     &:hover {
         border-color: rgba($sg-flame-orange, 0.35) !important;
         --btn-hover-bg: rgba(255, 255, 255, 0.06);
     }
+
+    .product-content {
+        padding-block: 0.45rem;
+    }
 }
 
 .pos .product-name {
     font-weight: 500;
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    letter-spacing: 0.01em;
     color: var(--sg-text-on-dark);
+    text-transform: none;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+}
+
+// Product image + missing-image fallback (ADR 0012 / surface product-card-image)
+.pos .rightpane .product {
+    --sg-pos-product-fallback: #{rgba($sg-bg-charcoal, 0.85)};
+}
+
+.pos .rightpane .product .product-img {
+    background: var(--sg-pos-product-fallback);
+    overflow: hidden;
+
+    img {
+        object-fit: cover;
+        background: var(--sg-pos-product-fallback) !important;
+    }
+}
+
+// Odoo 19: sin imageUrl no hay .product-img; el nombre lleva .no-image
+.pos .rightpane .product .product-name.no-image {
+    -webkit-line-clamp: 4;
+    aspect-ratio: 4 / 3;
+    border-radius: $sg-radius-card;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(255, 255, 255, 0.04) 0%,
+            var(--sg-pos-product-fallback) 48%,
+            rgba($sg-flame-orange, 0.08) 100%
+        );
+    padding: 0.65rem 0.5rem;
+    align-content: center;
 }
 
 .pos .category-button,
@@ -99,28 +273,151 @@
     }
 }
 
-.pos .leftpane {
-    @include sg-glass-surface($elevated: false, $on-dark: true);
-    border-right: 1px solid var(--sg-glass-border) !important;
-    margin: 0.5rem;
-    margin-right: 0;
-    border-radius: $sg-radius-card;
-}
-
 .pos .order-container,
 .pos .order {
     color: var(--sg-text-on-dark);
 }
 
+// Ticket vacío — OrderDisplay sin .orderline (ADR 0012 Fase C / ticket-empty)
+.pos .product-screen .leftpane:not(:has(.orderline)) {
+    --sg-pos-ticket-empty: #{$sg-text-muted-dark};
+
+    > *:first-child {
+        position: relative;
+        min-height: 10rem;
+
+        &::before {
+            content: "Tocá un producto para armar el pedido";
+            display: block;
+            max-width: 14rem;
+            margin: auto;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            font-family: var(--sg-font-family);
+            font-size: 0.92rem;
+            font-weight: 500;
+            line-height: 1.35;
+            letter-spacing: 0.01em;
+            color: var(--sg-pos-ticket-empty);
+            border: 1px dashed rgba(255, 255, 255, 0.14);
+            border-radius: $sg-radius-card;
+            background: rgba(255, 255, 255, 0.03);
+        }
+    }
+}
+
+// Línea de pedido — densa y escaneable (ADR 0005 + 0012 Fase C)
+.pos .orderline,
+.pos .order .orderline {
+    background: transparent;
+    backdrop-filter: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    font-size: 0.86rem;
+    line-height: 1.3;
+    padding: 0.4rem 0.45rem;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.04) !important;
+    }
+
+    .product-name {
+        font-weight: 600;
+        text-transform: none;
+        gap: 0.15rem;
+    }
+
+    .info-list {
+        font-size: 0.78rem;
+        color: $sg-text-muted-dark;
+    }
+}
+
+// Selected ticket line — densify's transparent bg wiped Odoo .selected; restore.
+.pos .orderline.selected,
+.pos .order .orderline.selected {
+    --sg-pos-orderline-selected: #{rgba($sg-flame-orange, 0.2)};
+    --orderline-selected: var(--sg-pos-orderline-selected);
+    background: var(--sg-pos-orderline-selected) !important;
+    background-color: var(--sg-pos-orderline-selected) !important;
+    border-color: transparent transparent rgba($sg-flame-orange, 0.35) !important;
+    box-shadow: inset 3px 0 0 rgba($sg-flame-orange, 0.85);
+}
+
+.pos .orderline .qty {
+    min-width: 1.75rem;
+    font-variant-numeric: tabular-nums;
+    color: rgba($sg-flame-orange, 0.95);
+}
+
+.pos .orderline .product-price,
+.pos .orderline .price {
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+// Descuento manual — botón numpad visible
+.pos .numpad .numpad-discount,
+.pos .numpad .btn.numpad-discount {
+    background: rgba($sg-flame-deep, 0.35);
+    border: 1px solid rgba($sg-flame-orange, 0.55);
+    color: var(--sg-text-on-dark);
+    font-weight: 700;
+
+    &:hover,
+    &:active,
+    &.active {
+        background: $sg-flame-gradient;
+        border-color: transparent;
+        color: var(--sg-text-on-dark);
+    }
+}
+
+// Descuento general (pedido) — Desc. bajo Precio (ADR 0014)
+// Odoo Numpad class becomes numpad-5-cols when length/4 === 5; force 4 columns.
+.pos .product-screen .numpad.numpad-5-cols {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.pos .numpad .numpad-order-discount,
+.pos .numpad .btn.numpad-order-discount {
+    background: rgba($sg-flame-deep, 0.45);
+    border: 1px solid rgba($sg-flame-orange, 0.65);
+    color: var(--sg-text-on-dark);
+    font-weight: 700;
+    font-size: 0.95rem;
+
+    &:hover,
+    &:active,
+    &.active {
+        background: $sg-flame-gradient;
+        border-color: transparent;
+        color: var(--sg-text-on-dark);
+    }
+
+    &:disabled {
+        opacity: 0.45;
+    }
+}
+
 .pos .pay-order-button,
 .pos .button.validation {
     @include sg-flame-cta;
+    background: var(--sg-primary, #{$sg-flame-deep}) !important;
     border-radius: $sg-radius-card !important;
     font-family: var(--sg-font-family);
+    font-weight: 700;
     text-transform: none;
     letter-spacing: 0.03em;
     min-height: 70px;
+    box-shadow: 0 6px 20px rgba($sg-flame-deep, 0.35);
     transition: transform 150ms ease, box-shadow 150ms ease;
+
+    &:hover,
+    &:active {
+        transform: scale(0.98);
+        box-shadow: 0 4px 14px rgba($sg-flame-deep, 0.45);
+    }
 }
 
 .pos .btn-primary:not(.pay-order-button) {
@@ -139,7 +436,302 @@
     font-weight: 500;
 }
 
+@media (prefers-reduced-motion: reduce) {
+    .pos .pay-order-button,
+    .pos .button.validation,
+    .pos .rightpane .product {
+        transition: none;
+    }
+}
+
 .pos .modal-content {
     @include sg-glass-surface($elevated: true, $on-dark: false);
     font-family: var(--sg-font-family);
+}
+
+// Acciones modal (ControlButtonsPopup) — ADR 0012 Fase B
+.pos .modal-content:has(.control-buttons-modal) {
+    @include sg-glass-surface($elevated: true, $on-dark: true);
+    background-color: rgba(26, 26, 26, 0.92) !important;
+    color: var(--sg-text-on-dark);
+    border: 1px solid var(--sg-glass-border);
+
+    .modal-header,
+    .modal-title,
+    .btn-close {
+        color: var(--sg-text-on-dark);
+    }
+
+    .btn-close {
+        filter: invert(1);
+        opacity: 0.7;
+    }
+}
+
+.pos .control-buttons-modal {
+    gap: 0.65rem !important;
+
+    .btn,
+    button {
+        @include sg-glass-surface($elevated: false, $on-dark: true);
+        --btn-bg: rgba(255, 255, 255, 0.08);
+        --btn-color: #{$sg-text-on-dark};
+        --btn-hover-bg: rgba(255, 255, 255, 0.14);
+        --btn-hover-color: #{$sg-text-on-dark};
+        border: 1px solid var(--sg-glass-border) !important;
+        color: var(--sg-text-on-dark) !important;
+        font-family: var(--sg-font-family);
+        font-weight: 500;
+        text-align: start;
+        justify-content: flex-start;
+    }
+
+    // Cancel Order — quieter destructive; never flame CTA (pay-cta)
+    --sg-pos-acciones-destructive: #{$sg-flame-rust};
+
+    button:has(.fa-trash) {
+        --btn-bg: transparent;
+        --btn-hover-bg: rgba($sg-flame-rust, 0.16);
+        background: transparent !important;
+        border-color: rgba($sg-flame-rust, 0.45) !important;
+        color: var(--sg-pos-acciones-destructive) !important;
+        font-weight: 500;
+        opacity: 0.92;
+
+        .fa-trash {
+            color: var(--sg-pos-acciones-destructive);
+        }
+
+        &:hover,
+        &:focus-visible {
+            opacity: 1;
+            border-color: var(--sg-pos-acciones-destructive) !important;
+        }
+    }
+}
+
+// =============================================================================
+// Payment screen — ADR 0013 Fase A (payment-chrome + payment-due)
+// =============================================================================
+
+.pos .payment-screen,
+.pos .payment-screen.screen {
+    background-color: $sg-bg-deep !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+    font-family: var(--sg-font-family);
+}
+
+.pos .payment-screen .main-content.bg-100,
+.pos .payment-screen .main-content {
+    background-color: $sg-bg-deep !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .payment-screen .left-content,
+.pos .payment-screen .center-content {
+    color: var(--sg-text-on-dark);
+}
+
+.pos .paymentlines-container {
+    --sg-pos-payment-due: #{$sg-text-on-dark};
+    color: var(--sg-text-on-dark);
+
+    &.paymentlines-empty {
+        opacity: 0.95;
+    }
+
+    .total,
+    .total.text-dark {
+        color: var(--sg-pos-payment-due) !important;
+        font-variant-numeric: tabular-nums;
+        font-weight: 700;
+        letter-spacing: -0.02em;
+        text-shadow: 0 2px 24px rgba($sg-flame-orange, 0.18);
+    }
+}
+
+// ADR 0013 Fase B — methods, lines, Validate vs Back
+.pos .paymentmethods.bg-200,
+.pos .paymentmethods {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+}
+
+.pos .paymentmethod,
+.pos .payment-screen .paymentmethod.btn {
+    @include sg-glass-surface($elevated: false, $on-dark: true);
+    --btn-bg: rgba(255, 255, 255, 0.08);
+    --btn-color: #{$sg-text-on-dark};
+    --btn-hover-bg: rgba(255, 255, 255, 0.14);
+    --btn-hover-color: #{$sg-text-on-dark};
+    border: 1px solid var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+    font-weight: 500;
+    text-align: start;
+
+    .payment-name,
+    .text-muted {
+        color: var(--sg-text-on-dark) !important;
+    }
+
+    .text-muted {
+        opacity: 0.72;
+    }
+}
+
+// payment-line — Odoo .bg-view / .selected use light chips; force dark so
+// on-dark text stays legible (white-on-white bug).
+.pos .paymentlines .paymentline,
+.pos .paymentlines .paymentline.bg-view,
+.pos .paymentlines .paymentline.selected {
+    --sg-pos-payment-line: #{rgba(255, 255, 255, 0.1)};
+    @include sg-glass-surface($elevated: false, $on-dark: true);
+    background: var(--sg-pos-payment-line) !important;
+    background-color: var(--sg-pos-payment-line) !important;
+    background-image: none !important;
+    border: 1px solid var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+
+    .payment-infos,
+    .payment-name,
+    .payment-amount,
+    .price-container,
+    span {
+        color: var(--sg-text-on-dark) !important;
+    }
+
+    .payment-name,
+    .payment-amount {
+        font-variant-numeric: tabular-nums;
+    }
+}
+
+.pos .paymentlines .paymentline.selected {
+    --sg-pos-payment-line: #{rgba($sg-flame-orange, 0.18)};
+    border-color: rgba($sg-flame-orange, 0.55) !important;
+    box-shadow: inset 0 0 0 1px rgba($sg-flame-orange, 0.25);
+}
+
+.pos .payment-screen .payment-buttons .btn,
+.pos .payment-screen .partner-button,
+.pos .payment-screen .js_invoice {
+    --btn-bg: rgba(255, 255, 255, 0.08);
+    --btn-color: #{$sg-text-on-dark};
+    border-color: var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+}
+
+.pos .payment-screen .back-button,
+.pos .payment-screen .button.back {
+    --btn-bg: rgba(255, 255, 255, 0.06);
+    --btn-color: #{$sg-text-on-dark};
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+    font-weight: 500;
+    box-shadow: none !important;
+}
+
+.pos .payment-screen .validation-button.next,
+.pos .payment-screen .validation-button.next.btn-primary {
+    --sg-pos-payment-validate: #{$sg-flame-deep};
+    @include sg-flame-cta;
+    background: var(--sg-primary, #{$sg-flame-deep}) !important;
+    border-color: transparent !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+    font-weight: 700;
+    box-shadow: 0 6px 20px rgba($sg-flame-deep, 0.35);
+
+    &.disabled,
+    &:disabled {
+        opacity: 0.45;
+        box-shadow: none;
+    }
+}
+
+// =============================================================================
+// Receipt screen — ADR 0013 Fase C (receipt-chrome + pane + done)
+// =============================================================================
+
+.pos .receipt-screen.bg-100,
+.pos .receipt-screen {
+    background-color: $sg-bg-deep !important;
+    background-image: none !important;
+    color: var(--sg-text-on-dark);
+    font-family: var(--sg-font-family);
+}
+
+.pos .receipt-screen .actions {
+    color: var(--sg-text-on-dark);
+    border-color: var(--sg-glass-border) !important;
+}
+
+.pos .receipt-screen .o_payment_successful {
+    .border-success,
+    .bg-success-subtle {
+        background: rgba($sg-flame-orange, 0.12) !important;
+        border-color: rgba($sg-flame-orange, 0.45) !important;
+        color: var(--sg-text-on-dark) !important;
+    }
+
+    .text-success {
+        color: var(--sg-text-on-dark) !important;
+    }
+}
+
+.pos .receipt-screen .receipt-options .btn-secondary,
+.pos .receipt-screen .button.print {
+    --btn-bg: rgba(255, 255, 255, 0.08);
+    --btn-color: #{$sg-text-on-dark};
+    border-color: var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+}
+
+.pos .receipt-screen .send-receipt-email-input,
+.pos .receipt-screen .send-receipt-phone-input {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--sg-glass-border) !important;
+    color: var(--sg-text-on-dark);
+
+    &::placeholder {
+        color: $sg-text-muted-dark;
+    }
+}
+
+// Paper ticket stays light for print fidelity (dark canvas around it)
+.pos .pos-receipt-container.bg-200,
+.pos .pos-receipt-container {
+    --sg-pos-receipt-paper: #{$sg-paper};
+    background-color: rgba(26, 26, 26, 0.55) !important;
+    background-image: none !important;
+
+    > div {
+        background: var(--sg-pos-receipt-paper);
+        color: $sg-text-on-light;
+        border-color: rgba(0, 0, 0, 0.08) !important;
+        border-radius: $sg-radius-card;
+        box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
+    }
+}
+
+.pos .receipt-screen .button.next.validation,
+.pos .receipt-screen .validation-button[name="done"],
+.pos .receipt-screen .btn-switchpane.validation-button {
+    --sg-pos-receipt-done: #{$sg-flame-deep};
+    @include sg-flame-cta;
+    background: var(--sg-primary, #{$sg-flame-deep}) !important;
+    border-color: transparent !important;
+    color: var(--sg-text-on-dark) !important;
+    font-family: var(--sg-font-family);
+    font-weight: 700;
+    box-shadow: 0 6px 20px rgba($sg-flame-deep, 0.35);
 }
