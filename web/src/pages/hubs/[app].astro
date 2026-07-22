@@ -1,0 +1,30 @@
+---
+import ShellLayout from '../../layouts/ShellLayout.astro';
+import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
+import { isHubApp } from '../../lib/shell/hub-apps.ts';
+
+const app = Astro.params.app ?? '';
+let userName = '';
+
+if (!isHubApp(app)) {
+	Astro.response.status = 404;
+} else {
+	try {
+		const { session } = requireOdooSession(Astro.cookies);
+		userName = session.name || session.login;
+	} catch {
+		invalidateBffSession(Astro.cookies);
+		return Astro.redirect('/login');
+	}
+}
+---
+
+{isHubApp(app) ? (
+	<ShellLayout title="Próximamente | Servigas" active={app} userName={userName}>
+		<main>
+			<h1>Próximamente</h1>
+		</main>
+	</ShellLayout>
+) : (
+	<h1>Hub no encontrado</h1>
+)}

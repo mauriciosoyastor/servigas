@@ -4,6 +4,7 @@ import { BffError } from "../src/lib/bff/errors.ts";
 import {
   bffErrorResponse,
   clearBffCookie,
+  invalidateBffSession,
   json,
   requireOdooSession,
   setBffCookie,
@@ -129,6 +130,24 @@ describe("BFF HTTP helpers", () => {
       () => requireOdooSession(cookies),
       (error) => error instanceof BffError && error.code === "unauthorized"
     );
+  });
+
+  it("destroys the local session and clears its cookie", () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("expired-odoo-session", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+
+    invalidateBffSession(cookies);
+
+    assert.equal(sessionStore.get(bffSid), undefined);
+    assert.deepEqual(cookies.deleteCalls, [{
+      name: BFF_COOKIE,
+      options: { path: "/" },
+    }]);
   });
 });
 

@@ -1,12 +1,17 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
-import { requireOdooSession } from '../lib/bff/http.ts';
+import { BffError } from '../lib/bff/errors.ts';
+import { getBackend } from '../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 
 try {
-	requireOdooSession(Astro.cookies);
+	const { odooSessionId } = requireOdooSession(Astro.cookies);
+	await getBackend().validateSession(odooSessionId);
 	return Astro.redirect('/');
-} catch {
-	// The login page is public when no valid local session exists.
+} catch (cause) {
+	if (cause instanceof BffError && cause.code === 'unauthorized') {
+		invalidateBffSession(Astro.cookies);
+	}
 }
 ---
 

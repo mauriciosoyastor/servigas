@@ -40,7 +40,27 @@ describe("shell UI contracts", () => {
 
     assert.match(index, /requireOdooSession\(Astro\.cookies\)/);
     assert.match(index, /getLauncher\(odooSessionId\)/);
+    assert.match(index, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(index, /Astro\.redirect\(["']\/login["']\)/);
     assert.match(index, /resolveTileNavigation/);
+  });
+
+  it("validates Odoo before redirecting an existing session from login", async () => {
+    const login = await source("pages/login.astro");
+
+    assert.match(login, /validateSession\(odooSessionId\)/);
+    assert.match(login, /invalidateBffSession\(Astro\.cookies\)/);
+  });
+
+  it("provides a protected minimal page for known hub apps", async () => {
+    const hub = await source("pages/hubs/[app].astro");
+
+    assert.match(hub, /isHubApp\(app\)/);
+    assert.match(hub, /Astro\.response\.status = 404/);
+    assert.match(hub, /requireOdooSession\(Astro\.cookies\)/);
+    assert.match(hub, /invalidateBffSession\(Astro\.cookies\)/);
+    assert.match(hub, /<ShellLayout/);
+    assert.match(hub, /Próximamente/);
+    assert.doesNotMatch(hub, /getHub\(/);
   });
 });

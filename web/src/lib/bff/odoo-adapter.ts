@@ -78,6 +78,18 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async validateSession(odooSessionId: string): Promise<void> {
+    const response = await this.#post(
+      "/web/session/get_session_info",
+      { jsonrpc: "2.0", params: {} },
+      odooSessionId
+    );
+    const payload = (await response.json()) as JsonRpcResponse<{ uid?: number | false }>;
+    if (!payload.result?.uid) {
+      throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+    }
+  }
+
   getLauncher(odooSessionId: string): Promise<LauncherPayload> {
     return this.#callKw(
       odooSessionId,

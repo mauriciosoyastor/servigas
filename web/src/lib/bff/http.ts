@@ -64,3 +64,11 @@ export function setBffCookie(
 export function clearBffCookie(cookies: APIContext["cookies"]) {
   cookies.delete(BFF_COOKIE, { path: "/" });
 }
+
+export function invalidateBffSession(cookies: APIContext["cookies"]) {
+  const sid = cookies.get(BFF_COOKIE)?.value;
+  if (sid) {
+    sessionStore.destroy(sid);
+  }
+  clearBffCookie(cookies);
+}

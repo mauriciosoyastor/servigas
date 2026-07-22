@@ -169,6 +169,38 @@ describe("OdooAdapter.getLauncher", () => {
   });
 });
 
+describe("OdooAdapter.validateSession", () => {
+  it("validates the Odoo session with its private cookie", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({ result: { uid: 2 } })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.validateSession("sess");
+
+    const [url, init] = fetchImpl.mock.calls[0].arguments;
+    assert.equal(String(url), "http://odoo.test/web/session/get_session_info");
+    assert.equal(init.headers.cookie, "session_id=sess");
+  });
+
+  it("maps an expired Odoo session to unauthorized", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () => Response.json({ result: { uid: false } }),
+    });
+
+    await assert.rejects(
+      () => adapter.validateSession("expired"),
+      (err) => err instanceof BffError && err.code === "unauthorized"
+    );
+  });
+});
+
 describe("OdooAdapter.getHub", () => {
   it("calls sg.hub.card get_hub_payload with the requested section", async () => {
     const calls = [];

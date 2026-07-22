@@ -4,7 +4,7 @@ import TileCard from '../components/TileCard.astro';
 import ComingSoonNote from '../components/ComingSoonNote.astro';
 import { BffError } from '../lib/bff/errors.ts';
 import { getBackend } from '../lib/bff/get-backend.ts';
-import { requireOdooSession } from '../lib/bff/http.ts';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 import type { LauncherTile } from '../lib/bff/types.ts';
 
 let odooSessionId: string;
@@ -15,6 +15,7 @@ try {
 	odooSessionId = sessionEntry.odooSessionId;
 	userName = sessionEntry.session.name || sessionEntry.session.login;
 } catch {
+	invalidateBffSession(Astro.cookies);
 	return Astro.redirect('/login');
 }
 
@@ -25,6 +26,7 @@ try {
 	tiles = (await getBackend().getLauncher(odooSessionId)).tiles;
 } catch (cause) {
 	if (cause instanceof BffError && cause.code === 'unauthorized') {
+		invalidateBffSession(Astro.cookies);
 		return Astro.redirect('/login');
 	}
 	launcherError = 'No pudimos cargar los accesos. Intentá nuevamente en unos minutos.';
