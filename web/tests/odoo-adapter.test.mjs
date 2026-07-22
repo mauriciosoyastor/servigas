@@ -48,6 +48,26 @@ describe("OdooAdapter.login", () => {
     });
   });
 
+  it("rejects authentication success without a session cookie", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          result: { uid: 2, name: "Admin", username: "admin" },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.login("admin", "admin"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "odoo_unavailable" &&
+        err.status === 503 &&
+        /session_id/.test(err.message)
+    );
+  });
+
   it("maps network failures to odoo_unavailable", async () => {
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
@@ -84,6 +104,68 @@ describe("OdooAdapter.getLauncher", () => {
     assert.equal(calls[0].url, "http://odoo.test/web/dataset/call_kw");
     assert.match(String(calls[0].body), /get_launcher_payload/);
     assert.match(String(calls[0].body), /sg\.app\.tile/);
+  });
+
+  it("maps session JSON-RPC errors to unauthorized", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            code: 100,
+            message: "Session expired",
+            data: { message: "Access Denied" },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.getLauncher("expired"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "unauthorized" &&
+        err.status === 401
+    );
+  });
+
+  it("maps other JSON-RPC errors to odoo_unavailable", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            code: 200,
+            message: "Odoo Server Error",
+            data: { message: "Database failure" },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.getLauncher("sess"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "odoo_unavailable" &&
+        err.status === 503
+    );
+  });
+
+  it("rejects JSON-RPC responses without a result", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () => Response.json({ jsonrpc: "2.0" }),
+    });
+
+    await assert.rejects(
+      () => adapter.getLauncher("sess"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "odoo_unavailable" &&
+        err.status === 503
+    );
   });
 });
 

@@ -45,6 +45,14 @@ export class OdooAdapter implements BackendClient {
     }
 
     const sessionId = this.#readSessionId(response.headers.get("set-cookie"));
+    if (!sessionId) {
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        "Odoo autenticó al usuario pero no devolvió la cookie session_id"
+      );
+    }
+
     return {
       sessionId,
       session: {
@@ -107,7 +115,32 @@ export class OdooAdapter implements BackendClient {
       sessionId
     );
     const payload = (await response.json()) as JsonRpcResponse<T>;
-    return payload.result as T;
+    if (payload.error !== undefined) {
+      const errorText = this.#describeRpcError(payload.error);
+      if (
+        /(session|access|authenticat|unauthoriz|permission)/i.test(
+          errorText
+        )
+      ) {
+        throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+      }
+
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+      );
+    }
+
+    if (payload.result === undefined) {
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        "Odoo devolvió una respuesta JSON-RPC sin resultado"
+      );
+    }
+
+    return payload.result;
   }
 
   async #post(
@@ -139,5 +172,17 @@ export class OdooAdapter implements BackendClient {
 
   #readSessionId(setCookie: string | null): string {
     return setCookie?.match(/(?:^|[;,]\s*)session_id=([^;,\s]+)/)?.[1] ?? "";
+  }
+
+  #describeRpcError(error: unknown): string {
+    if (typeof error === "string") {
+      return error;
+    }
+
+    try {
+      return JSON.stringify(error) ?? "";
+    } catch {
+      return "";
+    }
   }
 }
