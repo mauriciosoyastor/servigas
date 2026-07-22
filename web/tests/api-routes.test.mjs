@@ -50,6 +50,24 @@ describe("BFF HTTP helpers", () => {
     assert.deepEqual(await response.json(), { ok: true });
   });
 
+  it("does not expose raw Odoo details for unavailable errors", async () => {
+    const rawOdooMessage =
+      '{"jsonrpc":"2.0","error":{"data":{"debug":"Traceback: password=secret"}}}';
+    const unavailable = bffErrorResponse(
+      new BffError("odoo_unavailable", 503, rawOdooMessage)
+    );
+
+    assert.equal(unavailable.status, 503);
+    const unavailableBody = await unavailable.json();
+    assert.deepEqual(unavailableBody, {
+      error: {
+        code: "odoo_unavailable",
+        message: "No se pudo conectar con el servidor",
+      },
+    });
+    assert.doesNotMatch(JSON.stringify(unavailableBody), /jsonrpc|Traceback|secret/);
+  });
+
   it("maps known and unexpected errors", async () => {
     const known = bffErrorResponse(
       new BffError("bad_credentials", 401, "Credenciales inválidas")
@@ -58,7 +76,10 @@ describe("BFF HTTP helpers", () => {
 
     assert.equal(known.status, 401);
     assert.deepEqual(await known.json(), {
-      error: { code: "bad_credentials", message: "Credenciales inválidas" },
+      error: {
+        code: "bad_credentials",
+        message: "Usuario o contraseña incorrectos",
+      },
     });
     assert.equal(unexpected.status, 503);
     assert.deepEqual(await unexpected.json(), {

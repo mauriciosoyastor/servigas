@@ -1,6 +1,13 @@
 import type { APIContext } from "astro";
-import { BffError } from "./errors.ts";
+import { BffError, type BffErrorCode } from "./errors.ts";
 import { BFF_COOKIE, sessionStore } from "./session-store.ts";
+
+const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
+  unauthorized: "Sesión requerida",
+  bad_credentials: "Usuario o contraseña incorrectos",
+  odoo_unavailable: "No se pudo conectar con el servidor",
+  not_found: "Hub no encontrado",
+};
 
 export function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -15,7 +22,7 @@ export function json(data: unknown, init: ResponseInit = {}) {
 export function bffErrorResponse(err: unknown) {
   if (err instanceof BffError) {
     return json(
-      { error: { code: err.code, message: err.message } },
+      { error: { code: err.code, message: USER_ERROR_MESSAGES[err.code] } },
       { status: err.status }
     );
   }
