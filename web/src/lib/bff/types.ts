@@ -52,3 +52,88 @@ export type HubPayload = {
 };
 
 export type SessionInfo = { uid: number; name: string; login: string };
+
+export type RecordListColumn = {
+  key: string;
+  label: string;
+  kind?: "text" | "image";
+};
+
+export type RecordListRow = Record<
+  string,
+  string | number | boolean | null
+>;
+
+export type RecordListPayload = {
+  key: string;
+  title: string;
+  hint: string;
+  model: string;
+  total: number;
+  page: number;
+  pageSize: number;
+  q: string;
+  hubBack: string;
+  columns: RecordListColumn[];
+  rows: RecordListRow[];
+};
+
+export type RecordDetailLines = {
+  title: string;
+  columns: { key: string; label: string }[];
+  rows: RecordListRow[];
+};
+
+export type RecordDetailPayload = {
+  key: string;
+  title: string;
+  model: string;
+  hubBack: string;
+  listPath: string;
+  fields: { key: string; label: string; value: string | number | boolean | null }[];
+  imageUrl: string | null;
+  lines?: RecordDetailLines | null;
+};
+
+export type PosCatalogProduct = {
+  id: number;
+  name: string;
+  default_code: string | null;
+  list_price: number;
+  image_url: string | null;
+};
+
+export type PosPaymentMethod = {
+  id: number;
+  name: string;
+  isCash: boolean;
+};
+
+export type PosCatalogPayload = {
+  config: { id: number; name: string } | null;
+  products: PosCatalogProduct[];
+  paymentMethods: PosPaymentMethod[];
+  total: number;
+  q: string;
+};
+
+export type PosCheckoutLine = {
+  productId: number;
+  qty: number;
+  price: number;
+  discount?: number;
+};
+
+export type PosCheckoutOptions = {
+  paymentMethodId?: number;
+};
+
+export type PosCheckoutResult = {
+  orderId: number;
+  orderName: string;
+  detailPath: string;
+  channel: "pos.order" | "sale.order";
+  paymentMethodId: number | null;
+  paymentMethodName: string | null;
+  amountTotal: number;
+};

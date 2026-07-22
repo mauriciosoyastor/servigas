@@ -1,0 +1,106 @@
+---
+interface Props {
+	listKey: string;
+	recordId: number;
+	apiPath: string;
+	listPath: string;
+	label?: string;
+}
+
+const {
+	listKey,
+	recordId,
+	apiPath,
+	listPath,
+	label = 'Archivar',
+} = Astro.props;
+---
+
+<section class="sg-record-archive" data-record-archive data-list-key={listKey}>
+	<button
+		class="sg-focus-ring"
+		type="button"
+		data-record-archive-btn
+		data-id={recordId}
+		data-api={apiPath}
+		data-list={listPath}
+	>
+		{label}
+	</button>
+	<span class="sg-record-archive-status" data-record-archive-status hidden></span>
+</section>
+
+<script>
+	const root = document.querySelector('[data-record-archive]');
+	const btn = root?.querySelector('[data-record-archive-btn]');
+	const status = root?.querySelector('[data-record-archive-status]');
+	if (btn instanceof HTMLButtonElement && status instanceof HTMLElement) {
+		btn.addEventListener('click', async () => {
+			if (!window.confirm('¿Archivar este contacto? Dejará de verse en la lista activa.')) {
+				return;
+			}
+			status.hidden = false;
+			status.textContent = 'Archivando…';
+			status.dataset.state = 'pending';
+			btn.disabled = true;
+			try {
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'archive',
+						id: Number(btn.dataset.id),
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo archivar');
+				}
+				status.textContent = 'Archivado';
+				status.dataset.state = 'ok';
+				window.setTimeout(() => {
+					window.location.href = btn.dataset.list || '/';
+				}, 400);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo archivar';
+				status.dataset.state = 'error';
+				btn.disabled = false;
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-record-archive {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1rem;
+	}
+	.sg-record-archive button {
+		border: 1px solid rgba(255, 140, 120, 0.45);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: #ffb4a2;
+		background: rgba(80, 20, 10, 0.35);
+		font-size: 0.82rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-record-archive button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.sg-record-archive-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-archive-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-record-archive-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

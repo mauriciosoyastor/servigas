@@ -1,0 +1,56 @@
+---
+import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordEditForm from '../../../../components/RecordEditForm.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'inventory/products',
+	id,
+	'No encontramos este producto.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined) return '';
+	return String(hit.value);
+}
+---
+
+<ShellLayout title={`${detail?.title || 'Producto'} | Servigas`} active="inventory" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha de producto"
+		fallbackTitle="Producto"
+		fallbackListPath="/lists/inventory/products"
+	/>
+	{detail && !error ? (
+		<>
+			<RecordEditForm
+				listKey="inventory/products"
+				recordId={id}
+				apiPath="/api/records/inventory/products"
+				fields={[
+					{ key: 'default_code', label: 'Referencia', value: fieldValue('default_code') },
+					{ key: 'list_price', label: 'Precio', value: fieldValue('list_price') },
+				]}
+			/>
+			<RecordArchiveControl
+				listKey="inventory/products"
+				recordId={id}
+				apiPath="/api/records/inventory/products"
+				listPath="/lists/inventory/products"
+				label="Archivar producto"
+			/>
+		</>
+	) : null}
+</ShellLayout>

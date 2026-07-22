@@ -1,0 +1,619 @@
+---
+import ShellLayout from '../layouts/ShellLayout.astro';
+import { BffError } from '../lib/bff/errors.ts';
+import { getBackend } from '../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
+import type { PosCatalogPayload } from '../lib/bff/types.ts';
+
+let userName = '';
+let catalog: PosCatalogPayload | null = null;
+let error = '';
+const q = Astro.url.searchParams.get('q') || '';
+
+try {
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+	try {
+		catalog = await getBackend().getPosCatalog(odooSessionId, { q, limit: 48 });
+	} catch (cause) {
+		if (cause instanceof BffError && cause.code === 'unauthorized') {
+			invalidateBffSession(Astro.cookies);
+			return Astro.redirect('/login');
+		}
+		error = 'No pudimos cargar el catálogo del mostrador.';
+	}
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Mostrador | Servigas" active="sales" userName={userName}>
+	<main class="sg-pos" data-pos-caja>
+		<header class="sg-pos-heading">
+			<div>
+				<p>{catalog?.config?.name || 'Punto de venta'}</p>
+				<h1>Caja</h1>
+			</div>
+			<div class="sg-pos-heading-actions">
+				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/pos-orders">Historial POS</a>
+				<a class="sg-pos-link sg-focus-ring" href="/">Inicio</a>
+			</div>
+		</header>
+
+		{error ? (
+			<section class="sg-pos-state sg-glass" role="alert">
+				<strong>Error</strong>
+				<p>{error}</p>
+			</section>
+		) : (
+			<div class="sg-pos-layout">
+				<section class="sg-pos-catalog sg-glass" aria-label="Catálogo">
+					<form class="sg-pos-search" method="get" action="/pos">
+						<label>
+							<span class="sr-only">Buscar producto</span>
+							<input
+								class="sg-focus-ring"
+								type="search"
+								name="q"
+								value={q}
+								placeholder="Buscar por nombre o código…"
+							/>
+						</label>
+						<button class="sg-focus-ring" type="submit">Buscar</button>
+					</form>
+					<p class="sg-pos-meta">{catalog?.total ?? 0} productos</p>
+					<div class="sg-pos-grid" data-pos-grid>
+						{(catalog?.products || []).map((product) => (
+							<button
+								class="sg-pos-product sg-focus-ring"
+								type="button"
+								data-pos-add
+								data-id={product.id}
+								data-name={product.name}
+								data-price={product.list_price}
+							>
+								{product.image_url ? (
+									<img src={product.image_url} alt="" loading="lazy" />
+								) : (
+									<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
+								)}
+								<span class="sg-pos-product-name">{product.name}</span>
+								<span class="sg-pos-product-code">{product.default_code || '—'}</span>
+								<span class="sg-pos-product-price">
+									{product.list_price.toLocaleString('es-AR', {
+										style: 'currency',
+										currency: 'ARS',
+										maximumFractionDigits: 0,
+									})}
+								</span>
+							</button>
+						))}
+					</div>
+					{(catalog?.products || []).length === 0 ? (
+						<p class="sg-pos-empty">No hay productos para mostrar.</p>
+					) : null}
+				</section>
+
+				<aside class="sg-pos-cart sg-glass" aria-label="Ticket">
+					<strong>Ticket</strong>
+					<ul class="sg-pos-cart-lines" data-pos-lines></ul>
+					<p class="sg-pos-cart-empty" data-pos-empty>
+						Ticket vacío. Tocá un producto del catálogo para empezar.
+					</p>
+					<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
+						<legend>Pago</legend>
+						{(catalog?.paymentMethods || []).map((method, index) => (
+							<label>
+								<input
+									type="radio"
+									name="pos-pay"
+									value={method.id}
+									checked={index === 0}
+									data-pos-pay-method
+								/>
+								<span>{method.name}</span>
+							</label>
+						))}
+						{(catalog?.paymentMethods || []).length === 0 ? (
+							<p class="sg-pos-empty">Sin métodos de pago configurados.</p>
+						) : null}
+					</fieldset>
+					<div class="sg-pos-cart-total">
+						<span>Total</span>
+						<strong data-pos-total>$ 0</strong>
+					</div>
+					<button class="sg-pos-pay sg-focus-ring" type="button" data-pos-checkout disabled>
+						Registrar venta
+					</button>
+					<p class="sg-pos-cart-status" data-pos-status hidden></p>
+					<section class="sg-pos-receipt" data-pos-receipt hidden>
+						<strong>Venta registrada</strong>
+						<p data-pos-receipt-name></p>
+						<p data-pos-receipt-meta></p>
+						<p class="sg-pos-receipt-total" data-pos-receipt-total></p>
+						<div class="sg-pos-receipt-actions">
+							<button type="button" class="sg-focus-ring" data-pos-receipt-new>
+								Nueva venta
+							</button>
+							<a class="sg-focus-ring" data-pos-receipt-detail href="#">Ver pedido</a>
+						</div>
+					</section>
+				</aside>
+			</div>
+		)}
+	</main>
+</ShellLayout>
+
+<script>
+	import {
+		addToCart,
+		cartTotal,
+		emptyCart,
+		lineSubtotal,
+		removeFromCart,
+		setCartDiscount,
+		setCartQty,
+	} from '../lib/pos/cart.ts';
+
+	const root = document.querySelector('[data-pos-caja]');
+	if (root) {
+		let cart = emptyCart();
+		const linesEl = root.querySelector('[data-pos-lines]');
+		const emptyEl = root.querySelector('[data-pos-empty]');
+		const totalEl = root.querySelector('[data-pos-total]');
+		const checkoutBtn = root.querySelector('[data-pos-checkout]');
+		const statusEl = root.querySelector('[data-pos-status]');
+		const receiptEl = root.querySelector('[data-pos-receipt]');
+		const receiptNameEl = root.querySelector('[data-pos-receipt-name]');
+		const receiptMetaEl = root.querySelector('[data-pos-receipt-meta]');
+		const receiptTotalEl = root.querySelector('[data-pos-receipt-total]');
+		const receiptDetailEl = root.querySelector('[data-pos-receipt-detail]');
+		const receiptNewBtn = root.querySelector('[data-pos-receipt-new]');
+
+		const money = (value) =>
+			value.toLocaleString('es-AR', {
+				style: 'currency',
+				currency: 'ARS',
+				maximumFractionDigits: 0,
+			});
+
+		const selectedPaymentMethodId = () => {
+			const checked = root.querySelector('[data-pos-pay-method]:checked');
+			return checked ? Number(checked.value) : undefined;
+		};
+
+		const hideReceipt = () => {
+			if (receiptEl) receiptEl.hidden = true;
+		};
+
+		const showReceipt = (payload) => {
+			if (
+				!(
+					receiptEl &&
+					receiptNameEl &&
+					receiptMetaEl &&
+					receiptTotalEl &&
+					receiptDetailEl
+				)
+			) {
+				return;
+			}
+			receiptNameEl.textContent = payload.orderName || 'Venta';
+			const pay =
+				payload.paymentMethodName ||
+				(payload.channel === 'pos.order' ? 'POS' : 'Pedido');
+			receiptMetaEl.textContent = `Pago: ${pay}`;
+			receiptTotalEl.textContent = money(Number(payload.amountTotal) || 0);
+			receiptDetailEl.href = payload.detailPath || '/lists/sales/pos-orders';
+			receiptEl.hidden = false;
+		};
+
+		const render = () => {
+			if (!(linesEl && emptyEl && totalEl && checkoutBtn)) return;
+			linesEl.innerHTML = '';
+			for (const line of cart.lines) {
+				const li = document.createElement('li');
+				li.innerHTML = `
+					<div>
+						<strong></strong>
+						<span></span>
+						<label class="sg-pos-discount">
+							<span>Desc. %</span>
+							<input type="number" min="0" max="100" step="1" data-disc />
+						</label>
+					</div>
+					<div class="sg-pos-qty">
+						<button type="button" data-dec aria-label="Menos">−</button>
+						<em></em>
+						<button type="button" data-inc aria-label="Más">+</button>
+						<button type="button" data-rm aria-label="Quitar">×</button>
+					</div>
+				`;
+				li.querySelector('strong').textContent = line.name;
+				li.querySelector('span').textContent = money(lineSubtotal(line));
+				li.querySelector('em').textContent = String(line.qty);
+				const discInput = li.querySelector('[data-disc]');
+				discInput.value = String(line.discount || 0);
+				discInput.addEventListener('change', () => {
+					cart = setCartDiscount(cart, line.productId, Number(discInput.value));
+					render();
+				});
+				li.querySelector('[data-dec]').addEventListener('click', () => {
+					cart = setCartQty(cart, line.productId, line.qty - 1);
+					render();
+				});
+				li.querySelector('[data-inc]').addEventListener('click', () => {
+					cart = setCartQty(cart, line.productId, line.qty + 1);
+					render();
+				});
+				li.querySelector('[data-rm]').addEventListener('click', () => {
+					cart = removeFromCart(cart, line.productId);
+					render();
+				});
+				linesEl.appendChild(li);
+			}
+			emptyEl.hidden = cart.lines.length > 0;
+			totalEl.textContent = money(cartTotal(cart));
+			checkoutBtn.disabled = cart.lines.length === 0;
+		};
+
+		root.querySelectorAll('[data-pos-add]').forEach((button) => {
+			button.addEventListener('click', () => {
+				cart = addToCart(cart, {
+					productId: Number(button.getAttribute('data-id')),
+					name: button.getAttribute('data-name') || 'Producto',
+					price: Number(button.getAttribute('data-price') || 0),
+					qty: 1,
+				});
+				render();
+			});
+		});
+
+		checkoutBtn?.addEventListener('click', async () => {
+			if (!statusEl || !checkoutBtn) return;
+			hideReceipt();
+			checkoutBtn.disabled = true;
+			statusEl.hidden = false;
+			statusEl.textContent = 'Registrando venta…';
+			statusEl.dataset.state = 'pending';
+			try {
+				const response = await fetch('/api/pos/checkout', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						paymentMethodId: selectedPaymentMethodId(),
+						lines: cart.lines.map((line) => ({
+							productId: line.productId,
+							qty: line.qty,
+							price: line.price,
+							discount: line.discount,
+						})),
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo registrar');
+				}
+				statusEl.textContent = 'Listo';
+				statusEl.dataset.state = 'ok';
+				cart = emptyCart();
+				render();
+				showReceipt(payload);
+			} catch (error) {
+				statusEl.textContent =
+					error instanceof Error ? error.message : 'No se pudo registrar';
+				statusEl.dataset.state = 'error';
+				checkoutBtn.disabled = cart.lines.length === 0;
+			}
+		});
+
+		receiptNewBtn?.addEventListener('click', () => {
+			hideReceipt();
+			if (statusEl) {
+				statusEl.hidden = true;
+				statusEl.textContent = '';
+			}
+			cart = emptyCart();
+			render();
+		});
+
+		render();
+	}
+</script>
+
+<style>
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		border: 0;
+	}
+	.sg-pos {
+		max-width: 92rem;
+		margin: 0 auto;
+	}
+	.sg-pos-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+		flex-wrap: wrap;
+	}
+	.sg-pos-heading p {
+		margin: 0 0 0.4rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-pos-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3rem);
+		font-weight: 600;
+		letter-spacing: -0.045em;
+	}
+	.sg-pos-heading-actions {
+		display: flex;
+		gap: 0.6rem;
+	}
+	.sg-pos-link {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-pos-layout {
+		display: grid;
+		grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.9fr);
+		gap: 1rem;
+		align-items: start;
+	}
+	.sg-pos-catalog,
+	.sg-pos-cart {
+		border-radius: var(--sg-radius-card);
+		padding: 1rem;
+	}
+	.sg-pos-search {
+		display: flex;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+	}
+	.sg-pos-search label {
+		flex: 1;
+	}
+	.sg-pos-search input {
+		width: 100%;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font: inherit;
+	}
+	.sg-pos-search button,
+	.sg-pos-pay {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.65rem 1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.85rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-pos-meta {
+		margin: 0 0 0.75rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+	}
+	.sg-pos-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+		gap: 0.65rem;
+	}
+	.sg-pos-product {
+		display: grid;
+		gap: 0.35rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 1rem;
+		padding: 0.65rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.18);
+		text-align: left;
+		cursor: pointer;
+	}
+	.sg-pos-product img,
+	.sg-pos-product-empty {
+		display: grid;
+		width: 100%;
+		aspect-ratio: 1;
+		place-items: center;
+		border-radius: 0.75rem;
+		object-fit: cover;
+		background: rgba(255, 255, 255, 0.06);
+	}
+	.sg-pos-product-empty {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.7rem;
+	}
+	.sg-pos-product-name {
+		font-size: 0.78rem;
+		font-weight: 650;
+		line-height: 1.25;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+	.sg-pos-product-code {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.68rem;
+	}
+	.sg-pos-product-price {
+		font-size: 0.9rem;
+		font-weight: 700;
+	}
+	.sg-pos-cart {
+		position: sticky;
+		top: 1rem;
+		display: grid;
+		gap: 0.75rem;
+	}
+	.sg-pos-cart-lines {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.65rem;
+		max-height: 50vh;
+		overflow: auto;
+	}
+	.sg-pos-cart-lines li {
+		display: flex;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding-bottom: 0.65rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+	}
+	.sg-pos-cart-lines strong {
+		display: block;
+		font-size: 0.82rem;
+		line-height: 1.3;
+	}
+	.sg-pos-cart-lines span {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.75rem;
+	}
+	.sg-pos-qty {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+	}
+	.sg-pos-qty button {
+		width: 1.6rem;
+		height: 1.6rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 999px;
+		color: inherit;
+		background: rgba(0, 0, 0, 0.2);
+		cursor: pointer;
+	}
+	.sg-pos-discount {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		margin-top: 0.35rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.7rem;
+	}
+	.sg-pos-discount input {
+		width: 3.4rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.45rem;
+		padding: 0.2rem 0.35rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font: inherit;
+	}
+	.sg-pos-pay-methods {
+		margin: 0;
+		padding: 0.65rem 0 0;
+		border: 0;
+		border-top: 1px solid var(--sg-glass-border);
+		display: grid;
+		gap: 0.4rem;
+	}
+	.sg-pos-pay-methods legend {
+		padding: 0;
+		margin-bottom: 0.25rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+		font-weight: 650;
+	}
+	.sg-pos-pay-methods label {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.85rem;
+		cursor: pointer;
+	}
+	.sg-pos-cart-empty,
+	.sg-pos-empty {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.85rem;
+	}
+	.sg-pos-cart-total {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		font-size: 1.1rem;
+	}
+	.sg-pos-pay:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.sg-pos-cart-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-pos-cart-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+	.sg-pos-receipt {
+		display: grid;
+		gap: 0.45rem;
+		margin-top: 0.25rem;
+		padding-top: 0.75rem;
+		border-top: 1px solid var(--sg-glass-border);
+	}
+	.sg-pos-receipt p {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.82rem;
+	}
+	.sg-pos-receipt-total {
+		color: var(--sg-text-on-dark) !important;
+		font-size: 1.15rem !important;
+		font-weight: 700;
+	}
+	.sg-pos-receipt-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-top: 0.35rem;
+	}
+	.sg-pos-receipt-actions button,
+	.sg-pos-receipt-actions a {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.85rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.8rem;
+		font-weight: 650;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	.sg-pos-state {
+		border-radius: var(--sg-radius-card);
+		padding: 1.5rem;
+	}
+	@media (max-width: 900px) {
+		.sg-pos-layout {
+			grid-template-columns: 1fr;
+		}
+		.sg-pos-cart {
+			position: static;
+		}
+	}
+</style>

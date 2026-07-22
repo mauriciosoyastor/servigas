@@ -16,6 +16,9 @@ import {
 import { GET as getSession } from "../src/pages/api/auth/session.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
+import { POST as postRecord } from "../src/pages/api/records/[...slug].ts";
+import { GET as getPosCatalog } from "../src/pages/api/pos/catalog.ts";
+import { POST as postPosCheckout } from "../src/pages/api/pos/checkout.ts";
 
 class FakeCookies {
   values = new Map();
@@ -174,9 +177,33 @@ describe("BFF API routes", () => {
     const cookies = new FakeCookies();
     const sessionResponse = await getSession({ cookies });
     const launcherResponse = await getLauncher({ cookies });
+    const writeResponse = await postRecord({
+      cookies,
+      params: { slug: "sales/customers" },
+      request: new Request("http://localhost/api/records/sales/customers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: 6, values: { phone: "1" } }),
+      }),
+    });
+    const posCatalogResponse = await getPosCatalog({
+      cookies,
+      url: new URL("http://localhost/api/pos/catalog"),
+    });
+    const posCheckoutResponse = await postPosCheckout({
+      cookies,
+      request: new Request("http://localhost/api/pos/checkout", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ lines: [{ productId: 1, qty: 1, price: 10 }] }),
+      }),
+    });
 
     assert.equal(sessionResponse.status, 401);
     assert.equal(launcherResponse.status, 401);
+    assert.equal(writeResponse.status, 401);
+    assert.equal(posCatalogResponse.status, 401);
+    assert.equal(posCheckoutResponse.status, 401);
   });
 
   it("returns 404 for an unknown hub app", async () => {

@@ -17,6 +17,10 @@ const accents: Record<string, string> = {
 };
 const accent = accents[tile.accent_key] ?? 'var(--sg-flame-orange)';
 const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
+const actionPayload =
+	tile.action && typeof tile.action === 'object'
+		? encodeURIComponent(JSON.stringify(tile.action))
+		: '';
 ---
 
 <button
@@ -25,6 +29,8 @@ const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
 	data-tile
 	data-target-type={tile.target_type}
 	data-client-tag={tile.client_tag}
+	data-label={tile.label}
+	data-action={actionPayload}
 	style={`--tile-accent: ${accent}`}
 >
 	<span class="sg-tile-icon" aria-hidden="true">{monogram}</span>
@@ -32,7 +38,12 @@ const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
 		<span class="sg-tile-label">{tile.label}</span>
 		<span class="sg-tile-hint">{tile.hint}</span>
 	</span>
-	{tile.value && <span class="sg-tile-value">{tile.value}</span>}
+	{tile.value ? (
+		<span class="sg-tile-kpi" data-kpi>
+			<span class="sg-tile-kpi-label">KPI</span>
+			<span class="sg-tile-value">{tile.value}</span>
+		</span>
+	) : null}
 	<span class="sg-tile-enter">
 		{tile.enter_label || 'Ingresar'}
 		<span aria-hidden="true">→</span>
@@ -103,14 +114,30 @@ const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
 		font-size: 0.86rem;
 		line-height: 1.5;
 	}
-	.sg-tile-value {
+	.sg-tile-kpi {
 		justify-self: end;
-		border-radius: var(--sg-radius-pill);
-		padding: 0.4rem 0.65rem;
+		display: grid;
+		gap: 0.15rem;
+		justify-items: end;
+		border-radius: 1rem;
+		padding: 0.55rem 0.75rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.28);
+		border: 1px solid color-mix(in srgb, var(--tile-accent), white 18%);
+		min-width: 4.5rem;
+	}
+	.sg-tile-kpi-label {
 		color: var(--sg-text-muted-dark);
-		background: rgba(0, 0, 0, 0.18);
-		font-size: 0.72rem;
-		font-weight: 600;
+		font-size: 0.62rem;
+		font-weight: 700;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+	}
+	.sg-tile-value {
+		font-size: clamp(1.15rem, 2vw, 1.55rem);
+		font-weight: 700;
+		letter-spacing: -0.03em;
+		line-height: 1;
 	}
 	.sg-tile-enter {
 		display: flex;

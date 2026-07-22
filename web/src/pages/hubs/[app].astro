@@ -2,16 +2,22 @@
 import ShellLayout from '../../layouts/ShellLayout.astro';
 import TileCard from '../../components/TileCard.astro';
 import ComingSoonNote from '../../components/ComingSoonNote.astro';
+import HubSubnav from '../../components/HubSubnav.astro';
 import { BffError } from '../../lib/bff/errors.ts';
 import { getBackend } from '../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
-import type { HubCard } from '../../lib/bff/types.ts';
+import type { HubCard, HubGroup, HubSection } from '../../lib/bff/types.ts';
 import { isHubApp, type HubApp } from '../../lib/shell/hub-apps.ts';
 
 const app = Astro.params.app ?? '';
 const validApp = isHubApp(app);
+const requestedSection = Astro.url.searchParams.get('section') || 'summary';
+
 let userName = '';
 let cards: HubCard[] = [];
+let groups: HubGroup[] = [];
+let sections: HubSection[] = [];
+let activeSection = 'summary';
 let hubError = '';
 
 const HUB_LABELS: Record<HubApp, string> = {
@@ -36,8 +42,18 @@ if (!validApp) {
 	}
 
 	try {
-		const payload = await getBackend().getHub(odooSessionId, app, 'summary');
-		cards = payload.cards;
+		const payload = await getBackend().getHub(odooSessionId, app, requestedSection);
+		groups = payload.groups || [];
+		cards = groups.length
+			? groups.flatMap((group) => group.cards)
+			: payload.cards || [];
+		sections = payload.sections?.length
+			? payload.sections
+			: [{ code: 'summary', name: 'Resumen', icon: 'fa-th-large' }];
+		activeSection = payload.section || requestedSection;
+		if (!sections.some((section) => section.code === activeSection)) {
+			activeSection = sections[0]?.code || 'summary';
+		}
 	} catch (cause) {
 		if (cause instanceof BffError && cause.code === 'unauthorized') {
 			invalidateBffSession(Astro.cookies);
@@ -46,6 +62,9 @@ if (!validApp) {
 		hubError = 'No pudimos cargar este hub. Intentá nuevamente en unos minutos.';
 	}
 }
+
+const sectionName =
+	sections.find((section) => section.code === activeSection)?.name || 'Resumen';
 ---
 
 {validApp ? (
@@ -53,27 +72,42 @@ if (!validApp) {
 		<main class="sg-hub">
 			<header class="sg-hub-heading">
 				<div>
-					<p>Resumen operativo</p>
+					<p>{sectionName}</p>
 					<h1>{HUB_LABELS[app]}</h1>
 				</div>
 				<span>{cards.length} {cards.length === 1 ? 'acceso' : 'accesos'}</span>
 			</header>
+
+			{!hubError ? <HubSubnav app={app} sections={sections} active={activeSection} /> : null}
 
 			{hubError ? (
 				<section class="sg-hub-state sg-glass" role="alert">
 					<strong>No se pudo abrir el hub</strong>
 					<p>{hubError}</p>
 				</section>
+			) : groups.length ? (
+				<div class="sg-hub-groups">
+					{groups.map((group) => (
+						<section class="sg-hub-group" aria-label={group.name}>
+							<h2 class="sg-hub-group-title">{group.name}</h2>
+							<div class="sg-hub-grid">
+								{group.cards.map((card) => (
+									<TileCard tile={{ ...card, target_type: 'action', client_tag: '' }} />
+								))}
+							</div>
+						</section>
+					))}
+				</div>
 			) : cards.length ? (
-				<section class="sg-hub-grid" aria-label={`Accesos de ${HUB_LABELS[app]}`}>
+				<section class="sg-hub-grid" aria-label={`Accesos de ${HUB_LABELS[app]} — ${sectionName}`}>
 					{cards.map((card) => (
 						<TileCard tile={{ ...card, target_type: 'action', client_tag: '' }} />
 					))}
 				</section>
 			) : (
 				<section class="sg-hub-state sg-glass">
-					<strong>Sin tarjetas en este resumen</strong>
-					<p>No hay accesos configurados para mostrar en este hub.</p>
+					<strong>Sin tarjetas en esta sección</strong>
+					<p>No hay accesos configurados para mostrar acá.</p>
 				</section>
 			)}
 		</main>
@@ -84,11 +118,38 @@ if (!validApp) {
 )}
 
 <script>
+	import { resolveTileNavigation } from '../../lib/shell/tile-nav.ts';
+
 	const note = document.querySelector<HTMLElement>('[data-coming-soon]');
 	let noteTimer: ReturnType<typeof setTimeout> | undefined;
 
 	document.querySelectorAll<HTMLElement>('[data-tile]').forEach((tile) => {
 		tile.addEventListener('click', () => {
+			let action: Record<string, unknown> | undefined;
+			if (tile.dataset.action) {
+				try {
+					action = JSON.parse(decodeURIComponent(tile.dataset.action));
+				} catch {
+					action = undefined;
+				}
+			}
+
+			const destination = resolveTileNavigation({
+				target_type: tile.dataset.targetType || 'action',
+				client_tag: tile.dataset.clientTag || '',
+				label: tile.dataset.label,
+				action,
+			});
+
+			if (
+				destination.kind === 'hub' ||
+				destination.kind === 'list' ||
+				destination.kind === 'route'
+			) {
+				window.location.href = destination.path;
+				return;
+			}
+
 			if (!note) return;
 			note.hidden = false;
 			window.clearTimeout(noteTimer);
@@ -113,7 +174,8 @@ if (!validApp) {
 		align-items: end;
 		justify-content: space-between;
 		gap: 1rem;
-		margin-bottom: 2rem;
+		margin-bottom: 1.25rem;
+		flex-wrap: wrap;
 	}
 	.sg-hub-heading p {
 		margin: 0 0 0.5rem;
@@ -137,6 +199,18 @@ if (!validApp) {
 		background: var(--sg-glass-fill);
 		font-size: 0.7rem;
 		font-weight: 600;
+	}
+	.sg-hub-groups {
+		display: grid;
+		gap: 2rem;
+	}
+	.sg-hub-group-title {
+		margin: 0 0 0.85rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.82rem;
+		font-weight: 650;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
 	}
 	.sg-hub-grid {
 		display: grid;

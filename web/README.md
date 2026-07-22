@@ -32,7 +32,10 @@ npm run astro -- dev --background
 ```
 
 Abrir `http://localhost:4321`, iniciar sesión con un usuario de Odoo y recorrer
-Inicio → Inventario. Para administrar el servidor en segundo plano:
+Inicio → hubs Inventario / Ventas / Compras / Contabilidad → cards de resumen
+abren listas nativas Astro (allowlist BFF: productos, stock, pedidos, clientes,
+OC, facturas, pagos, integraciones, etc.). Detalle de producto en
+`/lists/inventory/products/:id`. Para administrar el servidor en segundo plano:
 
 ```powershell
 npm run astro -- dev status

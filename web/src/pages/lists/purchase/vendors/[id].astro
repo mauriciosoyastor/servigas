@@ -1,0 +1,56 @@
+---
+import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordEditForm from '../../../../components/RecordEditForm.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'purchase/vendors',
+	id,
+	'No encontramos este proveedor.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined) return '';
+	return String(hit.value);
+}
+---
+
+<ShellLayout title={`${detail?.title || 'Proveedor'} | Servigas`} active="purchase" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha de proveedor"
+		fallbackTitle="Proveedor"
+		fallbackListPath="/lists/purchase/vendors"
+	/>
+	{detail && !error ? (
+		<>
+			<RecordEditForm
+				listKey="purchase/vendors"
+				recordId={id}
+				apiPath="/api/records/purchase/vendors"
+				fields={[
+					{ key: 'phone', label: 'Teléfono', value: fieldValue('phone') },
+					{ key: 'email', label: 'Email', value: fieldValue('email') },
+				]}
+			/>
+			<RecordArchiveControl
+				listKey="purchase/vendors"
+				recordId={id}
+				apiPath="/api/records/purchase/vendors"
+				listPath="/lists/purchase/vendors"
+				label="Archivar proveedor"
+			/>
+		</>
+	) : null}
+</ShellLayout>

@@ -70,12 +70,27 @@ try {
 
 	document.querySelectorAll<HTMLElement>('[data-tile]').forEach((tile) => {
 		tile.addEventListener('click', () => {
+			let action: Record<string, unknown> | undefined;
+			if (tile.dataset.action) {
+				try {
+					action = JSON.parse(decodeURIComponent(tile.dataset.action));
+				} catch {
+					action = undefined;
+				}
+			}
+
 			const destination = resolveTileNavigation({
 				target_type: tile.dataset.targetType || '',
 				client_tag: tile.dataset.clientTag || '',
+				label: tile.dataset.label,
+				action,
 			});
 
-			if (destination.kind === 'hub') {
+			if (
+				destination.kind === 'hub' ||
+				destination.kind === 'list' ||
+				destination.kind === 'route'
+			) {
 				window.location.href = destination.path;
 				return;
 			}
