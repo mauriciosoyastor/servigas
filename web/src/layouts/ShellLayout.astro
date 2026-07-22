@@ -1,0 +1,81 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import RailNav from '../components/RailNav.astro';
+
+interface Props {
+	title?: string;
+	active?: string;
+	userName?: string;
+}
+
+const { title = 'Servigas', active = 'home', userName = '' } = Astro.props;
+---
+
+<BaseLayout title={title} bodyClass="sg-shell-canvas font-sans antialiased">
+	<RailNav active={active} />
+	<div class="sg-shell-frame">
+		<header class="sg-shell-topbar">
+			<div>
+				<p class="sg-shell-eyebrow">Centro de operaciones</p>
+				<p class="sg-shell-user">{userName ? `Hola, ${userName}` : 'Servigas'}</p>
+			</div>
+			<button class="sg-logout sg-focus-ring" type="button" data-logout>Cerrar sesión</button>
+		</header>
+		<slot />
+	</div>
+</BaseLayout>
+
+<script>
+	document.querySelector('[data-logout]')?.addEventListener('click', async () => {
+		await fetch('/api/auth/logout', { method: 'POST' });
+		window.location.assign('/login');
+	});
+</script>
+
+<style>
+	.sg-shell-frame {
+		min-height: 100dvh;
+		padding: 1.5rem 2rem 3rem 8rem;
+	}
+	.sg-shell-topbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 1rem;
+		max-width: 78rem;
+		margin: 0 auto 3rem;
+	}
+	.sg-shell-eyebrow {
+		margin: 0 0 0.25rem;
+		color: var(--sg-flame-yellow);
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.16em;
+		text-transform: uppercase;
+	}
+	.sg-shell-user {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	.sg-logout {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.65rem 1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		cursor: pointer;
+		transition: background-color 180ms ease;
+	}
+	.sg-logout:hover {
+		background: var(--sg-glass-fill-strong);
+	}
+	@media (max-width: 720px) {
+		.sg-shell-frame {
+			padding: 1.25rem 1rem 7rem;
+		}
+		.sg-shell-topbar {
+			margin-bottom: 2rem;
+		}
+	}
+</style>

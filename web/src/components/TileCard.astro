@@ -1,0 +1,125 @@
+---
+import type { LauncherTile } from '../lib/bff/types.ts';
+
+interface Props {
+	tile: LauncherTile;
+}
+
+const { tile } = Astro.props;
+const accents: Record<string, string> = {
+	'flame-yellow': 'var(--sg-flame-yellow)',
+	'flame-orange': 'var(--sg-flame-orange)',
+	'flame-deep': 'var(--sg-flame-deep)',
+	'flame-rust': 'var(--sg-flame-rust)',
+	'bg-mid': '#555',
+	'bg-charcoal': 'var(--sg-bg-charcoal)',
+	'bg-deep': 'var(--sg-bg-deep)',
+};
+const accent = accents[tile.accent_key] ?? 'var(--sg-flame-orange)';
+const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
+---
+
+<button
+	class="sg-tile sg-glass sg-focus-ring"
+	type="button"
+	data-tile
+	data-target-type={tile.target_type}
+	data-client-tag={tile.client_tag}
+	style={`--tile-accent: ${accent}`}
+>
+	<span class="sg-tile-icon" aria-hidden="true">{monogram}</span>
+	<span class="sg-tile-copy">
+		<span class="sg-tile-label">{tile.label}</span>
+		<span class="sg-tile-hint">{tile.hint}</span>
+	</span>
+	{tile.value && <span class="sg-tile-value">{tile.value}</span>}
+	<span class="sg-tile-enter">
+		{tile.enter_label || 'Ingresar'}
+		<span aria-hidden="true">→</span>
+	</span>
+</button>
+
+<style>
+	.sg-tile {
+		position: relative;
+		display: grid;
+		min-height: 15.5rem;
+		grid-template-columns: 1fr auto;
+		grid-template-rows: auto 1fr auto;
+		gap: 1.5rem;
+		overflow: hidden;
+		border-radius: var(--sg-radius-card);
+		padding: 1.4rem;
+		color: var(--sg-text-on-dark);
+		text-align: left;
+		cursor: pointer;
+		transition: transform 220ms ease, border-color 220ms ease, background-color 220ms ease;
+	}
+	.sg-tile::after {
+		position: absolute;
+		width: 10rem;
+		height: 10rem;
+		border-radius: 50%;
+		background: var(--tile-accent);
+		content: '';
+		filter: blur(72px);
+		opacity: 0.2;
+		right: -5rem;
+		bottom: -5rem;
+		pointer-events: none;
+	}
+	.sg-tile:hover {
+		border-color: color-mix(in srgb, var(--tile-accent), white 20%);
+		background: var(--sg-glass-fill-strong);
+		transform: translateY(-4px);
+	}
+	.sg-tile-icon {
+		display: grid;
+		width: 3rem;
+		height: 3rem;
+		place-items: center;
+		border: 1px solid color-mix(in srgb, var(--tile-accent), white 22%);
+		border-radius: 1rem;
+		color: white;
+		background: color-mix(in srgb, var(--tile-accent), transparent 52%);
+		font-size: 1.15rem;
+		font-weight: 700;
+	}
+	.sg-tile-copy {
+		align-self: end;
+		grid-column: 1 / -1;
+	}
+	.sg-tile-label,
+	.sg-tile-hint {
+		display: block;
+	}
+	.sg-tile-label {
+		margin-bottom: 0.4rem;
+		font-size: clamp(1.25rem, 2vw, 1.55rem);
+		font-weight: 650;
+	}
+	.sg-tile-hint {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.86rem;
+		line-height: 1.5;
+	}
+	.sg-tile-value {
+		justify-self: end;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.4rem 0.65rem;
+		color: var(--sg-text-muted-dark);
+		background: rgba(0, 0, 0, 0.18);
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+	.sg-tile-enter {
+		display: flex;
+		grid-column: 1 / -1;
+		align-items: center;
+		justify-content: space-between;
+		padding-top: 1rem;
+		border-top: 1px solid var(--sg-glass-border);
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+</style>

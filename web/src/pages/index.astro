@@ -1,19 +1,155 @@
 ---
-import BaseLayout from '../layouts/BaseLayout.astro';
+import ShellLayout from '../layouts/ShellLayout.astro';
+import TileCard from '../components/TileCard.astro';
+import ComingSoonNote from '../components/ComingSoonNote.astro';
+import { BffError } from '../lib/bff/errors.ts';
+import { getBackend } from '../lib/bff/get-backend.ts';
+import { requireOdooSession } from '../lib/bff/http.ts';
+import type { LauncherTile } from '../lib/bff/types.ts';
+
+let odooSessionId: string;
+let userName = '';
+
+try {
+	const sessionEntry = requireOdooSession(Astro.cookies);
+	odooSessionId = sessionEntry.odooSessionId;
+	userName = sessionEntry.session.name || sessionEntry.session.login;
+} catch {
+	return Astro.redirect('/login');
+}
+
+let tiles: LauncherTile[] = [];
+let launcherError = '';
+
+try {
+	tiles = (await getBackend().getLauncher(odooSessionId)).tiles;
+} catch (cause) {
+	if (cause instanceof BffError && cause.code === 'unauthorized') {
+		return Astro.redirect('/login');
+	}
+	launcherError = 'No pudimos cargar los accesos. Intentá nuevamente en unos minutos.';
+}
 ---
 
-<BaseLayout title="Servigas — Frontend">
-	<main class="mx-auto flex min-h-dvh max-w-5xl flex-col justify-center gap-8 px-6 py-16">
-		<div
-			class="rounded-sg-card border border-sg-flame-deep/10 bg-[var(--sg-glass-fill)] p-8 shadow-[var(--sg-glass-rim)] backdrop-blur-[var(--sg-glass-blur)]"
-		>
-			<p class="text-sm font-semibold tracking-wide text-sg-flame-orange uppercase">
-				Servigas · Liquid Glass v2
-			</p>
-			<h1 class="mt-2 text-3xl font-semibold text-sg-text">Frontend Astro listo</h1>
-			<p class="mt-3 max-w-xl text-sg-text/70">
-				Tailwind v4 con tokens de marca alineados a <code>servigas_tokens.scss</code>.
-			</p>
-		</div>
+<ShellLayout title="Inicio | Servigas" active="home" userName={userName}>
+	<main class="sg-launcher">
+		<header class="sg-launcher-heading">
+			<div>
+				<p>Panel principal</p>
+				<h1>¿Qué querés gestionar hoy?</h1>
+			</div>
+			<span>{tiles.length} {tiles.length === 1 ? 'acceso' : 'accesos'}</span>
+		</header>
+
+		{launcherError ? (
+			<section class="sg-launcher-state sg-glass" role="alert">
+				<strong>No se pudo abrir el launcher</strong>
+				<p>{launcherError}</p>
+			</section>
+		) : tiles.length ? (
+			<section class="sg-launcher-grid" aria-label="Aplicaciones disponibles">
+				{tiles.map((tile) => <TileCard tile={tile} />)}
+			</section>
+		) : (
+			<section class="sg-launcher-state sg-glass">
+				<strong>Todavía no hay accesos configurados</strong>
+				<p>Cuando el administrador publique aplicaciones, aparecerán en este espacio.</p>
+			</section>
+		)}
 	</main>
-</BaseLayout>
+	<ComingSoonNote />
+</ShellLayout>
+
+<script>
+	import { resolveTileNavigation } from '../lib/shell/tile-nav.ts';
+
+	const note = document.querySelector<HTMLElement>('[data-coming-soon]');
+	let noteTimer: ReturnType<typeof setTimeout> | undefined;
+
+	document.querySelectorAll<HTMLElement>('[data-tile]').forEach((tile) => {
+		tile.addEventListener('click', () => {
+			const destination = resolveTileNavigation({
+				target_type: tile.dataset.targetType || '',
+				client_tag: tile.dataset.clientTag || '',
+			});
+
+			if (destination.kind === 'hub') {
+				window.location.href = destination.path;
+				return;
+			}
+
+			if (note) {
+				note.hidden = false;
+				window.clearTimeout(noteTimer);
+				noteTimer = window.setTimeout(() => {
+					note.hidden = true;
+				}, 5000);
+			}
+		});
+	});
+
+	document.querySelector('[data-coming-soon-close]')?.addEventListener('click', () => {
+		if (note) note.hidden = true;
+	});
+</script>
+
+<style>
+	.sg-launcher {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-launcher-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 2rem;
+	}
+	.sg-launcher-heading p {
+		margin: 0 0 0.5rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-launcher-heading h1 {
+		max-width: 48rem;
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3.7rem);
+		font-weight: 600;
+		letter-spacing: -0.045em;
+		line-height: 1.05;
+	}
+	.sg-launcher-heading > span {
+		flex: none;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.8rem;
+		color: var(--sg-text-muted-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.7rem;
+		font-weight: 600;
+	}
+	.sg-launcher-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+		gap: 1rem;
+	}
+	.sg-launcher-state {
+		border-radius: var(--sg-radius-card);
+		padding: 2rem;
+	}
+	.sg-launcher-state strong {
+		font-size: 1.1rem;
+	}
+	.sg-launcher-state p {
+		margin: 0.55rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.88rem;
+	}
+	@media (max-width: 560px) {
+		.sg-launcher-heading {
+			align-items: start;
+			flex-direction: column;
+		}
+	}
+</style>
