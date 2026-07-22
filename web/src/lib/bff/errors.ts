@@ -5,12 +5,13 @@ export type BffErrorCode =
   | "not_found";
 
 export class BffError extends Error {
-  constructor(
-    readonly code: BffErrorCode,
-    readonly status: number,
-    message: string
-  ) {
+  readonly code: BffErrorCode;
+  readonly status: number;
+
+  constructor(code: BffErrorCode, status: number, message: string) {
     super(message);
     this.name = "BffError";
+    this.code = code;
+    this.status = status;
   }
 }
