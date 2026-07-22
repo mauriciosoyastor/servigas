@@ -52,15 +52,20 @@ describe("shell UI contracts", () => {
     assert.match(login, /invalidateBffSession\(Astro\.cookies\)/);
   });
 
-  it("provides a protected minimal page for known hub apps", async () => {
+  it("renders known hubs from their summary payload and keeps cards local", async () => {
     const hub = await source("pages/hubs/[app].astro");
 
     assert.match(hub, /isHubApp\(app\)/);
     assert.match(hub, /Astro\.response\.status = 404/);
     assert.match(hub, /requireOdooSession\(Astro\.cookies\)/);
+    assert.match(hub, /getBackend\(\)\.getHub\(odooSessionId,\s*app,\s*['"]summary['"]\)/);
+    assert.match(hub, /payload\.cards/);
+    assert.match(hub, /<TileCard/);
+    assert.match(hub, /<ComingSoonNote/);
+    assert.match(hub, /cause instanceof BffError && cause\.code === ['"]unauthorized['"]/);
     assert.match(hub, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(hub, /<ShellLayout/);
     assert.match(hub, /Próximamente/);
-    assert.doesNotMatch(hub, /getHub\(/);
+    assert.doesNotMatch(hub, /window\.location\.(?:href|assign)/);
   });
 });
