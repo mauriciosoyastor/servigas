@@ -65,7 +65,7 @@ describe("shell UI contracts", () => {
     assert.match(hub, /cause instanceof BffError && cause\.code === ['"]unauthorized['"]/);
     assert.match(hub, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(hub, /<ShellLayout/);
-    assert.match(hub, /Próximamente/);
+    assert.match(hub, /Sin tarjetas en este resumen/);
     assert.doesNotMatch(hub, /window\.location\.(?:href|assign)/);
   });
 });

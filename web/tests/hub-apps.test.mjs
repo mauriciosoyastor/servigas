@@ -12,4 +12,14 @@ describe("hub-apps", () => {
   it("maps inventory client tag", () => {
     assert.equal(clientTagToApp("servigas_inventory_hub"), "inventory");
   });
+  it("maps sales, purchase, and accounting client tags", () => {
+    const cases = [
+      ["servigas_sales_hub", "sales"],
+      ["servigas_purchase_hub", "purchase"],
+      ["servigas_accounting_hub", "accounting"],
+    ];
+    for (const [tag, app] of cases) {
+      assert.equal(clientTagToApp(tag), app, `expected ${tag} → ${app}`);
+    }
+  });
 });
