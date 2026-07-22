@@ -31,17 +31,17 @@
 
 ---
 
-## Resumen ejecutivo (estado al 2026-07-03)
+## Resumen ejecutivo (estado al 2026-07-22)
 
 | Área | Estado | Notas |
 |------|--------|-------|
 | Identidad visual | Hecho | Tokens llama + Montserrat (`servigas_tokens.scss`) |
 | Backend Odoo | Hecho | Navbar, acentos flame, `servigas_hub.scss` |
-| Hubs App Shell | **Hecho** | Inventario, Ventas, Compras, Facturación (`v19.0.1.4.0`) |
+| Hubs App Shell (OWL) | **Hecho** | Inventario, Ventas, Compras, Facturación (`v19.0.1.4.0`) — **prod** |
 | POS | En curso | Tema oscuro + glass en header |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
-| Web pública (`web/`) | Iniciado | Astro scaffold, sin integrar aún |
+| Shell Astro BFF (`web/`) | **Spike verificado (unit)** | SSR + login BFF + launcher + hub inventory; manual Odoo **pendiente** |
 | Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 **Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
@@ -71,4 +71,34 @@
 
 ---
 
-### 2026-
+### 2026-07-22 — Spike Astro BFF shell (Fase A) — verificación
+
+**Área:** web | docs  
+**Motivo:** cerrar el spike `feature/astro-bff-shell`: shell Astro con BFF contra Odoo (login, launcher, rail, hub inventory) y dejar constancia de qué está probado y qué falta antes de un corte a producción.
+
+**Archivos:**
+- `web/` — SSR (`@astrojs/node`), `OdooAdapter`, rutas API auth/launcher/hub, páginas login/home/hubs, estilos `--sg-*`
+- `web/tests/*.test.mjs` — 36 tests (adaptador, rutas, tile-nav, contratos UI)
+- `docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md` — plan Tasks 1–7
+
+**Cambios:**
+- BFF con cookie httpOnly; sesión Odoo solo server-side.
+- Launcher desde `sg.app.tile`; hub `inventory` desde `sg.hub.card` (sección `summary`).
+- Tiles no-hub y clicks de cards → UI «Próximamente» (sin embed Odoo).
+- Liquid Glass razonable vía tokens/shell CSS en Astro (paridad visual no validada contra instancia real).
+
+**Verificación:**
+
+| Check | Resultado |
+|-------|-----------|
+| `cd web && npm test` | **PASS** — 36/36 (11 suites) |
+| Login contra Odoo dev | **Pendiente** — sin instancia/credenciales en esta sesión |
+| Tiles reales en home | **Pendiente** |
+| Rail → hub inventory | **Pendiente** (cubierto parcialmente por tests de contrato UI) |
+| Cards reales en hub | **Pendiente** |
+| No-hub / cards → Próximamente | **PASS** (unit: `tile-nav`, `shell-ui`) |
+| Look Liquid Glass razonable | **Pendiente** — revisión visual manual |
+
+**Commits del spike (rama `feature/astro-bff-shell`):** `434c5b2` … `f30ffff` (Tasks 1–6).
+
+**Automatización:** smoke E2E con Odoo dev levantado (`web` + `ODOO_URL`); script CI `npm test` en `web/`; checklist manual Fase A reutilizable para Fase B (skill molde).

@@ -70,6 +70,10 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 
+## Shell Astro experimental (`web/`)
+
+Rama `feature/astro-bff-shell`: spike **Astro + BFF** (login, launcher, rail, hub inventory) documentado en [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). **Producción sigue siendo el frontend OWL / Liquid Glass en Odoo** hasta un corte explícito; no desplegar `web/` como reemplazo del shell operativo sin validación manual contra Odoo dev.
+
 ## Sistema de diseño — Liquid Glass v2 (frontend Odoo)
 
 **Decisión:** todo trabajo de UI/UX en Odoo sigue el design system **Liquid Glass v2**, usando la skill Cursor **`liquid-glass-v2-routes`** como playbook de patrones (canvas continuo, glass KPIs, command bar, subnav, motion).
