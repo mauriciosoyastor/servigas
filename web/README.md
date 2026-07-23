@@ -8,8 +8,9 @@ sesión de Odoo al navegador.
 Browser → Astro BFF → BackendClient → OdooAdapter → Odoo
 ```
 
-`web/` no reemplaza todavía al frontend OWL operativo. Es una implementación
-de referencia para validar el corte y extraer un molde reutilizable.
+`web/` es el **camino a corte** del shell operativo (ADR 0016): meta =
+reemplazar launcher/hubs/listas/POS OWL. Hoy OWL sigue en producción hasta
+go/no-go; este árbol es el piloto que debe alcanzar la checklist del ADR.
 
 ## Requisitos
 
