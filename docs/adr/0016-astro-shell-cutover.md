@@ -33,7 +33,7 @@ Adoptar la **postura B — camino a corte**, con alcance de corte **completo del
 - [ ] Smoke camino feliz contra Odoo dev: login → hubs → producto → cotización/RFQ → venta POS Astro *(diferido)*
 - [x] Session store durable (reemplazo de `MemorySessionStore`) — #13
 - [x] Errores BFF seguros + logout/timeout definidos — #24
-- [ ] Paridad Liquid Glass “usable en mostrador” (no pixel-perfect) — en curso (`docs/superpowers/plans/2026-07-23-astro-cutover-iteration-1-2-3.md`)
+- [x] Paridad Liquid Glass “usable en mostrador” (no pixel-perfect) — #27
 - [ ] Decisión explícita: “corte autorizado” en `CONTEXT.md` + bitácora
 
 ### Filtro semanal
