@@ -300,7 +300,7 @@ describe("BFF API routes", () => {
     assert.deepEqual(await response.json(), {
       error: {
         code: "validation_error",
-        message: "Revisá los datos e intentá de nuevo",
+        message: "Usuario y contraseña son requeridos",
       },
     });
   });
@@ -326,7 +326,7 @@ describe("BFF API routes", () => {
     assert.deepEqual(await response.json(), {
       error: {
         code: "validation_error",
-        message: "Revisá los datos e intentá de nuevo",
+        message: "Acción inválida",
       },
     });
     sessionStore.destroy(bffSid);

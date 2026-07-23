@@ -4,6 +4,7 @@ export type BffErrorCode =
   | "odoo_unavailable"
   | "not_found"
   | "validation_error"
+  | "forbidden"
   | "checkout_failed"
   | "action_failed";
 

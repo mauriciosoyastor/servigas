@@ -10,6 +10,7 @@ import type {
   PriceListImportPreview,
   RecordDetailPayload,
   RecordListPayload,
+  RecordNote,
   SessionInfo,
 } from "./types.ts";
 import type { RecordListQuery } from "../shell/record-lists.ts";
@@ -53,6 +54,30 @@ export interface BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number
+  ): Promise<void>;
+  listRecordNotes(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    viewerUid: number
+  ): Promise<RecordNote[]>;
+  createRecordNote(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote>;
+  updateRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote>;
+  deleteRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number
   ): Promise<void>;
   confirmRecord(
     odooSessionId: string,
