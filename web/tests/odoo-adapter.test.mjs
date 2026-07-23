@@ -770,6 +770,8 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(result.paymentMethodId, 2);
     assert.equal(result.paymentMethodName, "Card");
     assert.equal(result.amountTotal, 180);
+    assert.equal(result.partnerId, null);
+    assert.equal(result.partnerName, null);
 
     const bodies = fetchImpl.mock.calls.map((call) =>
       JSON.parse(call.arguments[1].body)
@@ -779,6 +781,7 @@ describe("OdooAdapter.checkoutPosCart", () => {
         body.params?.model === "pos.order" && body.params?.method === "create"
     );
     assert.equal(createCall.params.args[0].session_id, 4);
+    assert.equal(createCall.params.args[0].partner_id, false);
     assert.equal(createCall.params.args[0].lines[0][2].product_id, 42);
     assert.equal(createCall.params.args[0].lines[0][2].discount, 10);
     assert.equal(createCall.params.args[0].amount_total, 180);
@@ -816,7 +819,6 @@ describe("OdooAdapter.checkoutPosCart", () => {
           error: { message: "Create denied", data: { message: "fail" } },
         });
       }
-      // Legacy silent fallback paths — must not be used after fail-loud.
       if (model === "res.partner" && method === "search") {
         return Response.json({ result: [7] });
       }
@@ -853,6 +855,71 @@ describe("OdooAdapter.checkoutPosCart", () => {
     });
     assert.ok(!models.includes("sale.order"));
     assert.ok(!models.includes("res.partner"));
+  });
+
+  it("attaches an optional customer partner_id on pos.order create", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "pos.config" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 1, name: "Mostrador Servigas" }],
+        });
+      }
+      if (model === "pos.session" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 4, name: "Mostrador/00001", state: "opened" }],
+        });
+      }
+      if (model === "res.partner" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 9, name: "Cliente Mostrador" }],
+        });
+      }
+      if (model === "pos.payment.method" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 1, name: "Cash", is_cash_count: true }],
+        });
+      }
+      if (model === "pos.order" && method === "create") {
+        return Response.json({ result: 56 });
+      }
+      if (model === "pos.order" && method === "write") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.order" && method === "action_pos_order_paid") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.order" && method === "read") {
+        return Response.json({
+          result: [{ id: 56, name: "Mostrador - 000100" }],
+        });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.checkoutPosCart(
+      "sess",
+      [{ productId: 42, qty: 1, price: 50, discount: 0 }],
+      { paymentMethodId: 1, partnerId: 9 }
+    );
+    assert.equal(result.partnerId, 9);
+    assert.equal(result.partnerName, "Cliente Mostrador");
+
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    const createCall = bodies.find(
+      (body) =>
+        body.params?.model === "pos.order" && body.params?.method === "create"
+    );
+    assert.equal(createCall.params.args[0].partner_id, 9);
   });
 });
 

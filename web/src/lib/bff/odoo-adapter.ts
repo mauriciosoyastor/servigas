@@ -765,7 +765,8 @@ export class OdooAdapter implements BackendClient {
       return await this.#checkoutPosOrder(
         odooSessionId,
         clean,
-        options.paymentMethodId
+        options.paymentMethodId,
+        options.partnerId
       );
     } catch (cause) {
       if (cause instanceof BffError && cause.code === "unauthorized") throw cause;
@@ -852,7 +853,8 @@ export class OdooAdapter implements BackendClient {
       price: number;
       discount: number;
     }[],
-    preferredPaymentMethodId?: number
+    preferredPaymentMethodId?: number,
+    preferredPartnerId?: number
   ): Promise<PosCheckoutResult> {
     const sessionId = await this.#ensureOpenPosSession(odooSessionId);
     const amountTotal = Number(
@@ -864,6 +866,27 @@ export class OdooAdapter implements BackendClient {
         )
         .toFixed(2)
     );
+
+    let partnerId: number | false = false;
+    let partnerName: string | null = null;
+    const requestedPartner = Number(preferredPartnerId);
+    if (Number.isFinite(requestedPartner) && requestedPartner > 0) {
+      const partners = await this.#searchRead(
+        odooSessionId,
+        "res.partner",
+        [["id", "=", requestedPartner]],
+        ["name"],
+        1,
+        0,
+        "id asc"
+      );
+      const partner = partners[0];
+      if (!partner?.id) {
+        throw new BffError("not_found", 404, "Cliente no encontrado");
+      }
+      partnerId = Number(partner.id);
+      partnerName = String(partner.name || "");
+    }
 
     const paymentMethods = await this.#searchRead(
       odooSessionId,
@@ -897,7 +920,7 @@ export class OdooAdapter implements BackendClient {
       [
         {
           session_id: sessionId,
-          partner_id: false,
+          partner_id: partnerId,
           name: "/",
           amount_tax: 0,
           amount_total: amountTotal,
@@ -961,6 +984,8 @@ export class OdooAdapter implements BackendClient {
       channel: "pos.order",
       paymentMethodId,
       paymentMethodName: String(cash?.name || "Pago"),
+      partnerId: partnerId === false ? null : partnerId,
+      partnerName,
       amountTotal,
     };
   }

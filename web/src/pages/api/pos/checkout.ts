@@ -14,6 +14,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     const body = (await request.json()) as {
       lines?: PosCheckoutLine[];
       paymentMethodId?: number;
+      partnerId?: number;
     };
     if (!Array.isArray(body.lines)) {
       throw new BffError("validation_error", 400, "Carrito inválido");
@@ -26,6 +27,8 @@ export const POST: APIRoute = async ({ cookies, request }) => {
           body.paymentMethodId != null
             ? Number(body.paymentMethodId)
             : undefined,
+        partnerId:
+          body.partnerId != null ? Number(body.partnerId) : undefined,
       }
     );
     return json(result);
