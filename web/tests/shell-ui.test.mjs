@@ -19,27 +19,35 @@ describe("shell UI contracts", () => {
   });
 
   it("provides the requested shell components", async () => {
-    const [layout, rail, tile, note, table] = await Promise.all([
+    const [layout, rail, tile, note, table, tour] = await Promise.all([
       source("layouts/ShellLayout.astro"),
       source("components/RailNav.astro"),
       source("components/TileCard.astro"),
       source("components/ComingSoonNote.astro"),
       source("components/RecordTable.astro"),
+      source("components/OnboardingTour.astro"),
     ]);
 
     assert.match(layout, /compact\?:/);
     assert.match(layout, /is-compact/);
     assert.match(layout, /<RailNav active=/);
+    assert.match(layout, /<OnboardingTour/);
     assert.match(rail, /\/hubs\/inventory/);
     assert.match(rail, /\/hubs\/sales/);
+    assert.match(rail, /data-tour=\{`rail-\$\{item\.app\}`\}/);
     assert.match(tile, /data-tile/);
     assert.match(tile, /data-kpi|sg-tile-kpi/);
+    assert.match(tile, /tourTarget|data-tour=\{tourTarget\}/);
     assert.match(note, /Próximamente/);
     assert.match(note, /data-coming-soon-detail/);
     assert.match(note, /todavía no está disponible/);
     assert.doesNotMatch(note, /camino a corte|pantalla Astro/);
     assert.match(table, /sg-record-table/);
     assert.match(table, /sg-record-thumb/);
+    assert.match(tour, /data-onboarding/);
+    assert.match(tour, /Omitir tutorial/);
+    assert.match(tour, /No volver a mostrar/);
+    assert.match(tour, /onboarding-tour/);
   });
 
   it("posts login credentials to the BFF before navigating home", async () => {
@@ -58,6 +66,7 @@ describe("shell UI contracts", () => {
     assert.match(index, /Astro\.redirect\(["']\/login["']\)/);
     assert.match(index, /resolveTileNavigation/);
     assert.match(index, /sg-ops-strip/);
+    assert.match(index, /data-tour=["']ops-strip["']/);
     assert.match(index, /href="\/pos"/);
     assert.match(index, /quotations\/new/);
     assert.match(index, /solicitudes\/new/);
@@ -115,6 +124,8 @@ describe("shell UI contracts", () => {
     const page = await source("pages/pos.astro");
     assert.match(page, /getPosCatalog\(/);
     assert.match(page, /data-pos-caja/);
+    assert.match(page, /data-tour=["']pos-ticket["']/);
+    assert.match(page, /data-tour=["']pos-checkout["']/);
     assert.match(page, /\/api\/pos\/checkout/);
     assert.match(page, /\/lists\/sales\/ventas-caja/);
     assert.match(page, /addToCart|cartTotal/);

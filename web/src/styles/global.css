@@ -2,6 +2,7 @@
 @import "./tokens.css";
 @import "./shell.css";
 @import "./list.css";
+@import "./onboarding.css";
 
 @theme {
 	--font-sans: "Montserrat", "Segoe UI", system-ui, sans-serif;

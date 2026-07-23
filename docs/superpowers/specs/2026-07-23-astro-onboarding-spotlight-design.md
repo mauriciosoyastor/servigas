@@ -1,7 +1,7 @@
 # Spec — Onboarding spotlight (recorrido mostrador AR)
 
 **Fecha:** 2026-07-23  
-**Estado:** pending-review  
+**Estado:** approved  
 **Rama:** `cursor/astro-onboarding-spotlight-daee`  
 **Enfoque:** A — overlay propio (máscara / hueco iluminado) sin librería  
 **Voz:** mostrador claro (Argentina, voseo) — misma línea que copy AR
@@ -108,13 +108,13 @@ Reglas:
 
 ## Criterios de aceptación
 
-- [ ] Overlay oscuro + hueco iluminado sobre target
-- [ ] Recorrido cruza `/` → hub → `/pos` con reanudación por `sg_tour_step`
-- [ ] Omitir vs No volver a mostrar se comportan como la tabla de storage
-- [ ] Copy en español AR de mostrador
-- [ ] Targets faltantes no rompen el tour (skip)
-- [ ] `prefers-reduced-motion` respetado
-- [ ] Suite `web` verde
+- [x] Overlay oscuro + hueco iluminado sobre target
+- [x] Recorrido cruza `/` → hub → `/pos` con reanudación por `sg_tour_step`
+- [x] Omitir vs No volver a mostrar se comportan como la tabla de storage
+- [x] Copy en español AR de mostrador
+- [x] Targets faltantes no rompen el tour (skip)
+- [x] `prefers-reduced-motion` respetado
+- [x] Suite `web` verde
 
 ## Verificación
 

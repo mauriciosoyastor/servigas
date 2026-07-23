@@ -42,16 +42,18 @@ Adoptar la **postura B — camino a corte**, con alcance de corte **completo del
 |--------|-----------|
 | Gap que bloquea el camino feliz | Sí |
 | Session store / smoke CI | Sí |
-| Offline POS / recorrido / onboarding | No — después del go |
+| Offline POS / multi-caja | No — después del go operativo |
+| Onboarding spotlight Astro (inicio→hub→caja) | Sí — slice post go condicional |
 | Feature nueva de shell OWL | Solo hotfix prod; no invertir en paridad OWL |
 
-### No-hacemos (hasta después del go)
+### No-hacemos (hasta después del go operativo / smoke)
 
 - Offline / multi-caja POS
-- Recorrido / onboarding Astro
 - AFIP / facturación electrónica en este corte
 - Pixel-perfect vs OWL
 - Iframe / proxy de formularios Odoo en el camino feliz
+
+**Nota:** onboarding spotlight Astro (inicio→hub→caja) está permitido post go condicional.
 
 ## Consecuencias
 

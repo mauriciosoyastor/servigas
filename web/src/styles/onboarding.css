@@ -1,0 +1,104 @@
+/* Onboarding spotlight — overlay oscuro + ventana iluminada */
+
+.sg-onboarding {
+	position: fixed;
+	inset: 0;
+	z-index: 50;
+	pointer-events: none;
+}
+
+.sg-onboarding[hidden] {
+	display: none !important;
+}
+
+.sg-onboarding-hole {
+	position: fixed;
+	z-index: 51;
+	pointer-events: auto;
+	border-radius: var(--sg-radius-card, 12px);
+	box-shadow:
+		0 0 0 999vmax rgba(10, 10, 10, 0.88),
+		0 0 0 2px color-mix(in srgb, var(--sg-flame-yellow) 70%, white),
+		0 12px 40px rgba(0, 0, 0, 0.35);
+	background: transparent;
+	transition:
+		top 180ms ease,
+		left 180ms ease,
+		width 180ms ease,
+		height 180ms ease;
+}
+
+.sg-onboarding-tip {
+	position: fixed;
+	z-index: 52;
+	pointer-events: auto;
+	width: min(22rem, calc(100vw - 2rem));
+	padding: 1rem 1.1rem 1.05rem;
+	border-radius: var(--sg-radius-card, 12px);
+	border: 1px solid var(--sg-glass-border);
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 92%, black);
+	color: var(--sg-text-on-dark);
+	box-shadow: var(--sg-shadow-lg);
+}
+
+.sg-onboarding-progress {
+	margin: 0 0 0.35rem;
+	color: var(--sg-flame-yellow);
+	font-size: 0.68rem;
+	font-weight: 700;
+	letter-spacing: 0.12em;
+	text-transform: uppercase;
+}
+
+.sg-onboarding-tip strong {
+	display: block;
+	margin: 0 0 0.4rem;
+	font-size: 1.05rem;
+	font-weight: 600;
+	letter-spacing: -0.02em;
+}
+
+.sg-onboarding-tip p {
+	margin: 0 0 0.9rem;
+	color: var(--sg-text-muted-dark);
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
+.sg-onboarding-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.45rem;
+}
+
+.sg-onboarding-actions button {
+	border: 1px solid var(--sg-glass-border);
+	border-radius: var(--sg-radius-pill);
+	padding: 0.5rem 0.85rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	cursor: pointer;
+	color: var(--sg-text-on-dark);
+	background: var(--sg-glass-fill);
+}
+
+.sg-onboarding-actions button[data-tour-next] {
+	border-color: transparent;
+	color: #1a1a1a;
+	background: var(--sg-flame-gradient);
+	box-shadow: var(--sg-shadow-flame);
+}
+
+.sg-onboarding-actions button:hover {
+	background: var(--sg-glass-fill-strong);
+}
+
+.sg-onboarding-actions button[data-tour-next]:hover {
+	filter: brightness(1.05);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sg-onboarding-hole {
+		transition: none;
+	}
+}
