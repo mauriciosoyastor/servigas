@@ -63,6 +63,7 @@
 			objectUrl: null,
 			dataUrl: null,
 		};
+		let readGeneration = 0;
 
 		function setStatus(text, state) {
 			if (!text) {
@@ -78,6 +79,7 @@
 
 		function closeModal() {
 			modal.hidden = true;
+			readGeneration += 1;
 			if (pending.objectUrl) URL.revokeObjectURL(pending.objectUrl);
 			pending.objectUrl = null;
 			pending.dataUrl = null;
@@ -91,6 +93,7 @@
 			const apiPath = trigger.getAttribute("data-api-path") || "";
 			const targetSelector = trigger.getAttribute("data-image-target") || "";
 			if (!Number.isFinite(id) || id <= 0 || !apiPath) return;
+			readGeneration += 1;
 			pending = { id, apiPath, targetSelector, objectUrl: null, dataUrl: null };
 			fileInput.click();
 		}
@@ -107,6 +110,9 @@
 
 		fileInput.addEventListener("change", () => {
 			const file = fileInput.files && fileInput.files[0];
+			const generation = ++readGeneration;
+			pending.dataUrl = null;
+			btnSave.disabled = true;
 			if (!file) return;
 			if (!file.type.startsWith("image/")) {
 				modal.hidden = false;
@@ -128,7 +134,9 @@
 
 			const reader = new FileReader();
 			reader.onload = () => {
+				if (generation !== readGeneration) return;
 				pending.dataUrl = typeof reader.result === "string" ? reader.result : null;
+				btnSave.disabled = !pending.dataUrl;
 			};
 			reader.readAsDataURL(file);
 		});

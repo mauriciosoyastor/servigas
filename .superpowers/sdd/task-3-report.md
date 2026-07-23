@@ -1,3 +1,92 @@
+# Task 3 Report: Host cliente de carga de imagen
+
+## Status
+
+**DONE**
+
+## Summary
+
+Created the single-mount `ProductImageUploadHost.astro` client host. It delegates click handling from product image triggers to a gallery-only picker, validates type and client-side size, previews the selected image in a modal, and POSTs `image_1920` to the provided record API path.
+
+## Files Modified
+
+| File | Change |
+|------|--------|
+| `web/src/components/ProductImageUploadHost.astro` | New picker, preview modal, validation, POST flow, target-image cache refresh, and styles |
+| `web/tests/shell-ui.test.mjs` | UI contract test for the host markup and upload request |
+
+## TDD Evidence
+
+### RED — before implementation
+
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/shell-ui.test.mjs
+```
+
+**Result**: 25 pass / 1 fail. The new contract failed as intended with `ENOENT` because `ProductImageUploadHost.astro` did not yet exist.
+
+### GREEN — after implementation
+
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/shell-ui.test.mjs
+```
+
+**Result**: 26 pass / 0 fail.
+
+### Full suite — pre-commit
+
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/**/*.test.mjs
+```
+
+**Result**: 194 pass / 0 fail.
+
+## Commit
+
+```text
+cd4a9a7 feat(web): add product image upload host with preview
+```
+
+## Self-Review
+
+### Correctness
+
+- Delegated clicks read `data-record-id`, `data-api-path`, and optional `data-image-target`.
+- The input uses `accept="image/*"` and intentionally has no `capture` attribute, allowing the device gallery picker.
+- Non-image files and files larger than 2.5 MB show Spanish UTF-8 validation messages.
+- Saving sends the required `{ action: "update", id, values: { image_1920 } }` JSON body with same-origin credentials.
+- A 401 redirects to `/login`; other API errors stay visible in the modal.
+- Successful saves cache-bust the specified `<img>` target or reload the page when no valid target is supplied.
+- Object URLs are revoked and the host is idempotently bound across Astro page loads.
+
+### Scope
+
+No `RecordTable` or detail page integration was added; that remains Task 4.
+
+### Concerns
+
+None. The component follows the provided Task 3 implementation, with the mojibake strings from the brief corrected to UTF-8.
+
+## Critical review fix — stale image reader race
+
+- Cada cambio de archivo ahora invalida inmediatamente `pending.dataUrl`, deshabilita Guardar y obtiene una generación de lectura nueva.
+- El `FileReader.onload` solo conserva el data URL y reactiva Guardar si su generación sigue vigente; cancelar o abrir otro selector también invalida lecturas anteriores.
+- Se extendió el contrato de fuente de `shell-ui.test.mjs` para exigir la invalidación, generación y bloqueo de Guardar, sin añadir automatización de navegador.
+
+### Tests
+
+```powershell
+cd web
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/shell-ui.test.mjs
+```
+
+Resultado: 26 pass / 0 fail.
+
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/**/*.test.mjs
+```
+
+Resultado: 194 pass / 0 fail.
 # Task 3 Report — sessionStore + BackendClient + OdooAdapter
 
 ## Status

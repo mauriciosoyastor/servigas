@@ -311,5 +311,11 @@ describe("shell UI contracts", () => {
     assert.match(host, /Cancelar/);
     assert.match(host, /fetch\(/);
     assert.match(host, /image_1920/);
+    assert.match(host, /let\s+readGeneration\s*=\s*0/);
+    assert.match(
+      host,
+      /const file = fileInput\.files && fileInput\.files\[0\];\s+const generation = \+\+readGeneration;\s+pending\.dataUrl = null;\s+btnSave\.disabled = true;/s
+    );
+    assert.match(host, /if\s*\(\s*generation\s*!==\s*readGeneration\s*\)\s*return/);
   });
 });
