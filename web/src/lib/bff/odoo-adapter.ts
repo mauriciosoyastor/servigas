@@ -36,6 +36,7 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
+import { roundCents, splitAmount, summarizeTaxes } from "../pos/tax.ts";
 
 type DetailLineDef = {
   model: string;
@@ -757,6 +758,7 @@ export class OdooAdapter implements BackendClient {
       "barcode",
       "list_price",
       "qty_available",
+      "taxes_id",
     ];
 
     let rows: Record<string, unknown>[];
@@ -800,6 +802,12 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
+    const taxByProduct = await this.#resolveProductTaxes(
+      odooSessionId,
+      rows.map((row) => Number(row.id)).filter((id) => id > 0),
+      rows
+    );
+
     return {
       config,
       q,
@@ -807,6 +815,10 @@ export class OdooAdapter implements BackendClient {
       total: typeof total === "number" ? total : rows.length,
       products: rows.map((row) => {
         const id = Number(row.id);
+        const tax = taxByProduct.get(id) || {
+          taxRate: 0,
+          priceIncludesTax: false,
+        };
         return {
           id,
           name: String(row.display_name || row.name || ""),
@@ -820,6 +832,8 @@ export class OdooAdapter implements BackendClient {
               : String(row.barcode),
           list_price: Number(row.list_price) || 0,
           qty_available: Number(row.qty_available) || 0,
+          tax_rate: tax.taxRate,
+          price_includes_tax: tax.priceIncludesTax,
           image_url: mediaPath("product.product", id, "image_128"),
         };
       }),
@@ -935,6 +949,81 @@ export class OdooAdapter implements BackendClient {
     return sessionId;
   }
 
+  async #resolveProductTaxes(
+    odooSessionId: string,
+    productIds: number[],
+    productRows?: Record<string, unknown>[]
+  ): Promise<Map<number, { taxRate: number; priceIncludesTax: boolean }>> {
+    const result = new Map<
+      number,
+      { taxRate: number; priceIncludesTax: boolean }
+    >();
+    const ids = [...new Set(productIds.filter((id) => id > 0))];
+    if (!ids.length) return result;
+
+    let rows = productRows;
+    if (!rows?.length || !rows.every((row) => "taxes_id" in row)) {
+      rows = await this.#searchRead(
+        odooSessionId,
+        "product.product",
+        [["id", "in", ids]],
+        ["taxes_id"],
+        ids.length,
+        0,
+        "id asc"
+      );
+    }
+
+    const taxIds = new Set<number>();
+    for (const row of rows) {
+      const raw = row.taxes_id;
+      if (!Array.isArray(raw)) continue;
+      for (const taxId of raw) {
+        const id = Number(taxId);
+        if (id > 0) taxIds.add(id);
+      }
+    }
+
+    const taxById = new Map<
+      number,
+      { amount?: number; amount_type?: string; price_include?: boolean }
+    >();
+    if (taxIds.size) {
+      const taxRows = await this.#searchRead(
+        odooSessionId,
+        "account.tax",
+        [["id", "in", [...taxIds]]],
+        ["amount", "amount_type", "price_include", "type_tax_use"],
+        taxIds.size,
+        0,
+        "id asc"
+      );
+      for (const tax of taxRows) {
+        const use = String(tax.type_tax_use || "sale");
+        if (use !== "sale" && use !== "none") continue;
+        taxById.set(Number(tax.id), {
+          amount: Number(tax.amount) || 0,
+          amount_type: String(tax.amount_type || "percent"),
+          price_include: tax.price_include === true,
+        });
+      }
+    }
+
+    for (const row of rows) {
+      const productId = Number(row.id);
+      const raw = Array.isArray(row.taxes_id) ? row.taxes_id : [];
+      const taxes = raw
+        .map((taxId) => taxById.get(Number(taxId)))
+        .filter(Boolean) as {
+        amount?: number;
+        amount_type?: string;
+        price_include?: boolean;
+      }[];
+      result.set(productId, summarizeTaxes(taxes));
+    }
+    return result;
+  }
+
   async #checkoutPosOrder(
     odooSessionId: string,
     clean: {
@@ -947,14 +1036,31 @@ export class OdooAdapter implements BackendClient {
     preferredPartnerId?: number
   ): Promise<PosCheckoutResult> {
     const sessionId = await this.#ensureOpenPosSession(odooSessionId);
-    const amountTotal = Number(
-      clean
-        .reduce(
-          (sum, line) =>
-            sum + line.price * line.qty * (1 - line.discount / 100),
-          0
-        )
-        .toFixed(2)
+    const taxByProduct = await this.#resolveProductTaxes(
+      odooSessionId,
+      clean.map((line) => line.productId)
+    );
+
+    const lineMoney = clean.map((line) => {
+      const base = roundCents(
+        line.price * line.qty * (1 - line.discount / 100)
+      );
+      const tax = taxByProduct.get(line.productId) || {
+        taxRate: 0,
+        priceIncludesTax: false,
+      };
+      const amounts = splitAmount(base, tax.taxRate, tax.priceIncludesTax);
+      return { line, ...amounts };
+    });
+
+    const amountUntaxed = roundCents(
+      lineMoney.reduce((sum, row) => sum + row.untaxed, 0)
+    );
+    const amountTax = roundCents(
+      lineMoney.reduce((sum, row) => sum + row.tax, 0)
+    );
+    const amountTotal = roundCents(
+      lineMoney.reduce((sum, row) => sum + row.total, 0)
     );
 
     let partnerId: number | false = false;
@@ -1012,28 +1118,23 @@ export class OdooAdapter implements BackendClient {
           session_id: sessionId,
           partner_id: partnerId,
           name: "/",
-          amount_tax: 0,
+          amount_tax: amountTax,
           amount_total: amountTotal,
           amount_paid: 0,
           amount_return: 0,
-          lines: clean.map((line) => {
-            const subtotal = Number(
-              (line.price * line.qty * (1 - line.discount / 100)).toFixed(2)
-            );
-            return [
-              0,
-              0,
-              {
-                product_id: line.productId,
-                qty: line.qty,
-                price_unit: line.price,
-                price_subtotal: subtotal,
-                price_subtotal_incl: subtotal,
-                discount: line.discount,
-                name: "Producto",
-              },
-            ];
-          }),
+          lines: lineMoney.map(({ line, untaxed, total }) => [
+            0,
+            0,
+            {
+              product_id: line.productId,
+              qty: line.qty,
+              price_unit: line.price,
+              price_subtotal: untaxed,
+              price_subtotal_incl: total,
+              discount: line.discount,
+              name: "Producto",
+            },
+          ]),
         },
       ]
     );
@@ -1076,6 +1177,8 @@ export class OdooAdapter implements BackendClient {
       paymentMethodName: String(cash?.name || "Pago"),
       partnerId: partnerId === false ? null : partnerId,
       partnerName,
+      amountUntaxed,
+      amountTax,
       amountTotal,
     };
   }

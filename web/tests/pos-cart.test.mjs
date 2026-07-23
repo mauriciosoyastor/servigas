@@ -32,6 +32,7 @@ describe("pos cart", () => {
     assert.equal(cart.lines.length, 1);
     assert.equal(cart.lines[0].qty, 3);
     assert.equal(cart.lines[0].discount, 0);
+    assert.equal(cart.lines[0].taxRate, 0);
     assert.equal(cartTotal(cart), 300);
   });
 

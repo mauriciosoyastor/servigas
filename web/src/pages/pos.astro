@@ -73,6 +73,8 @@ try {
 									data-id={product.id}
 									data-name={product.name}
 									data-price={product.list_price}
+									data-tax-rate={product.tax_rate}
+									data-price-includes-tax={product.price_includes_tax ? '1' : '0'}
 									data-image={product.image_url || ''}
 									data-qty={product.qty_available}
 								>
@@ -95,7 +97,8 @@ try {
 										{product.list_price.toLocaleString('es-AR', {
 											style: 'currency',
 											currency: 'ARS',
-											maximumFractionDigits: 0,
+											minimumFractionDigits: 2,
+											maximumFractionDigits: 2,
 										})}
 									</span>
 								</button>
@@ -205,9 +208,17 @@ try {
 								<span>Desc. total</span>
 								<strong data-pos-order-disc-value>0%</strong>
 							</div>
+							<div class="sg-pos-cart-subrow">
+								<span>Subtotal</span>
+								<strong data-pos-untaxed>$ 0,00</strong>
+							</div>
+							<div class="sg-pos-cart-subrow">
+								<span>IVA</span>
+								<strong data-pos-tax>$ 0,00</strong>
+							</div>
 							<div class="sg-pos-cart-total">
 								<span>Total</span>
-								<strong data-pos-total>$ 0</strong>
+								<strong data-pos-total>$ 0,00</strong>
 							</div>
 							<button
 								type="button"
@@ -244,6 +255,7 @@ try {
 <script>
 	import {
 		addToCart,
+		cartAmounts,
 		cartTotal,
 		checkoutLinesFromCart,
 		emptyCart,
@@ -269,6 +281,8 @@ try {
 		let pad = emptyNumpad();
 		const linesEl = root.querySelector('[data-pos-lines]');
 		const emptyEl = root.querySelector('[data-pos-empty]');
+		const untaxedEl = root.querySelector('[data-pos-untaxed]');
+		const taxEl = root.querySelector('[data-pos-tax]');
 		const totalEl = root.querySelector('[data-pos-total]');
 		const checkoutBtn = root.querySelector('[data-pos-checkout]');
 		const statusEl = root.querySelector('[data-pos-status]');
@@ -288,7 +302,8 @@ try {
 			value.toLocaleString('es-AR', {
 				style: 'currency',
 				currency: 'ARS',
-				maximumFractionDigits: 0,
+				minimumFractionDigits: 2,
+				maximumFractionDigits: 2,
 			});
 
 		const selectedPaymentMethodId = () => {
@@ -427,7 +442,15 @@ try {
 			const customer = payload.partnerName
 				? ` · Cliente: ${payload.partnerName}`
 				: '';
-			receiptMetaEl.textContent = `Pago: ${pay}${customer}`;
+			const tax = Number(payload.amountTax) || 0;
+			const untaxed = Number(payload.amountUntaxed);
+			const taxNote =
+				tax > 0
+					? ` · Subtotal ${money(
+							Number.isFinite(untaxed) ? untaxed : Number(payload.amountTotal) || 0
+						)} + IVA ${money(tax)}`
+					: '';
+			receiptMetaEl.textContent = `Pago: ${pay}${customer}${taxNote}`;
 			receiptTotalEl.textContent = money(Number(payload.amountTotal) || 0);
 			receiptDetailEl.href = payload.detailPath || '/lists/sales/pos-orders';
 			receiptEl.hidden = false;
@@ -584,7 +607,10 @@ try {
 				linesEl.appendChild(li);
 			}
 			emptyEl.hidden = cart.lines.length > 0;
-			totalEl.textContent = money(cartTotal(cart));
+			const amounts = cartAmounts(cart);
+			if (untaxedEl) untaxedEl.textContent = money(amounts.untaxed);
+			if (taxEl) taxEl.textContent = money(amounts.tax);
+			totalEl.textContent = money(amounts.total || cartTotal(cart));
 			checkoutBtn.disabled = cart.lines.length === 0;
 			syncNumpadChrome();
 		};
@@ -598,6 +624,9 @@ try {
 					name: button.getAttribute('data-name') || 'Producto',
 					price: Number(button.getAttribute('data-price') || 0),
 					qty: 1,
+					taxRate: Number(button.getAttribute('data-tax-rate') || 0),
+					priceIncludesTax:
+						button.getAttribute('data-price-includes-tax') === '1',
 					imageUrl: imageUrl || undefined,
 				});
 				pad = selectLine(pad, productId);

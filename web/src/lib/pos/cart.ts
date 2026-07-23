@@ -1,9 +1,13 @@
+import { roundCents, splitAmount } from "./tax.ts";
+
 export type PosCartLine = {
   productId: number;
   name: string;
   price: number;
   qty: number;
   discount: number;
+  taxRate: number;
+  priceIncludesTax: boolean;
   imageUrl?: string;
 };
 
@@ -17,7 +21,15 @@ export type PosCartProduct = {
   name: string;
   price: number;
   qty?: number;
+  taxRate?: number;
+  priceIncludesTax?: boolean;
   imageUrl?: string;
+};
+
+export type CartAmounts = {
+  untaxed: number;
+  tax: number;
+  total: number;
 };
 
 export function emptyCart(): PosCart {
@@ -26,6 +38,9 @@ export function emptyCart(): PosCart {
 
 export function addToCart(cart: PosCart, product: PosCartProduct): PosCart {
   const qty = Math.max(1, Number(product.qty) || 1);
+  const taxRate = Math.max(0, Number(product.taxRate) || 0);
+  const priceIncludesTax = product.priceIncludesTax === true;
+  const price = roundCents(Math.max(0, Number(product.price) || 0));
   const existing = cart.lines.find((line) => line.productId === product.productId);
   if (existing) {
     return {
@@ -35,8 +50,10 @@ export function addToCart(cart: PosCart, product: PosCartProduct): PosCart {
           ? {
               ...line,
               qty: line.qty + qty,
-              price: product.price,
+              price,
               name: product.name,
+              taxRate,
+              priceIncludesTax,
               imageUrl: product.imageUrl || line.imageUrl,
             }
           : line
@@ -50,9 +67,11 @@ export function addToCart(cart: PosCart, product: PosCartProduct): PosCart {
       {
         productId: product.productId,
         name: product.name,
-        price: product.price,
+        price,
         qty,
         discount: 0,
+        taxRate,
+        priceIncludesTax,
         imageUrl: product.imageUrl || undefined,
       },
     ],
@@ -75,7 +94,7 @@ export function setCartPrice(
   productId: number,
   price: number
 ): PosCart {
-  const next = Math.max(0, Number(price) || 0);
+  const next = roundCents(Math.max(0, Number(price) || 0));
   return {
     ...cart,
     lines: cart.lines.map((line) =>
@@ -110,17 +129,48 @@ export function removeFromCart(cart: PosCart, productId: number): PosCart {
   };
 }
 
+/** Discounted line amount before IVA split (list price basis). */
 export function lineSubtotal(line: PosCartLine): number {
   const gross = line.price * line.qty;
-  return gross * (1 - (Number(line.discount) || 0) / 100);
+  return roundCents(gross * (1 - (Number(line.discount) || 0) / 100));
 }
 
 export function linesSubtotal(cart: PosCart): number {
-  return cart.lines.reduce((sum, line) => sum + lineSubtotal(line), 0);
+  return roundCents(
+    cart.lines.reduce((sum, line) => sum + lineSubtotal(line), 0)
+  );
 }
 
+export function lineAmounts(
+  line: PosCartLine,
+  orderDiscount = 0
+): CartAmounts {
+  const afterOrder = roundCents(
+    lineSubtotal(line) * (1 - (Number(orderDiscount) || 0) / 100)
+  );
+  return splitAmount(afterOrder, line.taxRate, line.priceIncludesTax);
+}
+
+export function cartAmounts(cart: PosCart): CartAmounts {
+  let untaxed = 0;
+  let tax = 0;
+  let total = 0;
+  for (const line of cart.lines) {
+    const amounts = lineAmounts(line, cart.orderDiscount);
+    untaxed += amounts.untaxed;
+    tax += amounts.tax;
+    total += amounts.total;
+  }
+  return {
+    untaxed: roundCents(untaxed),
+    tax: roundCents(tax),
+    total: roundCents(total),
+  };
+}
+
+/** Amount to collect (includes IVA when lines have taxRate). */
 export function cartTotal(cart: PosCart): number {
-  return linesSubtotal(cart) * (1 - (Number(cart.orderDiscount) || 0) / 100);
+  return cartAmounts(cart).total;
 }
 
 /** Combine line % and order % into one effective line discount for checkout. */
