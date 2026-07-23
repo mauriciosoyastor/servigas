@@ -43,6 +43,12 @@ try {
 			<span>{tiles.length} {tiles.length === 1 ? 'acceso' : 'accesos'}</span>
 		</header>
 
+		<nav class="sg-ops-strip" aria-label="Camino feliz del mostrador">
+			<a class="sg-ops-strip-primary sg-focus-ring" href="/pos">Caja / Mostrador</a>
+			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/sales/quotations/new">Nueva cotización</a>
+			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/purchase/rfq/new">Nueva RFQ</a>
+		</nav>
+
 		{launcherError ? (
 			<section class="sg-launcher-state sg-glass" role="alert">
 				<strong>No se pudo abrir el launcher</strong>
@@ -96,6 +102,13 @@ try {
 			}
 
 			if (note) {
+				const detail = note.querySelector('[data-coming-soon-detail]');
+				const label = (tile.dataset.label || '').trim();
+				if (detail) {
+					detail.textContent = label
+						? `«${label}» todavía no tiene pantalla Astro en el camino a corte.`
+						: 'Este acceso todavía no tiene pantalla Astro en el camino a corte.';
+				}
 				note.hidden = false;
 				window.clearTimeout(noteTimer);
 				noteTimer = window.setTimeout(() => {
@@ -120,7 +133,33 @@ try {
 		align-items: end;
 		justify-content: space-between;
 		gap: 1rem;
-		margin-bottom: 2rem;
+		margin-bottom: 1.25rem;
+	}
+	.sg-ops-strip {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		margin-bottom: 1.75rem;
+	}
+	.sg-ops-strip-primary,
+	.sg-ops-strip-link {
+		display: inline-flex;
+		align-items: center;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.7rem 1.1rem;
+		font-size: 0.88rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+	.sg-ops-strip-primary {
+		color: #fff;
+		background: var(--sg-flame-gradient);
+		box-shadow: var(--sg-shadow-flame, 0 12px 28px rgba(230, 74, 25, 0.3));
+	}
+	.sg-ops-strip-link {
+		color: var(--sg-text-on-dark);
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
 	}
 	.sg-launcher-heading p {
 		margin: 0 0 0.5rem;
