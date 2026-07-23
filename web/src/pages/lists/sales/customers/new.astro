@@ -24,11 +24,14 @@ try {
 			apiPath="/api/records/sales/customers"
 			listPath="/lists/sales/customers"
 			title="Alta de cliente"
-			hint="Se crea en Odoo como contacto con rango de cliente."
+			hint="Contacto con rango de cliente. CUIT opcional (recomendado para Factura Web)."
 			fields={[
 				{ key: 'name', label: 'Nombre', required: true },
+				{ key: 'vat', label: 'CUIT / VAT' },
 				{ key: 'phone', label: 'Teléfono' },
 				{ key: 'email', label: 'Email' },
+				{ key: 'street', label: 'Calle' },
+				{ key: 'city', label: 'Ciudad' },
 			]}
 		/>
 	</main>

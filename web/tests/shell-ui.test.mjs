@@ -161,6 +161,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /RecordEditForm|data-record-edit/);
     assert.match(page, /\/api\/records\/sales\/customers/);
     assert.match(page, /phone|email/);
+    assert.match(page, /vat|CUIT/);
+    assert.match(page, /street|city/);
     assert.match(page, /RecordArchiveControl|data-record-archive/);
   });
 
@@ -170,8 +172,10 @@ describe("shell UI contracts", () => {
     const createForm = await source("components/RecordCreateForm.astro");
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(customerNew, /RecordCreateForm/);
+    assert.match(customerNew, /vat|CUIT/);
     assert.match(createForm, /action:\s*['"]create['"]/);
     assert.match(vendorNew, /purchase\/vendors/);
+    assert.match(vendorNew, /vat|CUIT/);
     assert.match(listPage, /canCreateRecord/);
     assert.match(listPage, /sg-list-create|Nuevo cliente/);
   });

@@ -24,11 +24,14 @@ try {
 			apiPath="/api/records/purchase/vendors"
 			listPath="/lists/purchase/vendors"
 			title="Alta de proveedor"
-			hint="Se crea en Odoo como contacto con rango de proveedor."
+			hint="Contacto con rango de proveedor. CUIT opcional (recomendado para compras/Factura Web)."
 			fields={[
 				{ key: 'name', label: 'Nombre', required: true },
+				{ key: 'vat', label: 'CUIT / VAT' },
 				{ key: 'phone', label: 'Teléfono' },
 				{ key: 'email', label: 'Email' },
+				{ key: 'street', label: 'Calle' },
+				{ key: 'city', label: 'Ciudad' },
 			]}
 		/>
 	</main>

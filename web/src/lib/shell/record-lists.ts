@@ -123,6 +123,7 @@ function moveCols(): RecordListColumnDef[] {
 function partnerCols(): RecordListColumnDef[] {
   return [
     { key: "name", label: "Nombre" },
+    { key: "vat", label: "CUIT" },
     { key: "email", label: "Email" },
     { key: "phone", label: "Teléfono" },
     { key: "city", label: "Ciudad" },
@@ -513,13 +514,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con rango de cliente",
     model: "res.partner",
     domain: [["customer_rank", ">", 0]],
-    fields: ["name", "email", "phone", "city"],
+    fields: ["name", "vat", "email", "phone", "street", "city"],
     columns: partnerCols(),
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
     railApp: "sales",
-    searchFields: ["name", "email", "phone"],
+    searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
   "sales/customers-with-orders": {
@@ -529,7 +530,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con al menos un pedido de venta",
     model: "res.partner",
     domain: [["sale_order_count", ">", 0]],
-    fields: ["name", "email", "phone", "city", "sale_order_count"],
+    fields: ["name", "vat", "email", "phone", "street", "city", "sale_order_count"],
     columns: [
       ...partnerCols(),
       { key: "sale_order_count", label: "Pedidos" },
@@ -538,7 +539,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     order: "name asc",
     hubBack: "/hubs/sales",
     railApp: "sales",
-    searchFields: ["name", "email", "phone"],
+    searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
   "sales/teams": {
@@ -859,13 +860,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con rango de proveedor",
     model: "res.partner",
     domain: [["supplier_rank", ">", 0]],
-    fields: ["name", "email", "phone", "city"],
+    fields: ["name", "vat", "email", "phone", "street", "city"],
     columns: partnerCols(),
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/purchase",
     railApp: "purchase",
-    searchFields: ["name", "email", "phone"],
+    searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/purchase/vendors/:id",
   },
   "purchase/vendors-with-po": {
@@ -875,7 +876,15 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con al menos una orden de compra",
     model: "res.partner",
     domain: [["purchase_order_count", ">", 0]],
-    fields: ["name", "email", "phone", "city", "purchase_order_count"],
+    fields: [
+      "name",
+      "vat",
+      "email",
+      "phone",
+      "street",
+      "city",
+      "purchase_order_count",
+    ],
     columns: [
       ...partnerCols(),
       { key: "purchase_order_count", label: "OC" },
@@ -884,7 +893,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     order: "name asc",
     hubBack: "/hubs/purchase",
     railApp: "purchase",
-    searchFields: ["name", "email", "phone"],
+    searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/purchase/vendors/:id",
   },
   "purchase/portals": {

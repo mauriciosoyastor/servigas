@@ -796,6 +796,9 @@ describe("OdooAdapter.createRecord", () => {
     const result = await adapter.createRecord("sess", "sales/customers", {
       name: "Cliente Nuevo",
       phone: "11-0000",
+      vat: "20-12345678-9",
+      street: "Av. Demo 100",
+      city: "CABA",
     });
     assert.equal(result.id, 88);
     assert.equal(result.detailPath, "/lists/sales/customers/88");
@@ -806,6 +809,9 @@ describe("OdooAdapter.createRecord", () => {
     assert.deepEqual(body.params.args[0], {
       name: "Cliente Nuevo",
       phone: "11-0000",
+      vat: "20-12345678-9",
+      street: "Av. Demo 100",
+      city: "CABA",
       customer_rank: 1,
     });
   });
