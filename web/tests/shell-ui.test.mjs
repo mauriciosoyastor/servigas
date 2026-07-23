@@ -129,6 +129,8 @@ describe("shell UI contracts", () => {
     const page = await source("pages/lists/inventory/transfers/[id].astro");
     assert.match(page, /['"]inventory\/transfers['"]/);
     assert.match(page, /RecordDetailBody/);
+    assert.match(page, /RecordConfirmControl|Validar recepción/);
+    assert.match(page, /isConfirmableState/);
   });
 
   it("renders order lines block in record detail body", async () => {

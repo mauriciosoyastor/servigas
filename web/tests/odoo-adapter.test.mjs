@@ -1179,6 +1179,78 @@ describe("OdooAdapter.confirmRecord", () => {
       (error) => error?.code === "not_found"
     );
   });
+
+  it("assigns and validates a stock.picking transfer to done", async () => {
+    let pickingReads = 0;
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "stock.picking" && method === "read") {
+        pickingReads += 1;
+        const state =
+          pickingReads === 1 ? "confirmed" : pickingReads === 2 ? "assigned" : "done";
+        return Response.json({
+          result: [{ id: 33, state, name: "WH/IN/00033" }],
+        });
+      }
+      if (model === "stock.picking" && method === "action_assign") {
+        return Response.json({ result: true });
+      }
+      if (model === "stock.move" && method === "search_read") {
+        return Response.json({
+          result: [
+            { id: 101, product_uom_qty: 5, quantity: 0 },
+            { id: 102, product_uom_qty: 2, quantity: 2 },
+          ],
+        });
+      }
+      if (model === "stock.move" && method === "write") {
+        return Response.json({ result: true });
+      }
+      if (model === "stock.picking" && method === "button_validate") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.confirmRecord(
+      "sess",
+      "inventory/transfers",
+      33
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.state, "done");
+
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    assert.ok(
+      bodies.some(
+        (body) =>
+          body.params?.model === "stock.picking" &&
+          body.params?.method === "action_assign"
+      )
+    );
+    const moveWrite = bodies.find(
+      (body) =>
+        body.params?.model === "stock.move" && body.params?.method === "write"
+    );
+    assert.ok(moveWrite);
+    assert.deepEqual(moveWrite.params.args, [[101], { quantity: 5 }]);
+    const validate = bodies.find(
+      (body) =>
+        body.params?.model === "stock.picking" &&
+        body.params?.method === "button_validate"
+    );
+    assert.ok(validate);
+    assert.equal(validate.params.kwargs?.context?.cancel_backorder, true);
+  });
 });
 
 describe("OdooAdapter.logout", () => {
