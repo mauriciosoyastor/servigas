@@ -15,6 +15,7 @@ import {
 } from "../src/lib/bff/session-store.ts";
 import { __setBackendForTests } from "../src/lib/bff/get-backend.ts";
 import { GET as getSession } from "../src/pages/api/auth/session.ts";
+import { POST as postLogin } from "../src/pages/api/auth/login.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
 import { POST as postRecord } from "../src/pages/api/records/[...slug].ts";
@@ -284,5 +285,44 @@ describe("BFF API routes", () => {
     assert.deepEqual(await response.json(), {
       error: { code: "not_found", message: "No encontrado" },
     });
+  });
+
+  it("rejects empty login credentials with validation_error", async () => {
+    const response = await postLogin({
+      cookies: new FakeCookies(),
+      request: new Request("http://localhost/api/auth/login", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ login: "  ", password: "" }),
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: { code: "validation_error", message: "Datos inválidos" },
+    });
+  });
+
+  it("rejects invalid record action with validation_error", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    const response = await postRecord({
+      cookies,
+      params: { slug: "sales/customers" },
+      request: new Request("http://localhost/api/records/sales/customers", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ action: "explode", id: 1, values: {} }),
+      }),
+    });
+    assert.equal(response.status, 400);
+    assert.deepEqual(await response.json(), {
+      error: { code: "validation_error", message: "Datos inválidos" },
+    });
+    sessionStore.destroy(bffSid);
   });
 });

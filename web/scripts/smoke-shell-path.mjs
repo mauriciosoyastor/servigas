@@ -6,12 +6,17 @@
  *   - Odoo alcanzable vía ODOO_URL / ODOO_DB del proceso Astro
  *   - Credenciales SMOKE_LOGIN / SMOKE_PASSWORD (default admin/admin)
  *
+ * Por default solo GET (no muta datos). Con SMOKE_MUTATE=1 también intenta
+ * un checkout POS mínimo (solo si hay producto en catálogo).
+ *
  * Exit 0 = camino OK. Exit 1 = fallo. Exit 2 = prereq down (Astro/Odoo).
  */
 const base = process.env.SMOKE_BASE_URL || "http://127.0.0.1:4321";
 const loginName = process.env.SMOKE_LOGIN || "admin";
 const password = process.env.SMOKE_PASSWORD || "admin";
+const mutate = process.env.SMOKE_MUTATE === "1";
 const jar = new Map();
+let catalogProduct = null;
 
 function cookieHeader() {
   return [...jar.entries()].map(([k, v]) => `${k}=${v}`).join("; ");
@@ -111,6 +116,65 @@ await step("list_products", async () => {
   }
 });
 
+await step("list_quotations", async () => {
+  const res = await fetch(`${base}/api/lists/sales/quotations`, {
+    headers: { cookie: cookieHeader() },
+  });
+  absorb(res);
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(`quotations ${res.status} ${JSON.stringify(body)}`);
+  }
+  if (!Array.isArray(body.rows)) throw new Error("quotations sin rows");
+});
+
+await step("list_rfq", async () => {
+  const res = await fetch(`${base}/api/lists/purchase/rfq`, {
+    headers: { cookie: cookieHeader() },
+  });
+  absorb(res);
+  const body = await res.json();
+  if (!res.ok) throw new Error(`rfq ${res.status} ${JSON.stringify(body)}`);
+  if (!Array.isArray(body.rows)) throw new Error("rfq sin rows");
+});
+
+await step("quotation_new_page", async () => {
+  const res = await fetch(`${base}/lists/sales/quotations/new`, {
+    headers: { cookie: cookieHeader() },
+  });
+  absorb(res);
+  const html = await res.text();
+  if (!res.ok) throw new Error(`quotation new ${res.status}`);
+  if (!/cotiz|quotation|order-create|OrderCreate/i.test(html)) {
+    throw new Error("quotation new HTML inesperado");
+  }
+});
+
+await step("rfq_new_page", async () => {
+  const res = await fetch(`${base}/lists/purchase/rfq/new`, {
+    headers: { cookie: cookieHeader() },
+  });
+  absorb(res);
+  const html = await res.text();
+  if (!res.ok) throw new Error(`rfq new ${res.status}`);
+  if (!/rfq|pedido|order-create|OrderCreate/i.test(html)) {
+    throw new Error("rfq new HTML inesperado");
+  }
+});
+
+await step("pos_catalog", async () => {
+  const res = await fetch(`${base}/api/pos/catalog`, {
+    headers: { cookie: cookieHeader() },
+  });
+  absorb(res);
+  const body = await res.json();
+  if (!res.ok) {
+    throw new Error(`pos catalog ${res.status} ${JSON.stringify(body)}`);
+  }
+  if (!Array.isArray(body.products)) throw new Error("catalog sin products");
+  catalogProduct = body.products[0] || null;
+});
+
 await step("pos_page", async () => {
   const res = await fetch(`${base}/pos`, {
     headers: { cookie: cookieHeader() },
@@ -122,5 +186,40 @@ await step("pos_page", async () => {
     throw new Error("pos HTML inesperado");
   }
 });
+
+if (mutate) {
+  await step("pos_checkout_mutate", async () => {
+    if (!catalogProduct?.id) {
+      throw new Error("SMOKE_MUTATE=1 pero el catálogo no tiene productos");
+    }
+    const res = await fetch(`${base}/api/pos/checkout`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        cookie: cookieHeader(),
+      },
+      body: JSON.stringify({
+        lines: [
+          {
+            productId: catalogProduct.id,
+            qty: 1,
+            price: Number(catalogProduct.list_price) || 1,
+            discount: 0,
+          },
+        ],
+      }),
+    });
+    absorb(res);
+    const body = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(`checkout ${res.status} ${JSON.stringify(body)}`);
+    }
+    if (!body.orderId && !body.orderName) {
+      throw new Error("checkout sin orderId/orderName");
+    }
+  });
+} else {
+  console.log("skip pos_checkout_mutate (set SMOKE_MUTATE=1 to enable)");
+}
 
 console.log("smoke-shell-path: PASS");
