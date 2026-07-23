@@ -132,7 +132,7 @@ export type PosCheckoutResult = {
   orderId: number;
   orderName: string;
   detailPath: string;
-  channel: "pos.order" | "sale.order";
+  channel: "pos.order";
   paymentMethodId: number | null;
   paymentMethodName: string | null;
   amountTotal: number;
