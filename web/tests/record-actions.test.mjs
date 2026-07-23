@@ -19,6 +19,18 @@ describe("record-actions allowlist", () => {
     assert.equal(canConfirmRecord("purchase/rfq"), true);
   });
 
+  it("allows validating inventory transfers", () => {
+    const transfer = getRecordActionDef("inventory/transfers");
+    assert.ok(transfer);
+    assert.equal(transfer.model, "stock.picking");
+    assert.equal(transfer.method, "button_validate");
+    assert.equal(canConfirmRecord("inventory/transfers"), true);
+    assert.equal(isConfirmableState("inventory/transfers", "assigned"), true);
+    assert.equal(isConfirmableState("inventory/transfers", "confirmed"), true);
+    assert.equal(isConfirmableState("inventory/transfers", "waiting"), true);
+    assert.equal(isConfirmableState("inventory/transfers", "done"), false);
+  });
+
   it("rejects products and confirmed sales orders lists", () => {
     assert.equal(getRecordActionDef("inventory/products"), null);
     assert.equal(canConfirmRecord("sales/orders"), false);

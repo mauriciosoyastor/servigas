@@ -577,6 +577,10 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
+    if (actionDef.model === "stock.picking") {
+      return this.#validateStockPicking(odooSessionId, id, state);
+    }
+
     await this.#callKw(odooSessionId, actionDef.model, actionDef.method, [
       [id],
     ]);
@@ -591,6 +595,86 @@ export class OdooAdapter implements BackendClient {
       ok: true,
       state: after?.state == null ? null : String(after.state),
     };
+  }
+
+  async #validateStockPicking(
+    odooSessionId: string,
+    id: number,
+    initialState: string | null
+  ): Promise<{ ok: true; state: string | null }> {
+    let state = initialState;
+
+    if (state === "confirmed" || state === "waiting") {
+      await this.#callKw(odooSessionId, "stock.picking", "action_assign", [
+        [id],
+      ]);
+      const [assigned] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "stock.picking",
+        "read",
+        [[id], ["state"]]
+      );
+      state = assigned?.state == null ? null : String(assigned.state);
+    }
+
+    if (state !== "assigned") {
+      throw new BffError(
+        "action_failed",
+        409,
+        "No se pudo reservar stock para validar la transferencia"
+      );
+    }
+
+    const moves = await this.#searchRead(
+      odooSessionId,
+      "stock.move",
+      [["picking_id", "=", id]],
+      ["product_uom_qty", "quantity"],
+      200,
+      0,
+      "id asc"
+    );
+    for (const move of moves) {
+      const moveId = Number(move.id);
+      const demand = Number(move.product_uom_qty) || 0;
+      const qty = Number(move.quantity) || 0;
+      if (!Number.isFinite(moveId) || moveId <= 0) continue;
+      if (demand > 0 && qty <= 0) {
+        await this.#callKw(odooSessionId, "stock.move", "write", [
+          [moveId],
+          { quantity: demand },
+        ]);
+      }
+    }
+
+    await this.#callKw(
+      odooSessionId,
+      "stock.picking",
+      "button_validate",
+      [[id]],
+      {
+        context: {
+          cancel_backorder: true,
+          skip_backorder: true,
+        },
+      }
+    );
+
+    const [after] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "stock.picking",
+      "read",
+      [[id], ["state"]]
+    );
+    const afterState = after?.state == null ? null : String(after.state);
+    if (afterState !== "done") {
+      throw new BffError(
+        "action_failed",
+        409,
+        "La validación no completó la transferencia (puede requerir asistente en Odoo)"
+      );
+    }
+    return { ok: true, state: afterState };
   }
 
   async getPosCatalog(

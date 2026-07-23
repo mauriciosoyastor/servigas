@@ -29,6 +29,10 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       method: "button_confirm",
       confirmableStates: ["sent"],
     },
+    "inventory/transfers": {
+      method: "button_validate",
+      confirmableStates: ["confirmed", "waiting", "assigned"],
+    },
   };
 
 export function getRecordActionDef(listKey: string): RecordActionDef | null {
