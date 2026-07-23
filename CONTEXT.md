@@ -70,9 +70,18 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 
-## Shell Astro experimental (`web/`)
+## Shell Astro — camino a corte (`web/`)
 
-Spike **Astro + BFF** en `web/` (login, launcher, rail, hub inventory), ya en `main`; plan en [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). Skill reutilizable: `astro-bff-shell` (personal). **Producción sigue siendo el frontend OWL / Liquid Glass en Odoo** hasta un corte explícito; no desplegar `web/` como reemplazo del shell operativo sin validación manual contra Odoo dev.
+**Gobernanza (ADR 0016):** postura **B — camino a corte**. Meta: Astro (`web/`) reemplaza el shell operativo OWL, incluyendo **POS caja**. Hoy OWL sigue siendo producción hasta **go/no-go** explícito (checklist en el ADR).
+
+| Hoy | Meta (día D) |
+|-----|----------------|
+| OWL launcher/hubs/POS = prod | Astro login → hubs → listas → POS caja = shell oficial |
+| `web/` = piloto avanzado en `main` | Odoo = backend; UI OWL de negocio apagada |
+
+**Regla de build:** solo paridad del camino feliz o endurecer BFF. Fuera de alcance hasta después del go: offline, multi-caja, recorrido/onboarding.
+
+Skill: `astro-bff-shell` (personal). Plan spike: [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). ADR: [0016](docs/adr/0016-astro-shell-cutover.md).
 
 ## Sistema de diseño — Liquid Glass v2 (frontend Odoo)
 
@@ -120,6 +129,7 @@ Tokens: `astorproptech/docs/design/tokens.md`
 | 0013 | Tema pago/recibo Mostrador (hermano 0012 + TDD) | `docs/adr/0013-pos-payment-receipt-theme.md` |
 | 0014 | Descuento general (Desc.) en numpad Mostrador | `docs/adr/0014-pos-order-discount-numpad.md` |
 | 0015 | Sin chatter en forms operativos (plan + TDD) | `docs/adr/0015-hide-chatter-operative-forms.md` |
+| 0016 | Camino a corte shell Astro (+ POS) | `docs/adr/0016-astro-shell-cutover.md` |
 
 ## Estado actual (2026-07-05)
 

@@ -31,17 +31,17 @@
 
 ---
 
-## Resumen ejecutivo (estado al 2026-07-22)
+## Resumen ejecutivo (estado al 2026-07-23)
 
 | Área | Estado | Notas |
 |------|--------|-------|
 | Identidad visual | Hecho | Tokens llama + Montserrat (`servigas_tokens.scss`) |
 | Backend Odoo | Hecho | Navbar, acentos flame, `servigas_hub.scss` |
-| Hubs App Shell (OWL) | **Hecho** | Inventario, Ventas, Compras, Facturación (`v19.0.1.4.0`) — **prod** |
-| POS | En curso | Tema oscuro + glass en header |
+| Hubs App Shell (OWL) | **Prod (hasta corte)** | Inventario, Ventas, Compras, Facturación — vigente hasta go ADR 0016 |
+| POS OWL | En curso / fallback | Tema oscuro + glass; corte apunta a POS Astro |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
-| Shell Astro BFF (`web/`) | **Spike verificado (unit)** | SSR + login BFF + launcher + hub inventory; manual Odoo **pendiente** |
+| Shell Astro BFF (`web/`) | **Camino a corte (B)** | Operativo en piloto (listas, writes, POS); go/no-go en ADR 0016 |
 | Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 **Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
@@ -49,6 +49,26 @@
 ---
 
 ## Entradas
+
+### 2026-07-23 — Gobernanza: camino a corte Astro (ADR 0016)
+
+**Área:** docs | web  
+**Motivo:** fijar postura B (Astro reemplaza shell operativo OWL, incluyendo POS) y checklist go/no-go.  
+**Archivos:**
+- `docs/adr/0016-astro-shell-cutover.md`
+- `CONTEXT.md`
+- `docs/proyecto/bitacora-cambios.md`
+- `web/README.md`
+
+**Cambios:**
+- Decisión B + alcance día D = shell + listas + POS Astro.
+- OWL sigue prod hasta go explícito; filtro semanal anti-lab.
+- Resumen ejecutivo actualizado a “camino a corte”.
+
+**Verificación:** leer ADR 0016 + sección shell en `CONTEXT.md`.  
+**Automatización:** checklist go/no-go → issues/smoke CI cuando haya session store durable.
+
+---
 
 ### 2026-07-03 — Bitácora: kit automatización hubs App Shell
 
