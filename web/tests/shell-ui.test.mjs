@@ -205,6 +205,22 @@ describe("shell UI contracts", () => {
     assert.match(notes, /¿Borrar esta nota\?/);
   });
 
+  it("wires RecordNotes into v1 detail pages", async () => {
+    const pages = [
+      "pages/lists/sales/customers/[id].astro",
+      "pages/lists/purchase/vendors/[id].astro",
+      "pages/lists/inventory/products/[id].astro",
+      "pages/lists/sales/quotations/[id].astro",
+      "pages/lists/sales/orders/[id].astro",
+      "pages/lists/purchase/orders/[id].astro",
+    ];
+    for (const path of pages) {
+      const src = await source(path);
+      assert.match(src, /RecordNotes/, path);
+      assert.match(src, /listKey=/, path);
+    }
+  });
+
   it("renders customer detail with allowlisted edit form", async () => {
     const page = await source("pages/lists/sales/customers/[id].astro");
     assert.match(page, /RecordEditForm|data-record-edit/);
