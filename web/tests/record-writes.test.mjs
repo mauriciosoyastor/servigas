@@ -86,7 +86,7 @@ describe("record-writes allowlist", () => {
     );
   });
 
-  it("defines product create with sale_ok/is_storable defaults", () => {
+  it("defines product create with sale_ok/is_storable/available_in_pos defaults", () => {
     const def = getRecordWriteDef("inventory/products");
     assert.ok(def);
     assert.equal(def.model, "product.template");
@@ -97,6 +97,7 @@ describe("record-writes allowlist", () => {
     assert.deepEqual(def.createDefaults, {
       sale_ok: true,
       is_storable: true,
+      available_in_pos: true,
     });
     assert.equal(canCreateRecord("inventory/products"), true);
     assert.equal(canArchiveRecord("inventory/products"), true);
@@ -114,6 +115,7 @@ describe("record-writes allowlist", () => {
       list_price: 1999.5,
       sale_ok: true,
       is_storable: true,
+      available_in_pos: true,
     });
   });
 });

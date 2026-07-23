@@ -40,7 +40,11 @@ const WRITES: Record<string, WriteConfig> = {
   "inventory/products": {
     fields: ["default_code", "list_price"],
     createFields: ["name", "default_code", "list_price"],
-    createDefaults: { sale_ok: true, is_storable: true },
+    createDefaults: {
+      sale_ok: true,
+      is_storable: true,
+      available_in_pos: true,
+    },
     numericCreateFields: ["list_price"],
     canArchive: true,
   },

@@ -852,6 +852,7 @@ describe("OdooAdapter.createRecord products", () => {
       list_price: 2500,
       sale_ok: true,
       is_storable: true,
+      available_in_pos: true,
     });
   });
 });
