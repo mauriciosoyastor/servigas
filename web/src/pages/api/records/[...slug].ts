@@ -7,6 +7,7 @@ import {
   requireOdooSession,
 } from "../../../lib/bff/http.ts";
 import { canConfirmRecord } from "../../../lib/shell/record-actions.ts";
+import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import {
   canArchiveRecord,
   canCreateRecord,
@@ -34,7 +35,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     const writes = getRecordWriteDef(slug);
     const canAct =
-      Boolean(writes) || (action === "confirm" && canConfirmRecord(slug));
+      Boolean(writes) ||
+      (action === "confirm" && canConfirmRecord(slug)) ||
+      (action === "create" && canCreateOrder(slug));
     if (!canAct) {
       throw new BffError("not_found", 404, "Escritura no permitida");
     }

@@ -856,6 +856,60 @@ describe("OdooAdapter.createRecord products", () => {
   });
 });
 
+describe("OdooAdapter.createRecord quotations", () => {
+  it("creates a draft sale.order with one line", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 77 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "sales/quotations", {
+      partnerId: 6,
+      productId: 42,
+      qty: 2,
+    });
+    assert.equal(result.id, 77);
+    assert.equal(result.detailPath, "/lists/sales/quotations/77");
+
+    const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.model, "sale.order");
+    assert.equal(body.params.method, "create");
+    assert.equal(body.params.args[0].partner_id, 6);
+    assert.deepEqual(body.params.args[0].order_line[0][2], {
+      product_id: 42,
+      product_uom_qty: 2,
+    });
+  });
+});
+
+describe("OdooAdapter.createRecord RFQ", () => {
+  it("creates a draft purchase.order with product_qty line", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 91 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "purchase/rfq", {
+      partnerId: 8,
+      productId: 42,
+      qty: 3,
+    });
+    assert.equal(result.id, 91);
+    assert.equal(result.detailPath, "/lists/purchase/orders/91");
+
+    const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.model, "purchase.order");
+    assert.deepEqual(body.params.args[0].order_line[0][2], {
+      product_id: 42,
+      product_qty: 3,
+    });
+  });
+});
+
 describe("OdooAdapter.confirmRecord", () => {
   it("calls action_confirm on sale.order quotations", async () => {
     let reads = 0;

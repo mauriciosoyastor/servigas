@@ -183,6 +183,21 @@ describe("shell UI contracts", () => {
     assert.match(po, /Confirmar OC|purchase\/rfq/);
   });
 
+  it("renders quotation create page", async () => {
+    const page = await source("pages/lists/sales/quotations/new.astro");
+    const form = await source("components/OrderCreateForm.astro");
+    assert.match(page, /OrderCreateForm/);
+    assert.match(form, /partnerId|productId/);
+    assert.match(form, /action:\s*['"]create['"]/);
+  });
+
+  it("renders RFQ create page", async () => {
+    const page = await source("pages/lists/purchase/rfq/new.astro");
+    assert.match(page, /OrderCreateForm/);
+    assert.match(page, /purchase\/rfq/);
+    assert.match(page, /Proveedor|Nueva RFQ/);
+  });
+
   it("does not keep option B proxy/work surfaces", async () => {
     await assert.rejects(() => source("pages/work.astro"));
     await assert.rejects(() => source("pages/odoo-proxy/[...path].ts"));

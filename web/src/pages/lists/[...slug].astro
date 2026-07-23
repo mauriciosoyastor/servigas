@@ -25,7 +25,11 @@ const createLabel =
 			? 'Nuevo proveedor'
 			: listKey === 'inventory/products'
 				? 'Nuevo producto'
-				: 'Nuevo';
+				: listKey === 'sales/quotations'
+					? 'Nueva cotización'
+					: listKey === 'purchase/rfq'
+						? 'Nueva RFQ'
+						: 'Nuevo';
 
 let userName = '';
 let listError = '';

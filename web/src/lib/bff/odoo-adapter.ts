@@ -27,6 +27,10 @@ import {
   isConfirmableState,
 } from "../shell/record-actions.ts";
 import {
+  filterOrderCreateValues,
+  getOrderCreateDef,
+} from "../shell/order-creates.ts";
+import {
   canArchiveRecord,
   filterCreateValues,
   filterWritableValues,
@@ -419,6 +423,10 @@ export class OdooAdapter implements BackendClient {
     listKey: string,
     values: Record<string, unknown>
   ): Promise<{ id: number; detailPath: string }> {
+    if (getOrderCreateDef(listKey)) {
+      return this.#createMinimalOrder(odooSessionId, listKey, values);
+    }
+
     const writeDef = getRecordWriteDef(listKey);
     if (!writeDef?.createFields.length) {
       throw new BffError("not_found", 404, "Alta no permitida");
@@ -437,6 +445,44 @@ export class OdooAdapter implements BackendClient {
     const list = getRecordListDef(listKey);
     const detailPath =
       (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
+    return { id: Number(id), detailPath };
+  }
+
+  async #createMinimalOrder(
+    odooSessionId: string,
+    listKey: string,
+    values: Record<string, unknown>
+  ): Promise<{ id: number; detailPath: string }> {
+    const orderDef = getOrderCreateDef(listKey);
+    if (!orderDef) {
+      throw new BffError("not_found", 404, "Alta no permitida");
+    }
+    const filtered = filterOrderCreateValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("not_found", 404, "Datos de alta inválidos");
+    }
+
+    const line: Record<string, number> = {
+      product_id: filtered.productId,
+      [orderDef.lineQtyField]: filtered.qty,
+    };
+
+    const id = await this.#callKw<number>(
+      odooSessionId,
+      orderDef.model,
+      "create",
+      [
+        {
+          partner_id: filtered.partnerId,
+          order_line: [[0, 0, line]],
+        },
+      ]
+    );
+
+    const list = getRecordListDef(listKey);
+    const detailPath =
+      (list && buildDetailPath(list, Number(id))) ||
+      `/lists/${listKey}/${id}`;
     return { id: Number(id), detailPath };
   }
 
