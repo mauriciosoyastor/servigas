@@ -3,9 +3,11 @@ import type { LauncherTile } from '../lib/bff/types.ts';
 
 interface Props {
 	tile: LauncherTile;
+	/** Onboarding spotlight anchor (data-tour) */
+	tourTarget?: string;
 }
 
-const { tile } = Astro.props;
+const { tile, tourTarget } = Astro.props;
 const accents: Record<string, string> = {
 	'flame-yellow': 'var(--sg-flame-yellow)',
 	'flame-orange': 'var(--sg-flame-orange)',
@@ -31,6 +33,7 @@ const actionPayload =
 	data-client-tag={tile.client_tag}
 	data-label={tile.label}
 	data-action={actionPayload}
+	data-tour={tourTarget}
 	style={`--tile-accent: ${accent}`}
 >
 	<span class="sg-tile-icon" aria-hidden="true">{monogram}</span>

@@ -75,7 +75,10 @@ const sectionName =
 					<p>{sectionName}</p>
 					<h1>{HUB_LABELS[app]}</h1>
 				</div>
-				<span>{cards.length} {cards.length === 1 ? 'acceso' : 'accesos'}</span>
+				<div class="sg-hub-heading-meta">
+					<span>{cards.length} {cards.length === 1 ? 'acceso' : 'accesos'}</span>
+					<a class="sg-hub-pos-entry sg-focus-ring" href="/pos" data-tour="pos-entry">Ir a la caja</a>
+				</div>
 			</header>
 
 			{!hubError ? <HubSubnav app={app} sections={sections} active={activeSection} /> : null}
@@ -87,12 +90,17 @@ const sectionName =
 				</section>
 			) : groups.length ? (
 				<div class="sg-hub-groups">
-					{groups.map((group) => (
+					{groups.map((group, groupIndex) => (
 						<section class="sg-hub-group" aria-label={group.name}>
 							<h2 class="sg-hub-group-title">{group.name}</h2>
 							<div class="sg-hub-grid">
-								{group.cards.map((card) => (
-									<TileCard tile={{ ...card, target_type: 'action', client_tag: '' }} />
+								{group.cards.map((card, cardIndex) => (
+									<TileCard
+										tile={{ ...card, target_type: 'action', client_tag: '' }}
+										tourTarget={
+											groupIndex === 0 && cardIndex === 0 ? 'hub-card' : undefined
+										}
+									/>
 								))}
 							</div>
 						</section>
@@ -100,8 +108,11 @@ const sectionName =
 				</div>
 			) : cards.length ? (
 				<section class="sg-hub-grid" aria-label={`Accesos de ${HUB_LABELS[app]} — ${sectionName}`}>
-					{cards.map((card) => (
-						<TileCard tile={{ ...card, target_type: 'action', client_tag: '' }} />
+					{cards.map((card, index) => (
+						<TileCard
+							tile={{ ...card, target_type: 'action', client_tag: '' }}
+							tourTarget={index === 0 ? 'hub-card' : undefined}
+						/>
 					))}
 				</section>
 			) : (
@@ -197,7 +208,14 @@ const sectionName =
 		letter-spacing: -0.045em;
 		line-height: 1.05;
 	}
-	.sg-hub-heading > span {
+	.sg-hub-heading-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.5rem;
+	}
+	.sg-hub-heading-meta > span,
+	.sg-hub-pos-entry {
 		flex: none;
 		border: 1px solid var(--sg-glass-border);
 		border-radius: var(--sg-radius-pill);
@@ -206,6 +224,11 @@ const sectionName =
 		background: var(--sg-glass-fill);
 		font-size: 0.7rem;
 		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-hub-pos-entry {
+		color: var(--sg-text-on-dark);
+		background: color-mix(in srgb, var(--sg-flame-orange) 28%, var(--sg-glass-fill));
 	}
 	.sg-hub-groups {
 		display: grid;

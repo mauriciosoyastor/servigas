@@ -14,7 +14,12 @@ const items = [
 ---
 
 <aside class="sg-rail sg-glass" aria-label="Navegación principal">
-	<a class="sg-brand sg-focus-ring" href="/" aria-label="Servigas, inicio">
+	<a
+		class="sg-brand sg-focus-ring"
+		href="/"
+		aria-label="Servigas, inicio"
+		data-tour="rail-home"
+	>
 		<span class="sg-brand-mark" aria-hidden="true">S</span>
 		<span class="sg-brand-name">Servigas</span>
 	</a>
@@ -26,6 +31,7 @@ const items = [
 				class:list={['sg-rail-link', 'sg-focus-ring', { 'is-active': active === item.app }]}
 				aria-current={active === item.app ? 'page' : undefined}
 				title={item.label}
+				data-tour={`rail-${item.app}`}
 			>
 				<svg viewBox="0 0 24 24" aria-hidden="true">
 					<path d={item.icon}></path>

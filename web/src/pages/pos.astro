@@ -115,7 +115,7 @@ try {
 					</div>
 				</section>
 
-				<aside class="sg-pos-cart sg-glass" aria-label="Ticket">
+				<aside class="sg-pos-cart sg-glass" aria-label="Ticket" data-tour="pos-ticket">
 					<div class="sg-pos-cart-ticket">
 						<strong>Ticket</strong>
 						<ul
@@ -234,7 +234,13 @@ try {
 								Desc. al total…
 							</button>
 						</div>
-						<button class="sg-pos-pay sg-focus-ring" type="button" data-pos-checkout disabled>
+						<button
+							class="sg-pos-pay sg-focus-ring"
+							type="button"
+							data-pos-checkout
+							data-tour="pos-checkout"
+							disabled
+						>
 							Registrar venta
 						</button>
 						<p class="sg-pos-cart-status" data-pos-status hidden></p>

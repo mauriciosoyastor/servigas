@@ -1,5 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import OnboardingTour from '../components/OnboardingTour.astro';
 import RailNav from '../components/RailNav.astro';
 
 interface Props {
@@ -30,6 +31,7 @@ const {
 		</header>
 		<slot />
 	</div>
+	<OnboardingTour />
 </BaseLayout>
 
 <script>
