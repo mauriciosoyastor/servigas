@@ -260,4 +260,33 @@ describe("shell UI contracts", () => {
     await assert.rejects(() => source("pages/odoo-proxy/[...path].ts"));
     await assert.rejects(() => source("lib/bff/odoo-proxy.ts"));
   });
+
+  it("styles record lists as glass panel with mobile card reflow", async () => {
+    const css = await source("styles/list.css");
+
+    // Contenedor: isla glass, no papel canvas
+    assert.match(css, /\.sg-record-table-wrap\s*\{[^}]*backdrop-filter:/s);
+    assert.match(css, /\.sg-record-table-wrap\s*\{[^}]*--sg-glass-fill/s);
+    assert.doesNotMatch(
+      css,
+      /\.sg-record-table-wrap\s*\{[^}]*background:\s*color-mix\(in srgb,\s*var\(--sg-canvas\)/s
+    );
+
+    // Tabla on-dark
+    assert.match(css, /\.sg-record-table\s*\{[^}]*--sg-text-on-dark/s);
+
+    // Header sticky charcoal / flame
+    assert.match(css, /\.sg-record-table thead\s*\{[^}]*sticky/s);
+    assert.match(css, /\.sg-record-table thead\s*\{[^}]*--sg-bg-charcoal|--sg-glass-fill/s);
+
+    // Móvil: reflow a cards
+    assert.match(css, /@media\s*\(max-width:\s*767px\)/);
+    assert.match(css, /@media\s*\(max-width:\s*767px\)[\s\S]*display:\s*block/);
+
+    // Reduced motion
+    assert.match(
+      css,
+      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.sg-record-table tbody tr/
+    );
+  });
 });
