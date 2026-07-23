@@ -1,8 +1,10 @@
 # Design: Bitácora de notas en fichas Astro
 
 **Fecha:** 2026-07-23  
-**Estado:** approved (diseño; pendiente plan de implementación)  
+**Estado:** implemented (automated) — smoke manual contra Odoo live pendiente  
 **Repo:** servigas / `web/` (+ Odoo vía BFF)
+
+> **Implementación (2026-07-23):** Tasks 1–5 completadas en `feat/astro-record-notes` (HEAD `6daad08`). Suite automatizada verde: 203 tests PASS (`web/tests/**/*.test.mjs`). Smoke manual con sesión real en dev server no ejecutado en este entorno (sin servidor Odoo ni credenciales disponibles); validar agregar/editar/borrar propia, visibilidad sin botones para otro usuario, y bloque Notas en las seis fichas v1 antes de promover.
 
 ## Problema
 

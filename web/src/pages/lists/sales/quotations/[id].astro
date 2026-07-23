@@ -1,6 +1,7 @@
 ---
 import RecordConfirmControl from '../../../../components/RecordConfirmControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
@@ -43,5 +44,8 @@ const showConfirm = isConfirmableState('sales/quotations', state);
 			apiPath="/api/records/sales/quotations"
 			label="Confirmar pedido"
 		/>
+	) : null}
+	{detail && !error ? (
+		<RecordNotes listKey="sales/quotations" recordId={id} />
 	) : null}
 </ShellLayout>

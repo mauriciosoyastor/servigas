@@ -15,6 +15,7 @@ import type {
   RecordDetailPayload,
   RecordListPayload,
   RecordListRow,
+  RecordNote,
   SessionInfo,
 } from "./types.ts";
 import {
@@ -47,6 +48,13 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
+import {
+  isAllowedNoteModel,
+  normalizeNoteBody,
+  odooHtmlFromPlainText,
+  plainTextFromOdooHtml,
+  resolveNoteTarget,
+} from "../shell/record-notes.ts";
 import { roundCents, splitAmount, summarizeTaxes } from "../pos/tax.ts";
 
 type DetailLineDef = {
@@ -742,6 +750,110 @@ export class OdooAdapter implements BackendClient {
       [id],
       { active: false },
     ]);
+  }
+
+  async listRecordNotes(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    viewerUid: number
+  ): Promise<RecordNote[]> {
+    const target = resolveNoteTarget(listKey);
+    if (!target || !Number.isFinite(recordId) || recordId <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "mail.message",
+      [
+        ["model", "=", target.model],
+        ["res_id", "=", recordId],
+        ["message_type", "=", "comment"],
+      ],
+      ["body", "author_id", "create_uid", "date"],
+      200,
+      0,
+      "id desc"
+    );
+    return rows.map((row) => this.#mapMailMessage(row, viewerUid));
+  }
+
+  async createRecordNote(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote> {
+    const target = resolveNoteTarget(listKey);
+    if (!target || !Number.isFinite(recordId) || recordId <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+    const normalized = normalizeNoteBody(body);
+    if (!normalized.ok) {
+      throw new BffError("validation_error", 400, normalized.error);
+    }
+
+    const noteId = await this.#callKw<number>(
+      odooSessionId,
+      target.model,
+      "message_post",
+      [[recordId]],
+      {
+        body: odooHtmlFromPlainText(normalized.body),
+        message_type: "comment",
+        subtype_xmlid: "mail.mt_note",
+      }
+    );
+    return this.#readRecordNote(odooSessionId, Number(noteId), viewerUid);
+  }
+
+  async updateRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote> {
+    if (!Number.isFinite(noteId) || noteId <= 0) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    const normalized = normalizeNoteBody(body);
+    if (!normalized.ok) {
+      throw new BffError("validation_error", 400, normalized.error);
+    }
+
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
+    this.#assertNoteOwner(note, viewerUid);
+    await this.#callKw(odooSessionId, "mail.message", "write", [
+      [noteId],
+      { body: odooHtmlFromPlainText(normalized.body) },
+    ]);
+    return this.#readRecordNote(odooSessionId, noteId, viewerUid);
+  }
+
+  async deleteRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number
+  ): Promise<void> {
+    if (!Number.isFinite(noteId) || noteId <= 0) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
+    this.#assertNoteOwner(note, viewerUid);
+    await this.#callKw(odooSessionId, "mail.message", "unlink", [[noteId]]);
   }
 
   async confirmRecord(
@@ -1466,6 +1578,64 @@ export class OdooAdapter implements BackendClient {
       [domain],
       { fields, limit, offset, order }
     );
+  }
+
+  async #readRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number,
+    requireAllowedModel = false
+  ): Promise<RecordNote> {
+    const rows = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "mail.message",
+      "read",
+      [[noteId], ["body", "model", "author_id", "create_uid", "date"]]
+    );
+    if (!rows[0]) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    if (requireAllowedModel && !isAllowedNoteModel(rows[0].model)) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    return this.#mapMailMessage(rows[0], viewerUid);
+  }
+
+  #mapMailMessage(
+    row: Record<string, unknown>,
+    viewerUid: number
+  ): RecordNote {
+    const createUid = Array.isArray(row.create_uid) ? row.create_uid : [];
+    const author = Array.isArray(row.author_id) ? row.author_id : [];
+    const authorId = Number(createUid[0]) || 0;
+    const rawDate = String(row.date || "");
+    const normalizedDate = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(
+      rawDate
+    )
+      ? `${rawDate.replace(" ", "T")}Z`
+      : rawDate;
+    const parsedDate = new Date(normalizedDate);
+
+    return {
+      id: Number(row.id) || 0,
+      body: plainTextFromOdooHtml(String(row.body || "")),
+      authorName: author[1] ? String(author[1]) : "Usuario",
+      authorId,
+      createdAt: Number.isNaN(parsedDate.getTime())
+        ? rawDate
+        : parsedDate.toISOString(),
+      canEdit: authorId === viewerUid,
+    };
+  }
+
+  #assertNoteOwner(note: RecordNote, viewerUid: number): void {
+    if (note.authorId !== viewerUid) {
+      throw new BffError(
+        "forbidden",
+        403,
+        "Solo podés editar tus propias notas"
+      );
+    }
   }
 
   #cellValue(value: unknown): string | number | boolean | null {

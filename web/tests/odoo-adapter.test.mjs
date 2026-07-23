@@ -1409,3 +1409,222 @@ describe("MemorySessionStore", () => {
     assert.equal(BFF_COOKIE, "sg_bff_sid");
   });
 });
+
+describe("OdooAdapter record notes", () => {
+  it("lists comment messages newest first with canEdit", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 2,
+            body: "<p>nueva</p>",
+            author_id: [10, "Ana"],
+            create_uid: [5, "Ana"],
+            date: "2026-07-23 15:00:00",
+          },
+          {
+            id: 1,
+            body: "<p>vieja</p>",
+            author_id: [11, "Bob"],
+            create_uid: [6, "Bob"],
+            date: "2026-07-22 10:00:00",
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const notes = await adapter.listRecordNotes(
+      "sess",
+      "sales/customers",
+      9,
+      5
+    );
+    assert.equal(notes.length, 2);
+    assert.equal(notes[0].id, 2);
+    assert.equal(notes[0].body, "nueva");
+    assert.equal(notes[0].createdAt, "2026-07-23T15:00:00.000Z");
+    assert.equal(notes[0].canEdit, true);
+    assert.equal(notes[1].canEdit, false);
+    const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.model, "mail.message");
+    assert.equal(body.params.method, "search_read");
+    assert.deepEqual(body.params.args[0], [
+      ["model", "=", "res.partner"],
+      ["res_id", "=", 9],
+      ["message_type", "=", "comment"],
+    ]);
+    assert.equal(body.params.kwargs.order, "id desc");
+  });
+
+  it("creates via message_post on the record model", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params.method === "message_post") {
+        return Response.json({ result: 77 });
+      }
+      return Response.json({
+        result: [
+          {
+            id: 77,
+            body: "<p>hola</p>",
+            author_id: [10, "Ana"],
+            create_uid: [5, "Ana"],
+            date: "2026-07-23 16:00:00",
+          },
+        ],
+      });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const note = await adapter.createRecordNote(
+      "sess",
+      "inventory/products",
+      3,
+      "hola",
+      5
+    );
+    assert.equal(note.id, 77);
+    assert.equal(note.body, "hola");
+    const postBody = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(postBody.params.model, "product.template");
+    assert.equal(postBody.params.method, "message_post");
+    assert.equal(postBody.params.kwargs.message_type, "comment");
+    assert.equal(postBody.params.kwargs.subtype_xmlid, "mail.mt_note");
+  });
+
+  it("updates an own note after validating its author", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params.method === "write") {
+        return Response.json({ result: true });
+      }
+      return Response.json({
+        result: [{
+          id: 77,
+          body: body.params.method === "read" ? "<p>editada</p>" : "<p>original</p>",
+          model: "res.partner",
+          author_id: [10, "Ana"],
+          create_uid: [5, "Ana"],
+          date: "2026-07-23 16:00:00",
+        }],
+      });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const note = await adapter.updateRecordNote("sess", 77, "editada", 5);
+
+    assert.equal(note.body, "editada");
+    const write = fetchImpl.mock.calls
+      .map((call) => JSON.parse(call.arguments[1].body))
+      .find((body) => body.params.method === "write");
+    assert.deepEqual(write.params.args, [[77], { body: "<p>editada</p>" }]);
+  });
+
+  it("rejects update for a message outside the note model allowlist", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 77,
+            body: "<p>x</p>",
+            model: "stock.picking",
+            author_id: [10, "Ana"],
+            create_uid: [5, "Ana"],
+            date: "2026-07-23 16:00:00",
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.updateRecordNote("sess", 77, "otro", 5),
+      (error) => error?.code === "not_found" && error?.status === 404
+    );
+    assert.equal(fetchImpl.mock.calls.length, 1);
+  });
+
+  it("forbids update by non-author", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 77,
+            body: "<p>x</p>",
+            model: "res.partner",
+            author_id: [11, "Bob"],
+            create_uid: [6, "Bob"],
+            date: "2026-07-23 16:00:00",
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () => adapter.updateRecordNote("sess", 77, "otro", 5),
+      (error) => error?.code === "forbidden" && error?.status === 403
+    );
+  });
+
+  it("deletes an own note after validating its author", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params.method === "unlink") {
+        return Response.json({ result: true });
+      }
+      return Response.json({
+        result: [{
+          id: 77,
+          body: "<p>x</p>",
+          model: "res.partner",
+          author_id: [10, "Ana"],
+          create_uid: [5, "Ana"],
+          date: "2026-07-23 16:00:00",
+        }],
+      });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.deleteRecordNote("sess", 77, 5);
+
+    const unlink = fetchImpl.mock.calls
+      .map((call) => JSON.parse(call.arguments[1].body))
+      .find((body) => body.params.method === "unlink");
+    assert.deepEqual(unlink.params.args, [[77]]);
+  });
+
+  it("rejects notes on non-allowlisted listKey", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () => Response.json({ result: [] }),
+    });
+    await assert.rejects(
+      () => adapter.listRecordNotes("sess", "inventory/variants", 1, 5),
+      (error) => error?.code === "not_found"
+    );
+  });
+});
