@@ -1,0 +1,268 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { BffError } from '../lib/bff/errors.ts';
+import { getBackend } from '../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
+
+try {
+	const { odooSessionId } = requireOdooSession(Astro.cookies);
+	await getBackend().validateSession(odooSessionId);
+	return Astro.redirect('/');
+} catch (cause) {
+	if (cause instanceof BffError && cause.code === 'unauthorized') {
+		invalidateBffSession(Astro.cookies);
+	}
+}
+---
+
+<BaseLayout title="Ingresar | Servigas" bodyClass="sg-shell-canvas font-sans antialiased">
+	<main class="sg-login">
+		<section class="sg-login-intro" aria-labelledby="login-title">
+			<div class="sg-login-brand">
+				<span aria-hidden="true">S</span>
+				Servigas
+			</div>
+			<p class="sg-login-kicker">Centro de operaciones</p>
+			<h1 id="login-title">Todo tu negocio,<br />en un solo lugar.</h1>
+			<p class="sg-login-lead">
+				Accedé a inventario, ventas, compras y contabilidad desde una experiencia simple y conectada.
+			</p>
+			<div class="sg-login-orbit" aria-hidden="true"></div>
+		</section>
+
+		<section class="sg-login-panel sg-glass" aria-label="Acceso a Servigas">
+			<div>
+				<p class="sg-login-kicker">Bienvenido</p>
+				<h2>Ingresá a tu cuenta</h2>
+				<p>Usá tus credenciales habituales de Servigas.</p>
+			</div>
+
+			<form data-login-form>
+				<label>
+					<span>Usuario</span>
+					<input class="sg-focus-ring" name="login" autocomplete="username" required />
+				</label>
+				<label>
+					<span>Contraseña</span>
+					<input
+						class="sg-focus-ring"
+						name="password"
+						type="password"
+						autocomplete="current-password"
+						required
+					/>
+				</label>
+				<p class="sg-login-error" data-login-error role="alert" hidden></p>
+				<button class="sg-login-submit sg-focus-ring" type="submit">
+					<span>Ingresar</span>
+					<span aria-hidden="true">→</span>
+				</button>
+			</form>
+			<p class="sg-login-help">Si tenés problemas para ingresar, contactá al administrador.</p>
+		</section>
+	</main>
+</BaseLayout>
+
+<script>
+	const form = document.querySelector<HTMLFormElement>('[data-login-form]');
+	const error = document.querySelector<HTMLElement>('[data-login-error]');
+	const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+	form?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!submit || !error) return;
+
+		error.hidden = true;
+		submit.disabled = true;
+		const data = new FormData(form);
+
+		try {
+			const response = await fetch('/api/auth/login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					login: data.get('login'),
+					password: data.get('password'),
+				}),
+			});
+			const payload = await response.json();
+			if (!response.ok) {
+				throw new Error(payload?.error?.message || 'No se pudo iniciar sesión');
+			}
+			window.location.assign('/');
+		} catch (cause) {
+			error.textContent =
+				cause instanceof Error ? cause.message : 'No se pudo iniciar sesión';
+			error.hidden = false;
+		} finally {
+			submit.disabled = false;
+		}
+	});
+</script>
+
+<style>
+	.sg-login {
+		position: relative;
+		display: grid;
+		min-height: 100dvh;
+		grid-template-columns: minmax(0, 1.1fr) minmax(22rem, 30rem);
+		align-items: center;
+		gap: clamp(3rem, 8vw, 9rem);
+		overflow: hidden;
+		padding: clamp(2rem, 6vw, 6rem);
+	}
+	.sg-login-intro {
+		position: relative;
+		z-index: 1;
+		max-width: 42rem;
+	}
+	.sg-login-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: clamp(4rem, 10vh, 7rem);
+		font-weight: 650;
+	}
+	.sg-login-brand span {
+		display: grid;
+		width: 2.8rem;
+		height: 2.8rem;
+		place-items: center;
+		border-radius: 0.9rem;
+		background: var(--sg-flame-gradient);
+		box-shadow: 0 10px 32px rgba(230, 74, 25, 0.35);
+	}
+	.sg-login-kicker {
+		margin: 0 0 0.85rem;
+		color: var(--sg-flame-yellow);
+		font-size: 0.7rem;
+		font-weight: 700;
+		letter-spacing: 0.18em;
+		text-transform: uppercase;
+	}
+	.sg-login h1 {
+		margin: 0;
+		font-size: clamp(2.8rem, 6vw, 5.8rem);
+		font-weight: 600;
+		letter-spacing: -0.055em;
+		line-height: 0.98;
+	}
+	.sg-login-lead {
+		max-width: 37rem;
+		margin: 1.75rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: clamp(1rem, 1.5vw, 1.15rem);
+		line-height: 1.7;
+	}
+	.sg-login-orbit {
+		position: absolute;
+		z-index: -1;
+		width: 28rem;
+		height: 28rem;
+		border: 1px solid rgba(255, 214, 0, 0.15);
+		border-radius: 50%;
+		left: -11rem;
+		bottom: -19rem;
+		box-shadow: 0 0 100px rgba(245, 124, 0, 0.09);
+	}
+	.sg-login-panel {
+		position: relative;
+		z-index: 1;
+		border-radius: 1.75rem;
+		padding: clamp(1.75rem, 4vw, 3rem);
+		box-shadow: var(--sg-shadow-lg);
+	}
+	.sg-login-panel h2 {
+		margin: 0;
+		font-size: clamp(1.7rem, 3vw, 2.2rem);
+		font-weight: 600;
+	}
+	.sg-login-panel > div > p:last-child {
+		margin: 0.65rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	.sg-login form {
+		display: grid;
+		gap: 1.15rem;
+		margin-top: 2.25rem;
+	}
+	.sg-login label span {
+		display: block;
+		margin: 0 0 0.45rem 0.2rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.75rem;
+		font-weight: 600;
+	}
+	.sg-login input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.95rem;
+		padding: 0.95rem 1rem;
+		color: white;
+		background: rgba(0, 0, 0, 0.2);
+	}
+	.sg-login-submit {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		border: 0;
+		border-radius: 0.95rem;
+		margin-top: 0.25rem;
+		padding: 1rem 1.1rem;
+		color: white;
+		background: linear-gradient(135deg, var(--sg-flame-orange), var(--sg-flame-deep));
+		box-shadow: 0 12px 34px rgba(230, 74, 25, 0.25);
+		cursor: pointer;
+		font-weight: 650;
+		transition: transform 180ms ease, filter 180ms ease;
+	}
+	.sg-login-submit:hover {
+		filter: brightness(1.08);
+		transform: translateY(-2px);
+	}
+	.sg-login-submit:disabled {
+		cursor: wait;
+		opacity: 0.65;
+	}
+	.sg-login-error {
+		margin: 0;
+		border-radius: 0.75rem;
+		padding: 0.75rem;
+		color: #ffd8cc;
+		background: rgba(191, 54, 12, 0.22);
+		font-size: 0.78rem;
+	}
+	.sg-login-help {
+		margin: 2rem 0 0;
+		color: rgba(255, 255, 255, 0.48);
+		font-size: 0.7rem;
+		text-align: center;
+	}
+	@media (max-width: 850px) {
+		.sg-login {
+			grid-template-columns: 1fr;
+			gap: 3rem;
+		}
+		.sg-login-brand {
+			margin-bottom: 3rem;
+		}
+		.sg-login-intro {
+			margin: 0 auto;
+		}
+		.sg-login-panel {
+			width: min(100%, 30rem);
+			box-sizing: border-box;
+			margin: 0 auto;
+		}
+	}
+	@media (max-width: 520px) {
+		.sg-login {
+			padding: 1.25rem;
+		}
+		.sg-login h1 {
+			font-size: 2.65rem;
+		}
+	}
+</style>

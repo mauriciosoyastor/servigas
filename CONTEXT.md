@@ -1,4 +1,4 @@
-﻿# CONTEXT — Servigas
+# CONTEXT — Servigas
 
 > Lenguaje de negocio, límites del proyecto y decisiones que guían implementación. Actualizalo cuando cambie el alcance.
 
@@ -39,9 +39,9 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 
 | Área | Módulos |
 |------|---------|
-| Core custom | `servigas_core` (estilos Liquid Glass, extensiones UI) |
-| Integraciones | `servigas_integrations` (panel Factura Web / portales, pantalla de inicio) |
-| Operación | `stock`, `sale_management`, `point_of_sale`, `purchase`, `account` |
+| App + UI | `servigas_core` (`application: True`) — launcher, hubs, tema Liquid Glass, navegación unificada |
+| Integraciones | `servigas_integrations` (`application: False`) — tile + cards en hubs (Factura Web, portales) |
+| Operación | `stock`, `sale_management`, `point_of_sale`, `purchase`, `account` (menús raíz ocultos para operativos) |
 | Localización (fase final) | `l10n_ar` + EDI |
 
 ## Integraciones
@@ -69,6 +69,10 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Runtime Odoo 19 | `../odoo-workspace/odoo-19/` |
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
+
+## Shell Astro experimental (`web/`)
+
+Spike **Astro + BFF** en `web/` (login, launcher, rail, hub inventory), ya en `main`; plan en [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). Skill reutilizable: `astro-bff-shell` (personal). **Producción sigue siendo el frontend OWL / Liquid Glass en Odoo** hasta un corte explícito; no desplegar `web/` como reemplazo del shell operativo sin validación manual contra Odoo dev.
 
 ## Sistema de diseño — Liquid Glass v2 (frontend Odoo)
 
@@ -102,14 +106,30 @@ Tokens: `astorproptech/docs/design/tokens.md`
 | # | Tema | Doc |
 |---|------|-----|
 | 0001 | Frontend Liquid Glass v2 en Odoo | `docs/adr/0001-liquid-glass-odoo-frontend.md` |
+| 0002 | Sync diferido del contexto del rail | `docs/adr/0002-rail-context-sync.md` |
+| 0003 | Contrato rail al navegar desde KPI cards | `docs/adr/0003-rail-kpi-navigation-contract.md` |
+| 0004 | Ingreso POS desde launcher / rail | `docs/adr/0004-pos-launcher-entry.md` |
+| 0005 | Tema Liquid Glass del Mostrador (contrato + SCSS) | `docs/adr/0005-pos-liquid-glass-theme-contract.md` |
+| 0006 | UI recorrido operativo (panel + «Ver recorrido») | `docs/adr/0006-onboarding-recorrido-chrome.md` |
+| 0007 | Verificación del camino shell (Inicio→Mostrador) | `docs/adr/0007-shell-path-verification-contract.md` |
+| 0008 | Recorrido vs KPI cards (target hub + stacking) | `docs/adr/0008-recorrido-kpi-target-stacking.md` |
+| 0009 | Dual recorrido: rápido y completo | `docs/adr/0009-dual-recorrido-rapido-completo.md` |
+| 0010 | Motor de playlists onboarding (`quick` \| `full`) | `docs/adr/0010-onboarding-playlists-engine.md` |
+| 0011 | Plantillas del recorrido completo | `docs/adr/0011-recorrido-completo-plantillas.md` |
+| 0012 | UX Mostrador por fases (extiende 0005 + TDD) | `docs/adr/0012-pos-ux-phases-tdd.md` |
+| 0013 | Tema pago/recibo Mostrador (hermano 0012 + TDD) | `docs/adr/0013-pos-payment-receipt-theme.md` |
+| 0014 | Descuento general (Desc.) en numpad Mostrador | `docs/adr/0014-pos-order-discount-numpad.md` |
+| 0015 | Sin chatter en forms operativos (plan + TDD) | `docs/adr/0015-hide-chatter-operative-forms.md` |
 
-## Estado actual (2026-07-03)
+## Estado actual (2026-07-05)
 
 - [x] Catálogo 8.767 productos importado en `servigas_dev`
 - [x] Idioma Español (AR)
-- [x] POS «Mostrador Servigas» con descuento manual
-- [x] Tema Servigas en `servigas_core` (tokens, POS, backend, variables primarias, navbar sin morado)
-- [ ] Actualizar módulo en BD y validar visualmente (`odoo-bin -u servigas_core`)
+- [x] POS «Mostrador Servigas» con descuento manual (línea `%` + general **Desc.**, ADR 0014)
+- [x] Tema Servigas en `servigas_core` (tokens, POS, backend, launcher, hubs)
+- [x] Integraciones conectadas (tile launcher + cards Factura Web / portales)
+- [x] App única Servigas para operativos; admins conservan apps nativas
+- [ ] Actualizar módulos en BD y validar visualmente (`-u servigas_core,servigas_integrations`)
 - [ ] Venta de prueba POS validada
 - [ ] Stock masivo (conteo físico)
 - [ ] Ubicaciones internas configuradas

@@ -1,0 +1,23 @@
+:root {
+	--sg-font-family: "Montserrat", "Segoe UI", system-ui, sans-serif;
+	--sg-bg-deep: #1a1a1a;
+	--sg-bg-charcoal: #2b2b2b;
+	--sg-paper: #f7f5f2;
+	--sg-canvas: #efecea;
+	--sg-text-on-dark: #ffffff;
+	--sg-text-muted-dark: rgba(255, 255, 255, 0.72);
+	--sg-text-on-light: #1a1a1a;
+	--sg-flame-yellow: #ffd600;
+	--sg-flame-orange: #f57c00;
+	--sg-flame-deep: #e64a19;
+	--sg-flame-rust: #bf360c;
+	--sg-flame-gradient: linear-gradient(135deg, var(--sg-flame-yellow), var(--sg-flame-orange) 52%, var(--sg-flame-deep));
+	--sg-glass-fill: rgba(255, 255, 255, 0.08);
+	--sg-glass-fill-strong: rgba(255, 255, 255, 0.14);
+	--sg-glass-border: rgba(255, 255, 255, 0.12);
+	--sg-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.12);
+	--sg-glass-blur: 16px;
+	--sg-radius-card: 1.25rem;
+	--sg-radius-pill: 999px;
+	--sg-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.3);
+}

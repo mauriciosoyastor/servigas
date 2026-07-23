@@ -1,0 +1,182 @@
+---
+import ShellLayout from '../../layouts/ShellLayout.astro';
+import RecordTable from '../../components/RecordTable.astro';
+import ListToolbar from '../../components/ListToolbar.astro';
+import { BffError } from '../../lib/bff/errors.ts';
+import { getBackend } from '../../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
+import type { RecordListPayload } from '../../lib/bff/types.ts';
+import { getRecordListDef } from '../../lib/shell/record-lists.ts';
+import { canCreateRecord } from '../../lib/shell/record-writes.ts';
+
+const slugParts = Array.isArray(Astro.params.slug)
+	? Astro.params.slug
+	: String(Astro.params.slug || '')
+			.split('/')
+			.filter(Boolean);
+
+const listKey = slugParts.join('/');
+const def = getRecordListDef(listKey);
+const createPath = canCreateRecord(listKey) ? `${def?.path}/new` : null;
+const createLabel =
+	listKey === 'sales/customers'
+		? 'Nuevo cliente'
+		: listKey === 'purchase/vendors'
+			? 'Nuevo proveedor'
+			: listKey === 'inventory/products'
+				? 'Nuevo producto'
+				: 'Nuevo';
+
+let userName = '';
+let listError = '';
+let payload: RecordListPayload | null = null;
+const q = Astro.url.searchParams.get('q') || '';
+const page = Number(Astro.url.searchParams.get('page') || '1') || 1;
+
+if (!def) {
+	Astro.response.status = 404;
+} else {
+	try {
+		const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+		userName = session.name || session.login;
+		try {
+			payload = await getBackend().getRecordList(odooSessionId, listKey, { q, page });
+		} catch (cause) {
+			if (cause instanceof BffError && cause.code === 'unauthorized') {
+				invalidateBffSession(Astro.cookies);
+				return Astro.redirect('/login');
+			}
+			listError = 'No pudimos cargar el listado. Intentá nuevamente en unos minutos.';
+		}
+	} catch {
+		invalidateBffSession(Astro.cookies);
+		return Astro.redirect('/login');
+	}
+}
+---
+
+{def ? (
+	<ShellLayout title={`${payload?.title || def.title} | Servigas`} active={def.railApp} userName={userName}>
+		<main class="sg-list-page">
+			<header class="sg-list-heading">
+				<div>
+					<p>{payload?.hint || def.hint}</p>
+					<h1>{payload?.title || def.title}</h1>
+				</div>
+				<div class="sg-list-heading-meta">
+					{payload ? (
+						<span>
+							{payload.total.toLocaleString('es-AR')} registros
+							{payload.rows.length < payload.total
+								? ` · página ${payload.page}`
+								: ''}
+						</span>
+					) : null}
+					{createPath ? (
+						<a class="sg-list-create sg-focus-ring" href={createPath}>{createLabel}</a>
+					) : null}
+					<a class="sg-list-back sg-focus-ring" href={def.hubBack}>← Volver al hub</a>
+				</div>
+			</header>
+
+			{payload ? (
+				<ListToolbar
+					action={def.path}
+					q={payload.q}
+					page={payload.page}
+					pageSize={payload.pageSize}
+					total={payload.total}
+				/>
+			) : null}
+
+			{listError ? (
+				<section class="sg-list-state sg-glass" role="alert">
+					<strong>No se pudo abrir el listado</strong>
+					<p>{listError}</p>
+				</section>
+			) : payload && payload.rows.length ? (
+				<RecordTable columns={payload.columns} rows={payload.rows} caption={payload.title} />
+			) : (
+				<section class="sg-list-state sg-glass">
+					<strong>Sin resultados</strong>
+					<p>
+						{payload?.q
+							? 'No hay registros que coincidan con la búsqueda.'
+							: 'No encontramos registros para mostrar.'}
+					</p>
+				</section>
+			)}
+		</main>
+	</ShellLayout>
+) : (
+	<h1>Lista no encontrada</h1>
+)}
+
+<style>
+	.sg-list-page {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-list-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+	.sg-list-heading p {
+		margin: 0 0 0.5rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-list-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		font-weight: 600;
+		letter-spacing: -0.045em;
+		line-height: 1.05;
+	}
+	.sg-list-heading-meta {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.sg-list-heading-meta > span {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.8rem;
+		color: var(--sg-text-muted-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.7rem;
+		font-weight: 600;
+	}
+	.sg-list-back,
+	.sg-list-create {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-list-create {
+		border-color: rgba(155, 231, 176, 0.45);
+	}
+	.sg-list-state {
+		border-radius: var(--sg-radius-card);
+		padding: 2rem;
+	}
+	.sg-list-state strong {
+		font-size: 1.1rem;
+	}
+	.sg-list-state p {
+		margin: 0.55rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.88rem;
+	}
+</style>
