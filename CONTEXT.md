@@ -85,7 +85,9 @@ OWL queda como fallback hasta que ese smoke pase en el entorno objetivo.
 | OWL launcher/hubs/POS = **fallback** | Odoo = backend únicamente |
 | Smoke real contra Odoo = **deuda pre-prod** | Smoke verde en el entorno objetivo |
 
-**Regla de build:** solo paridad del camino feliz o endurecer BFF. Fuera de alcance post-go (hasta priorizar): offline, multi-caja, recorrido/onboarding.
+**Regla de build:** solo paridad del camino feliz, endurecer BFF, o onboarding spotlight del shell. Fuera de alcance post-go (hasta priorizar): offline, multi-caja.
+
+**Onboarding:** tour spotlight en `ShellLayout` (inicio → hub → caja); preferencia `localStorage` (`sg_tour_done`). Spec: [onboarding spotlight](docs/superpowers/specs/2026-07-23-astro-onboarding-spotlight-design.md).
 
 Skill: `astro-bff-shell` (personal). Plan spike: [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). ADR: [0016](docs/adr/0016-astro-shell-cutover.md).
 

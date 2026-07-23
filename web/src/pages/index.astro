@@ -43,7 +43,7 @@ try {
 			<span>{tiles.length} {tiles.length === 1 ? 'acceso' : 'accesos'}</span>
 		</header>
 
-		<nav class="sg-ops-strip" aria-label="Atajos del mostrador">
+		<nav class="sg-ops-strip" aria-label="Atajos del mostrador" data-tour="ops-strip">
 			<a class="sg-ops-strip-primary sg-focus-ring" href="/pos">Caja / Mostrador</a>
 			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/sales/quotations/new">Nueva cotización</a>
 			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/purchase/solicitudes/new">Nuevo pedido a proveedor</a>
@@ -56,7 +56,9 @@ try {
 			</section>
 		) : tiles.length ? (
 			<section class="sg-launcher-grid" aria-label="Aplicaciones disponibles">
-				{tiles.map((tile) => <TileCard tile={tile} />)}
+				{tiles.map((tile, index) => (
+					<TileCard tile={tile} tourTarget={index === 0 ? 'home-tile' : undefined} />
+				))}
 			</section>
 		) : (
 			<section class="sg-launcher-state sg-glass">

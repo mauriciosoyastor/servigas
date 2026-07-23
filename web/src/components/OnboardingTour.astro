@@ -1,0 +1,174 @@
+---
+/**
+ * Spotlight onboarding — montado en ShellLayout.
+ * Lógica de pasos/storage: lib/shell/onboarding-tour.ts
+ */
+---
+
+<div class="sg-onboarding" data-onboarding hidden>
+	<div class="sg-onboarding-hole" data-tour-hole aria-hidden="true"></div>
+	<div
+		class="sg-onboarding-tip"
+		data-tour-tip
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="sg-tour-title"
+	>
+		<p class="sg-onboarding-progress" data-tour-progress></p>
+		<strong id="sg-tour-title" data-tour-title></strong>
+		<p data-tour-body></p>
+		<div class="sg-onboarding-actions">
+			<button type="button" class="sg-focus-ring" data-tour-next>Siguiente</button>
+			<button type="button" class="sg-focus-ring" data-tour-skip>Omitir tutorial</button>
+			<button type="button" class="sg-focus-ring" data-tour-never>No volver a mostrar</button>
+		</div>
+	</div>
+</div>
+
+<script>
+	import {
+		advanceTour,
+		markTourDone,
+		markTourSkippedSession,
+		resolveInitialStep,
+		setTourStep,
+		shouldAutoStart,
+		tourProgressLabel,
+		type TourStep,
+	} from '../lib/shell/onboarding-tour.ts';
+
+	const root = document.querySelector<HTMLElement>('[data-onboarding]');
+	const hole = document.querySelector<HTMLElement>('[data-tour-hole]');
+	const tip = document.querySelector<HTMLElement>('[data-tour-tip]');
+	const progressEl = document.querySelector<HTMLElement>('[data-tour-progress]');
+	const titleEl = document.querySelector<HTMLElement>('[data-tour-title]');
+	const bodyEl = document.querySelector<HTMLElement>('[data-tour-body]');
+	const nextBtn = document.querySelector<HTMLButtonElement>('[data-tour-next]');
+	const skipBtn = document.querySelector<HTMLButtonElement>('[data-tour-skip]');
+	const neverBtn = document.querySelector<HTMLButtonElement>('[data-tour-never]');
+
+	if (
+		!root ||
+		!hole ||
+		!tip ||
+		!progressEl ||
+		!titleEl ||
+		!bodyEl ||
+		!nextBtn ||
+		!skipBtn ||
+		!neverBtn
+	) {
+		// no-op
+	} else {
+		let current: TourStep | null = null;
+		let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+
+		const hasTarget = (target: string) =>
+			Boolean(document.querySelector(`[data-tour="${target}"]`));
+
+		const targetEl = (step: TourStep) =>
+			document.querySelector<HTMLElement>(`[data-tour="${step.target}"]`);
+
+		function place(step: TourStep) {
+			const el = targetEl(step);
+			if (!el || !hole || !tip) return;
+			el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+			const pad = 8;
+			const rect = el.getBoundingClientRect();
+			const top = Math.max(8, rect.top - pad);
+			const left = Math.max(8, rect.left - pad);
+			const width = Math.min(window.innerWidth - left - 8, rect.width + pad * 2);
+			const height = Math.min(window.innerHeight - top - 8, rect.height + pad * 2);
+			hole.style.top = `${top}px`;
+			hole.style.left = `${left}px`;
+			hole.style.width = `${width}px`;
+			hole.style.height = `${height}px`;
+
+			const tipW = Math.min(352, window.innerWidth - 32);
+			let tipTop = top + height + 12;
+			let tipLeft = left;
+			if (tipTop + 200 > window.innerHeight) {
+				tipTop = Math.max(8, top - 12 - 200);
+			}
+			if (tipLeft + tipW > window.innerWidth - 8) {
+				tipLeft = Math.max(8, window.innerWidth - tipW - 8);
+			}
+			tip.style.top = `${tipTop}px`;
+			tip.style.left = `${tipLeft}px`;
+			tip.style.width = `${tipW}px`;
+		}
+
+		function render(step: TourStep) {
+			current = step;
+			setTourStep(localStorage, step.id);
+			progressEl!.textContent = tourProgressLabel(step.id);
+			titleEl!.textContent = step.title;
+			bodyEl!.textContent = step.body;
+			nextBtn!.textContent = step.id === 'pos-cobrar' ? 'Listo' : 'Siguiente';
+			root!.hidden = false;
+			document.body.style.overflow = 'hidden';
+			requestAnimationFrame(() => place(step));
+		}
+
+		function closeTour() {
+			root!.hidden = true;
+			document.body.style.overflow = '';
+			current = null;
+		}
+
+		function skip() {
+			markTourSkippedSession(sessionStorage);
+			closeTour();
+		}
+
+		function neverShow() {
+			markTourDone(localStorage);
+			closeTour();
+		}
+
+		function goNext() {
+			if (!current) return;
+			const result = advanceTour(current, location.pathname, hasTarget);
+			if (result.kind === 'done') {
+				markTourDone(localStorage);
+				closeTour();
+				return;
+			}
+			if (result.kind === 'navigate') {
+				setTourStep(localStorage, result.nextStepId);
+				window.location.assign(result.href);
+				return;
+			}
+			render(result.step);
+		}
+
+		function start() {
+			if (!shouldAutoStart(localStorage, sessionStorage)) return;
+			const step = resolveInitialStep(location.pathname, localStorage, hasTarget);
+			if (!step) return;
+			render(step);
+		}
+
+		nextBtn.addEventListener('click', goNext);
+		skipBtn.addEventListener('click', skip);
+		neverBtn.addEventListener('click', neverShow);
+		window.addEventListener('keydown', (event) => {
+			if (root.hidden) return;
+			if (event.key === 'Escape') {
+				event.preventDefault();
+				skip();
+			}
+		});
+		window.addEventListener('resize', () => {
+			if (root.hidden || !current) return;
+			window.clearTimeout(resizeTimer);
+			resizeTimer = window.setTimeout(() => place(current!), 80);
+		});
+
+		if (document.readyState === 'loading') {
+			document.addEventListener('DOMContentLoaded', start);
+		} else {
+			start();
+		}
+	}
+</script>
