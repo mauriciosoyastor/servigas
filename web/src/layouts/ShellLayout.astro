@@ -6,14 +6,21 @@ interface Props {
 	title?: string;
 	active?: string;
 	userName?: string;
+	/** Less topbar chrome — for full-viewport surfaces like /pos */
+	compact?: boolean;
 }
 
-const { title = 'Servigas', active = 'home', userName = '' } = Astro.props;
+const {
+	title = 'Servigas',
+	active = 'home',
+	userName = '',
+	compact = false,
+} = Astro.props;
 ---
 
 <BaseLayout title={title} bodyClass="sg-shell-canvas font-sans antialiased">
 	<RailNav active={active} />
-	<div class="sg-shell-frame">
+	<div class:list={['sg-shell-frame', compact && 'is-compact']}>
 		<header class="sg-shell-topbar">
 			<div>
 				<p class="sg-shell-eyebrow">Centro de operaciones</p>
@@ -44,6 +51,24 @@ const { title = 'Servigas', active = 'home', userName = '' } = Astro.props;
 		gap: 1rem;
 		max-width: 78rem;
 		margin: 0 auto 3rem;
+	}
+	.sg-shell-frame.is-compact {
+		padding-top: 1rem;
+		padding-bottom: 1.25rem;
+	}
+	.sg-shell-frame.is-compact .sg-shell-topbar {
+		max-width: 92rem;
+		margin-bottom: 0.75rem;
+	}
+	.sg-shell-frame.is-compact .sg-shell-eyebrow {
+		font-size: 0.62rem;
+	}
+	.sg-shell-frame.is-compact .sg-shell-user {
+		font-size: 0.8rem;
+	}
+	.sg-shell-frame.is-compact .sg-logout {
+		padding: 0.45rem 0.85rem;
+		font-size: 0.8rem;
 	}
 	.sg-shell-eyebrow {
 		margin: 0 0 0.25rem;

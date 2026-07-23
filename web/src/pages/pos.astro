@@ -28,7 +28,12 @@ try {
 }
 ---
 
-<ShellLayout title="Mostrador | Servigas" active="sales" userName={userName}>
+<ShellLayout
+	title="Mostrador | Servigas"
+	active="sales"
+	userName={userName}
+	compact
+>
 	<main class="sg-pos" data-pos-caja>
 		<header class="sg-pos-heading">
 			<div>
@@ -739,28 +744,28 @@ try {
 		display: flex;
 		flex-direction: column;
 		min-height: 0;
-		height: calc(100dvh - 10.5rem);
+		height: calc(100dvh - 6.5rem);
 	}
 	.sg-pos-heading {
 		display: flex;
 		align-items: end;
 		justify-content: space-between;
 		gap: 1rem;
-		margin-bottom: 1rem;
+		margin-bottom: 0.65rem;
 		flex: 0 0 auto;
 		flex-wrap: wrap;
 	}
 	.sg-pos-heading p {
-		margin: 0 0 0.4rem;
+		margin: 0 0 0.2rem;
 		color: var(--sg-text-muted-dark);
-		font-size: 0.78rem;
+		font-size: 0.72rem;
 		font-weight: 500;
 	}
 	.sg-pos-heading h1 {
 		margin: 0;
-		font-size: clamp(2rem, 4vw, 3rem);
-		font-weight: 600;
-		letter-spacing: -0.045em;
+		font-size: clamp(1.35rem, 2.4vw, 1.85rem);
+		font-weight: 650;
+		letter-spacing: 0.01em;
 	}
 	.sg-pos-heading-actions {
 		display: flex;
@@ -823,23 +828,57 @@ try {
 	}
 	.sg-pos-search input {
 		width: 100%;
-		border: 1px solid var(--sg-glass-border);
-		border-radius: 0.75rem;
-		padding: 0.65rem 0.8rem;
-		color: var(--sg-text-on-dark);
-		background: rgba(0, 0, 0, 0.22);
-		font: inherit;
-	}
-	.sg-pos-search button,
-	.sg-pos-pay {
+		min-height: 2.75rem;
 		border: 1px solid var(--sg-glass-border);
 		border-radius: var(--sg-radius-pill);
-		padding: 0.65rem 1rem;
+		padding: 0.75rem 1.1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill-strong);
+		box-shadow: var(--sg-glass-rim);
+		backdrop-filter: blur(var(--sg-glass-blur));
+		-webkit-backdrop-filter: blur(var(--sg-glass-blur));
+		font: inherit;
+		font-size: 1.05rem;
+		font-weight: 500;
+	}
+	.sg-pos-search input:focus {
+		outline: none;
+		border-color: color-mix(in srgb, var(--sg-primary), white 20%);
+		box-shadow:
+			var(--sg-glass-rim),
+			0 0 0 3px color-mix(in srgb, var(--sg-accent), transparent 70%);
+	}
+	.sg-pos-search button {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		min-height: 2.75rem;
+		padding: 0.65rem 1.15rem;
 		color: var(--sg-text-on-dark);
 		background: var(--sg-glass-fill);
-		font-size: 0.85rem;
+		font-size: 0.9rem;
 		font-weight: 650;
 		cursor: pointer;
+	}
+	.sg-pos-pay {
+		border: 0;
+		border-radius: var(--sg-radius-pill);
+		min-height: 3.1rem;
+		padding: 0.85rem 1.25rem;
+		color: #fff;
+		background: var(--sg-flame-gradient);
+		box-shadow: var(--sg-shadow-flame);
+		font-size: 1rem;
+		font-weight: 700;
+		letter-spacing: 0.01em;
+		cursor: pointer;
+	}
+	.sg-pos-pay:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+		box-shadow: none;
+	}
+	.sg-pos-pay:not(:disabled):hover {
+		filter: brightness(1.06);
 	}
 	.sg-pos-meta {
 		margin: 0;
@@ -949,9 +988,11 @@ try {
 		box-sizing: border-box;
 	}
 	.sg-pos-cart :global(.sg-pos-cart-lines li.is-selected) {
-		background: rgba(255, 255, 255, 0.06);
-		padding: 0.45rem 0.35rem 0.65rem;
+		background: color-mix(in srgb, var(--sg-primary), transparent 82%);
+		padding: 0.45rem 0.45rem 0.65rem;
 		border-radius: 0.65rem;
+		border-bottom-color: transparent;
+		box-shadow: inset 3px 0 0 var(--sg-accent);
 	}
 	.sg-pos-cart :global(.sg-pos-line-select) {
 		flex: 1 1 auto;
@@ -1036,14 +1077,16 @@ try {
 		gap: 0.25rem;
 	}
 	.sg-pos-cart :global(.sg-pos-qty button) {
-		width: 1.5rem;
-		height: 1.5rem;
+		width: 2rem;
+		height: 2rem;
 		flex: 0 0 auto;
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 999px;
 		color: inherit;
 		background: rgba(0, 0, 0, 0.2);
 		cursor: pointer;
+		font-size: 1rem;
+		font-weight: 700;
 	}
 	.sg-pos-cart :global(.sg-pos-qty em) {
 		min-width: 0.9rem;
@@ -1081,7 +1124,9 @@ try {
 		cursor: pointer;
 	}
 	.sg-pos-numpad-modes button.is-active {
-		background: rgba(255, 255, 255, 0.14);
+		background: color-mix(in srgb, var(--sg-primary), transparent 72%);
+		border-color: color-mix(in srgb, var(--sg-accent), transparent 45%);
+		box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--sg-accent), transparent 55%);
 	}
 	.sg-pos-numpad-buffer {
 		margin: 0;
