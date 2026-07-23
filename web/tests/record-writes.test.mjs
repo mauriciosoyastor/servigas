@@ -39,6 +39,11 @@ describe("record-writes allowlist", () => {
     assert.equal(canArchiveRecord("inventory/transfers"), false);
   });
 
+  it("allows creating quotations via order-creates", () => {
+    assert.equal(canCreateRecord("sales/quotations"), true);
+    assert.equal(canCreateRecord("purchase/rfq"), true);
+  });
+
   it("filters update values to allowlisted fields only", () => {
     const filtered = filterWritableValues("sales/customers", {
       phone: "11-1234",

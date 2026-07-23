@@ -3,6 +3,7 @@
  */
 
 import { getRecordListDef } from "./record-lists.ts";
+import { canCreateOrder } from "./order-creates.ts";
 
 export type RecordWriteDef = {
   listKey: string;
@@ -62,7 +63,7 @@ export function getRecordWriteDef(listKey: string): RecordWriteDef | null {
 
 export function canCreateRecord(listKey: string): boolean {
   const def = getRecordWriteDef(listKey);
-  return Boolean(def?.createFields.length);
+  return Boolean(def?.createFields.length) || canCreateOrder(listKey);
 }
 
 export function canArchiveRecord(listKey: string): boolean {

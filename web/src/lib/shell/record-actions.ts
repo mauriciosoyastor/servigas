@@ -18,15 +18,15 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       confirmableStates: ["draft", "sent"],
     },
     "purchase/rfq": {
-      method: "action_confirm",
+      method: "button_confirm",
       confirmableStates: ["draft", "sent"],
     },
     "purchase/rfq-draft": {
-      method: "action_confirm",
+      method: "button_confirm",
       confirmableStates: ["draft"],
     },
     "purchase/rfq-sent": {
-      method: "action_confirm",
+      method: "button_confirm",
       confirmableStates: ["sent"],
     },
   };

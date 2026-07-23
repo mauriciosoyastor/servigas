@@ -1,0 +1,178 @@
+---
+interface Option {
+	id: number;
+	label: string;
+}
+
+interface Props {
+	apiPath: string;
+	listPath: string;
+	partners: Option[];
+	products: Option[];
+	title?: string;
+	hint?: string;
+	partnerLabel?: string;
+	partnerPlaceholder?: string;
+}
+
+const {
+	apiPath,
+	listPath,
+	partners,
+	products,
+	title = 'Nueva cotización',
+	hint = 'Cliente + un producto. Queda en borrador para confirmar después.',
+	partnerLabel = 'Cliente',
+	partnerPlaceholder = 'Elegí un cliente…',
+} = Astro.props;
+---
+
+<section class="sg-order-create sg-glass" data-order-create>
+	<strong>{title}</strong>
+	<p>{hint}</p>
+	<form class="sg-order-create-form" data-order-create-form>
+		<label>
+			<span>{partnerLabel} *</span>
+			<select class="sg-focus-ring" name="partnerId" required>
+				<option value="">{partnerPlaceholder}</option>
+				{partners.map((p) => (
+					<option value={String(p.id)}>{p.label}</option>
+				))}
+			</select>
+		</label>
+		<label>
+			<span>Producto *</span>
+			<select class="sg-focus-ring" name="productId" required>
+				<option value="">Elegí un producto…</option>
+				{products.map((p) => (
+					<option value={String(p.id)}>{p.label}</option>
+				))}
+			</select>
+		</label>
+		<label>
+			<span>Cantidad *</span>
+			<input
+				class="sg-focus-ring"
+				type="number"
+				name="qty"
+				min="0.01"
+				step="any"
+				value="1"
+				required
+			/>
+		</label>
+		<div class="sg-order-create-actions">
+			<button class="sg-focus-ring" type="submit">Crear borrador</button>
+			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
+			<span class="sg-order-create-status" data-order-create-status hidden></span>
+		</div>
+	</form>
+</section>
+
+<script define:vars={{ apiPath, listPath }}>
+	const root = document.querySelector('[data-order-create]');
+	const form = root?.querySelector('[data-order-create-form]');
+	const status = root?.querySelector('[data-order-create-status]');
+	if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			status.hidden = false;
+			status.textContent = 'Creando…';
+			status.dataset.state = 'pending';
+			const data = new FormData(form);
+			const values = {
+				partnerId: Number(data.get('partnerId')),
+				productId: Number(data.get('productId')),
+				qty: Number(data.get('qty')),
+			};
+			try {
+				const response = await fetch(apiPath, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'create', values }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo crear');
+				}
+				status.textContent = 'Creada';
+				status.dataset.state = 'ok';
+				window.setTimeout(() => {
+					window.location.href = payload.detailPath || listPath;
+				}, 350);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo crear';
+				status.dataset.state = 'error';
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-order-create {
+		display: grid;
+		gap: 0.65rem;
+		max-width: 36rem;
+		border-radius: var(--sg-radius-card);
+		padding: 1.2rem;
+	}
+	.sg-order-create p {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.82rem;
+		line-height: 1.45;
+	}
+	.sg-order-create-form {
+		display: grid;
+		gap: 0.85rem;
+		margin-top: 0.35rem;
+	}
+	.sg-order-create-form label {
+		display: grid;
+		gap: 0.35rem;
+	}
+	.sg-order-create-form span {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-order-create-form input,
+	.sg-order-create-form select {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font: inherit;
+	}
+	.sg-order-create-actions {
+		display: flex;
+		align-items: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+	}
+	.sg-order-create-actions button,
+	.sg-order-create-actions a {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.6rem 1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.85rem;
+		font-weight: 650;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	.sg-order-create-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-order-create-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-order-create-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

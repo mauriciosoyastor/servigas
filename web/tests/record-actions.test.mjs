@@ -13,6 +13,9 @@ describe("record-actions allowlist", () => {
     assert.equal(quote.model, "sale.order");
     assert.equal(quote.method, "action_confirm");
     assert.equal(canConfirmRecord("sales/quotations"), true);
+    const rfq = getRecordActionDef("purchase/rfq");
+    assert.ok(rfq);
+    assert.equal(rfq.method, "button_confirm");
     assert.equal(canConfirmRecord("purchase/rfq"), true);
   });
 
