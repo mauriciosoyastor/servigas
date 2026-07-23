@@ -9,17 +9,23 @@ import {
 } from "../src/lib/shell/record-writes.ts";
 
 describe("record-writes allowlist", () => {
-  it("allows phone and email updates on sales customers", () => {
+  it("allows phone, email, vat and address updates on sales customers", () => {
     const def = getRecordWriteDef("sales/customers");
     assert.ok(def);
     assert.equal(def.model, "res.partner");
-    assert.deepEqual(def.fields.sort(), ["email", "phone"].sort());
+    assert.deepEqual(
+      def.fields.sort(),
+      ["city", "email", "phone", "street", "vat"].sort()
+    );
   });
 
   it("defines create fields and customer_rank default", () => {
     const def = getRecordWriteDef("sales/customers");
     assert.ok(def);
-    assert.deepEqual(def.createFields.sort(), ["email", "name", "phone"].sort());
+    assert.deepEqual(
+      def.createFields.sort(),
+      ["city", "email", "name", "phone", "street", "vat"].sort()
+    );
     assert.deepEqual(def.createDefaults, { customer_rank: 1 });
     assert.equal(canCreateRecord("sales/customers"), true);
     assert.equal(canArchiveRecord("sales/customers"), true);
@@ -28,6 +34,10 @@ describe("record-writes allowlist", () => {
   it("defines vendor create with supplier_rank default", () => {
     const def = getRecordWriteDef("purchase/vendors");
     assert.ok(def);
+    assert.deepEqual(
+      def.createFields.sort(),
+      ["city", "email", "name", "phone", "street", "vat"].sort()
+    );
     assert.deepEqual(def.createDefaults, { supplier_rank: 1 });
     assert.equal(canCreateRecord("purchase/vendors"), true);
     assert.equal(canArchiveRecord("purchase/vendors"), true);
@@ -48,12 +58,18 @@ describe("record-writes allowlist", () => {
     const filtered = filterWritableValues("sales/customers", {
       phone: "11-1234",
       email: "a@b.com",
+      vat: "20-12345678-9",
+      street: "Av. Demo 100",
+      city: "CABA",
       name: "HACK",
       active: false,
     });
     assert.deepEqual(filtered, {
       phone: "11-1234",
       email: "a@b.com",
+      vat: "20-12345678-9",
+      street: "Av. Demo 100",
+      city: "CABA",
     });
   });
 
@@ -62,12 +78,18 @@ describe("record-writes allowlist", () => {
       name: "  Cliente Demo  ",
       phone: "11-9999",
       email: "demo@servigas.test",
+      vat: " 20123456789 ",
+      street: "Calle Falsa 123",
+      city: "Rosario",
       customer_rank: 99,
     });
     assert.deepEqual(created, {
       name: "Cliente Demo",
       phone: "11-9999",
       email: "demo@servigas.test",
+      vat: "20123456789",
+      street: "Calle Falsa 123",
+      city: "Rosario",
       customer_rank: 1,
     });
   });

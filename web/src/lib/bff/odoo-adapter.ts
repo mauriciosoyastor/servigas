@@ -399,6 +399,11 @@ export class OdooAdapter implements BackendClient {
       default_code: "Referencia",
       qty_available: "Stock",
       active: "Activo",
+      vat: "CUIT",
+      street: "Calle",
+      city: "Ciudad",
+      email: "Email",
+      phone: "Teléfono",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;

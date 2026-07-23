@@ -26,14 +26,14 @@ type WriteConfig = {
 
 const WRITES: Record<string, WriteConfig> = {
   "sales/customers": {
-    fields: ["phone", "email"],
-    createFields: ["name", "phone", "email"],
+    fields: ["phone", "email", "vat", "street", "city"],
+    createFields: ["name", "vat", "phone", "email", "street", "city"],
     createDefaults: { customer_rank: 1 },
     canArchive: true,
   },
   "purchase/vendors": {
-    fields: ["phone", "email"],
-    createFields: ["name", "phone", "email"],
+    fields: ["phone", "email", "vat", "street", "city"],
+    createFields: ["name", "vat", "phone", "email", "street", "city"],
     createDefaults: { supplier_rank: 1 },
     canArchive: true,
   },
