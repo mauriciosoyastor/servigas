@@ -23,24 +23,58 @@ describe("order-creates allowlist", () => {
     assert.equal(canCreateOrder("purchase/rfq"), true);
   });
 
-  it("filters partner, product and qty", () => {
+  it("filters multi-line payload with price and discount", () => {
+    assert.deepEqual(
+      filterOrderCreateValues("sales/quotations", {
+        partnerId: "6",
+        lines: [
+          { productId: 42, qty: "2", price: "100", discount: "10" },
+          { productId: 7, qty: 1 },
+        ],
+      }),
+      {
+        partnerId: 6,
+        lines: [
+          { productId: 42, qty: 2, price: 100, discount: 10 },
+          { productId: 7, qty: 1 },
+        ],
+      }
+    );
+  });
+
+  it("normalizes legacy single-product payload to one line", () => {
     assert.deepEqual(
       filterOrderCreateValues("sales/quotations", {
         partnerId: "6",
         productId: 42,
         qty: "2.5",
       }),
-      { partnerId: 6, productId: 42, qty: 2.5 }
+      {
+        partnerId: 6,
+        lines: [{ productId: 42, qty: 2.5 }],
+      }
     );
   });
 
-  it("rejects missing partner or product", () => {
+  it("rejects missing partner, empty lines, or invalid discount", () => {
     assert.equal(
-      filterOrderCreateValues("sales/quotations", { productId: 1, qty: 1 }),
+      filterOrderCreateValues("sales/quotations", {
+        lines: [{ productId: 1, qty: 1 }],
+      }),
       null
     );
     assert.equal(
-      filterOrderCreateValues("sales/quotations", { partnerId: 1, qty: 0 }),
+      filterOrderCreateValues("sales/quotations", {
+        partnerId: 1,
+        lines: [],
+      }),
+      null
+    );
+    assert.equal(
+      filterOrderCreateValues("sales/quotations", {
+        partnerId: 1,
+        lines: [{ productId: 1, qty: 1, discount: 150 }],
+      }),
       null
     );
   });

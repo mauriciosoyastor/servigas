@@ -1,5 +1,5 @@
 /**
- * Allowlisted minimal order creates (quotation / RFQ).
+ * Allowlisted order creates (quotation / RFQ), multi-line.
  */
 
 export type OrderCreateDef = {
@@ -24,10 +24,16 @@ const ORDER_CREATES: Record<string, OrderCreateDef> = {
   },
 };
 
-export type OrderCreateValues = {
-  partnerId: number;
+export type OrderCreateLine = {
   productId: number;
   qty: number;
+  price?: number;
+  discount?: number;
+};
+
+export type OrderCreateValues = {
+  partnerId: number;
+  lines: OrderCreateLine[];
 };
 
 export function getOrderCreateDef(listKey: string): OrderCreateDef | null {
@@ -38,6 +44,33 @@ export function canCreateOrder(listKey: string): boolean {
   return Boolean(getOrderCreateDef(listKey));
 }
 
+function parseLine(raw: unknown): OrderCreateLine | null {
+  if (!raw || typeof raw !== "object") return null;
+  const row = raw as Record<string, unknown>;
+  const productId = Number(row.productId ?? row.product_id);
+  const qty = Number(row.qty ?? row.product_uom_qty ?? row.product_qty);
+  if (!Number.isFinite(productId) || productId <= 0) return null;
+  if (!Number.isFinite(qty) || qty <= 0) return null;
+
+  const line: OrderCreateLine = { productId, qty };
+
+  if ("price" in row || "price_unit" in row) {
+    const price = Number(row.price ?? row.price_unit);
+    if (!Number.isFinite(price) || price < 0) return null;
+    line.price = price;
+  }
+
+  if ("discount" in row) {
+    const discount = Number(row.discount);
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+      return null;
+    }
+    line.discount = discount;
+  }
+
+  return line;
+}
+
 export function filterOrderCreateValues(
   listKey: string,
   values: Record<string, unknown>
@@ -45,17 +78,27 @@ export function filterOrderCreateValues(
   if (!getOrderCreateDef(listKey)) return null;
 
   const partnerId = Number(values.partnerId ?? values.partner_id);
-  const productId = Number(values.productId ?? values.product_id);
-  const qtyRaw = values.qty ?? values.product_uom_qty ?? values.product_qty ?? 1;
-  const qty = Number(qtyRaw);
-
   if (!Number.isFinite(partnerId) || partnerId <= 0) return null;
-  if (!Number.isFinite(productId) || productId <= 0) return null;
-  if (!Number.isFinite(qty) || qty <= 0) return null;
 
-  return {
-    partnerId,
-    productId,
-    qty,
-  };
+  let lines: OrderCreateLine[] = [];
+  if (Array.isArray(values.lines)) {
+    for (const raw of values.lines) {
+      const line = parseLine(raw);
+      if (!line) return null;
+      lines.push(line);
+    }
+  } else {
+    const legacy = parseLine({
+      productId: values.productId ?? values.product_id,
+      qty: values.qty ?? values.product_uom_qty ?? values.product_qty ?? 1,
+      ...("price" in values || "price_unit" in values
+        ? { price: values.price ?? values.price_unit }
+        : {}),
+      ...("discount" in values ? { discount: values.discount } : {}),
+    });
+    if (legacy) lines = [legacy];
+  }
+
+  if (!lines.length) return null;
+  return { partnerId, lines };
 }

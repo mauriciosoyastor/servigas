@@ -967,6 +967,38 @@ describe("OdooAdapter.createRecord quotations", () => {
       product_uom_qty: 2,
     });
   });
+
+  it("creates a draft sale.order with multiple priced lines", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 78 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "sales/quotations", {
+      partnerId: 6,
+      lines: [
+        { productId: 42, qty: 2, price: 100, discount: 10 },
+        { productId: 7, qty: 1, price: 50 },
+      ],
+    });
+    assert.equal(result.id, 78);
+
+    const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.args[0].order_line.length, 2);
+    assert.deepEqual(body.params.args[0].order_line[0][2], {
+      product_id: 42,
+      product_uom_qty: 2,
+      price_unit: 100,
+      discount: 10,
+    });
+    assert.deepEqual(body.params.args[0].order_line[1][2], {
+      product_id: 7,
+      product_uom_qty: 1,
+      price_unit: 50,
+    });
+  });
 });
 
 describe("OdooAdapter.createRecord RFQ", () => {

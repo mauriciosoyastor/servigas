@@ -17,7 +17,7 @@ const {
 	partnerListKey,
 	productListKey = 'inventory/variants',
 	title = 'Nueva cotización',
-	hint = 'Buscá cliente y producto por nombre o código. Queda en borrador para confirmar después.',
+	hint = 'Buscá cliente y agregá una o más líneas (qty, precio, % desc.). Queda en borrador.',
 	partnerLabel = 'Cliente',
 	partnerPlaceholder = 'Buscar cliente…',
 	productPlaceholder = 'Buscar producto por nombre o código…',
@@ -48,38 +48,51 @@ const {
 			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
 			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
 		</div>
-		<div
-			class="sg-order-picker"
-			data-order-picker
-			data-picker-kind="product"
-			data-list-key={productListKey}
-		>
-			<label>
-				<span>Producto *</span>
-				<input
-					class="sg-focus-ring"
-					type="search"
-					autocomplete="off"
-					placeholder={productPlaceholder}
-					data-picker-query
-				/>
-			</label>
-			<input type="hidden" name="productId" value="" required data-picker-id />
-			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
-			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+
+		<fieldset class="sg-order-line-composer" data-line-composer>
+			<legend>Agregar línea</legend>
+			<div
+				class="sg-order-picker"
+				data-order-picker
+				data-picker-kind="product"
+				data-list-key={productListKey}
+			>
+				<label>
+					<span>Producto</span>
+					<input
+						class="sg-focus-ring"
+						type="search"
+						autocomplete="off"
+						placeholder={productPlaceholder}
+						data-picker-query
+					/>
+				</label>
+				<input type="hidden" value="" data-picker-id data-draft-product-id />
+				<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+				<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+			</div>
+			<div class="sg-order-line-fields">
+				<label>
+					<span>Cantidad</span>
+					<input class="sg-focus-ring" type="number" min="0.01" step="any" value="1" data-draft-qty />
+				</label>
+				<label>
+					<span>Precio</span>
+					<input class="sg-focus-ring" type="number" min="0" step="any" value="" placeholder="Lista" data-draft-price />
+				</label>
+				<label>
+					<span>% Desc.</span>
+					<input class="sg-focus-ring" type="number" min="0" max="100" step="any" value="0" data-draft-discount />
+				</label>
+			</div>
+			<button class="sg-focus-ring" type="button" data-add-line>Agregar línea</button>
+		</fieldset>
+
+		<div class="sg-order-lines" data-order-lines>
+			<p class="sg-order-lines-empty" data-lines-empty>Sin líneas todavía.</p>
+			<ul data-lines-list hidden></ul>
 		</div>
-		<label>
-			<span>Cantidad *</span>
-			<input
-				class="sg-focus-ring"
-				type="number"
-				name="qty"
-				min="0.01"
-				step="any"
-				value="1"
-				required
-			/>
-		</label>
+
 		<div class="sg-order-create-actions">
 			<button class="sg-focus-ring" type="submit">Crear borrador</button>
 			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
@@ -92,6 +105,17 @@ const {
 	const root = document.querySelector('[data-order-create]');
 	const form = root?.querySelector('[data-order-create-form]');
 	const status = root?.querySelector('[data-order-create-status]');
+	const linesEmpty = root?.querySelector('[data-lines-empty]');
+	const linesList = root?.querySelector('[data-lines-list]');
+	const addLineBtn = root?.querySelector('[data-add-line]');
+	const draftProductId = root?.querySelector('[data-draft-product-id]');
+	const draftQty = root?.querySelector('[data-draft-qty]');
+	const draftPrice = root?.querySelector('[data-draft-price]');
+	const draftDiscount = root?.querySelector('[data-draft-discount]');
+	/** @type {{ productId: number, label: string, qty: number, price?: number, discount?: number }[]} */
+	let lines = [];
+	let draftLabel = '';
+	let draftListPrice = null;
 
 	function buildSearchUrl(listKey, q) {
 		const query = String(q || '').trim();
@@ -114,6 +138,43 @@ const {
 		const name = row?.name;
 		if (typeof name === 'string' && name.trim()) return name.trim();
 		return String(row?.id ?? '');
+	}
+
+	function renderLines() {
+		if (!(linesList instanceof HTMLElement) || !(linesEmpty instanceof HTMLElement)) return;
+		linesList.replaceChildren();
+		if (!lines.length) {
+			linesEmpty.hidden = false;
+			linesList.hidden = true;
+			return;
+		}
+		linesEmpty.hidden = true;
+		linesList.hidden = false;
+		lines.forEach((line, index) => {
+			const li = document.createElement('li');
+			const meta = [
+				`x${line.qty}`,
+				line.price != null ? `$${line.price}` : 'precio lista',
+				line.discount ? `-${line.discount}%` : null,
+			]
+				.filter(Boolean)
+				.join(' · ');
+			li.innerHTML = `<strong></strong><span></span>`;
+			const strong = li.querySelector('strong');
+			const span = li.querySelector('span');
+			if (strong) strong.textContent = line.label;
+			if (span) span.textContent = meta;
+			const remove = document.createElement('button');
+			remove.type = 'button';
+			remove.className = 'sg-focus-ring';
+			remove.textContent = 'Quitar';
+			remove.addEventListener('click', () => {
+				lines = lines.filter((_, i) => i !== index);
+				renderLines();
+			});
+			li.appendChild(remove);
+			linesList.appendChild(li);
+		});
 	}
 
 	function wirePicker(picker) {
@@ -139,6 +200,10 @@ const {
 			idInput.value = '';
 			selectedEl.hidden = true;
 			selectedEl.textContent = '';
+			if (kind === 'product') {
+				draftLabel = '';
+				draftListPrice = null;
+			}
 		};
 
 		const hideResults = () => {
@@ -146,12 +211,24 @@ const {
 			resultsEl.replaceChildren();
 		};
 
-		const choose = (id, label) => {
+		const choose = (id, label, row) => {
 			idInput.value = String(id);
 			selectedEl.hidden = false;
 			selectedEl.textContent = `Elegido: ${label}`;
 			queryInput.value = label;
 			hideResults();
+			if (kind === 'product') {
+				draftLabel = label;
+				const price = Number(row?.list_price);
+				draftListPrice = Number.isFinite(price) ? price : null;
+				if (
+					draftPrice instanceof HTMLInputElement &&
+					draftListPrice != null &&
+					!draftPrice.value
+				) {
+					draftPrice.value = String(draftListPrice);
+				}
+			}
 		};
 
 		const renderResults = (rows) => {
@@ -166,7 +243,7 @@ const {
 				btn.type = 'button';
 				btn.className = 'sg-focus-ring';
 				btn.textContent = label;
-				btn.addEventListener('click', () => choose(id, label));
+				btn.addEventListener('click', () => choose(id, label, row));
 				li.appendChild(btn);
 				resultsEl.appendChild(li);
 			}
@@ -216,6 +293,65 @@ const {
 		if (picker instanceof HTMLElement) wirePicker(picker);
 	});
 
+	addLineBtn?.addEventListener('click', () => {
+		const productId = Number(
+			draftProductId instanceof HTMLInputElement ? draftProductId.value : 0
+		);
+		const qty = Number(draftQty instanceof HTMLInputElement ? draftQty.value : 0);
+		const priceRaw =
+			draftPrice instanceof HTMLInputElement ? draftPrice.value.trim() : '';
+		const discount = Number(
+			draftDiscount instanceof HTMLInputElement ? draftDiscount.value : 0
+		);
+		if (!productId || !draftLabel || !Number.isFinite(qty) || qty <= 0) {
+			if (status instanceof HTMLElement) {
+				status.hidden = false;
+				status.textContent = 'Elegí un producto y cantidad válidos';
+				status.dataset.state = 'error';
+			}
+			return;
+		}
+		if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
+			if (status instanceof HTMLElement) {
+				status.hidden = false;
+				status.textContent = 'El descuento debe estar entre 0 y 100';
+				status.dataset.state = 'error';
+			}
+			return;
+		}
+		/** @type {{ productId: number, label: string, qty: number, price?: number, discount?: number }} */
+		const line = { productId, label: draftLabel, qty };
+		if (priceRaw !== '') {
+			const price = Number(priceRaw);
+			if (!Number.isFinite(price) || price < 0) {
+				if (status instanceof HTMLElement) {
+					status.hidden = false;
+					status.textContent = 'Precio inválido';
+					status.dataset.state = 'error';
+				}
+				return;
+			}
+			line.price = price;
+		}
+		if (discount > 0) line.discount = discount;
+		lines.push(line);
+		renderLines();
+		if (draftProductId instanceof HTMLInputElement) draftProductId.value = '';
+		draftLabel = '';
+		const productPicker = root?.querySelector('[data-picker-kind="product"]');
+		const q = productPicker?.querySelector('[data-picker-query]');
+		const sel = productPicker?.querySelector('[data-picker-selected]');
+		if (q instanceof HTMLInputElement) q.value = '';
+		if (sel instanceof HTMLElement) {
+			sel.hidden = true;
+			sel.textContent = '';
+		}
+		if (draftQty instanceof HTMLInputElement) draftQty.value = '1';
+		if (draftPrice instanceof HTMLInputElement) draftPrice.value = '';
+		if (draftDiscount instanceof HTMLInputElement) draftDiscount.value = '0';
+		if (status instanceof HTMLElement) status.hidden = true;
+	});
+
 	if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
@@ -223,16 +359,26 @@ const {
 			status.textContent = 'Creando…';
 			status.dataset.state = 'pending';
 			const data = new FormData(form);
-			const values = {
-				partnerId: Number(data.get('partnerId')),
-				productId: Number(data.get('productId')),
-				qty: Number(data.get('qty')),
-			};
-			if (!values.partnerId || !values.productId) {
-				status.textContent = 'Elegí cliente y producto de la lista';
+			const partnerId = Number(data.get('partnerId'));
+			if (!partnerId) {
+				status.textContent = 'Elegí un contacto de la lista';
 				status.dataset.state = 'error';
 				return;
 			}
+			if (!lines.length) {
+				status.textContent = 'Agregá al menos una línea';
+				status.dataset.state = 'error';
+				return;
+			}
+			const values = {
+				partnerId,
+				lines: lines.map(({ productId, qty, price, discount }) => {
+					const line = { productId, qty };
+					if (price != null) line.price = price;
+					if (discount != null) line.discount = discount;
+					return line;
+				}),
+			};
 			try {
 				const response = await fetch(apiPath, {
 					method: 'POST',
@@ -256,17 +402,19 @@ const {
 			}
 		});
 	}
+
+	renderLines();
 </script>
 
 <style>
 	.sg-order-create {
 		display: grid;
 		gap: 0.65rem;
-		max-width: 36rem;
+		max-width: 40rem;
 		border-radius: var(--sg-radius-card);
 		padding: 1.2rem;
 	}
-	.sg-order-create p {
+	.sg-order-create > p {
 		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.82rem;
@@ -283,7 +431,8 @@ const {
 		gap: 0.35rem;
 	}
 	.sg-order-create-form span,
-	.sg-order-picker span {
+	.sg-order-picker span,
+	.sg-order-line-composer legend {
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--sg-text-muted-dark);
@@ -342,6 +491,72 @@ const {
 		font-size: 0.8rem;
 		color: var(--sg-text-muted-dark);
 	}
+	.sg-order-line-composer {
+		display: grid;
+		gap: 0.65rem;
+		margin: 0;
+		padding: 0.85rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.85rem;
+	}
+	.sg-order-line-fields {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.55rem;
+	}
+	.sg-order-line-composer > button {
+		justify-self: start;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.5rem 0.9rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font: inherit;
+		font-size: 0.85rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-order-lines ul {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.45rem;
+	}
+	.sg-order-lines li {
+		display: grid;
+		grid-template-columns: 1fr auto;
+		gap: 0.2rem 0.75rem;
+		align-items: center;
+		padding: 0.65rem 0.75rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		background: rgba(0, 0, 0, 0.18);
+	}
+	.sg-order-lines li strong {
+		font-size: 0.9rem;
+	}
+	.sg-order-lines li span {
+		grid-column: 1;
+		font-size: 0.75rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-order-lines li button {
+		grid-row: 1 / span 2;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.35rem 0.7rem;
+		background: transparent;
+		color: var(--sg-text-on-dark);
+		font: inherit;
+		font-size: 0.75rem;
+		cursor: pointer;
+	}
+	.sg-order-lines-empty {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
 	.sg-order-create-actions {
 		display: flex;
 		align-items: center;
@@ -369,5 +584,10 @@ const {
 	}
 	.sg-order-create-status[data-state='error'] {
 		color: #ffb4a2;
+	}
+	@media (max-width: 640px) {
+		.sg-order-line-fields {
+			grid-template-columns: 1fr;
+		}
 	}
 </style>
