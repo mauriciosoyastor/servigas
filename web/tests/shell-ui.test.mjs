@@ -196,7 +196,9 @@ describe("shell UI contracts", () => {
     assert.match(form, /data-order-picker/);
     assert.match(form, /data-picker-query/);
     assert.match(form, /name=["']partnerId["']/);
-    assert.match(form, /name=["']productId["']/);
+    assert.match(form, /data-order-lines/);
+    assert.match(form, /data-add-line/);
+    assert.match(form, /lines:\s*lines\.map/);
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /action:\s*['"]create['"]/);
     assert.doesNotMatch(form, /<select/);

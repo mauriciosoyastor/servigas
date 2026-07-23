@@ -462,10 +462,15 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Datos de alta inválidos");
     }
 
-    const line: Record<string, number> = {
-      product_id: filtered.productId,
-      [orderDef.lineQtyField]: filtered.qty,
-    };
+    const order_line = filtered.lines.map((line) => {
+      const vals: Record<string, number> = {
+        product_id: line.productId,
+        [orderDef.lineQtyField]: line.qty,
+      };
+      if (line.price !== undefined) vals.price_unit = line.price;
+      if (line.discount !== undefined) vals.discount = line.discount;
+      return [0, 0, vals];
+    });
 
     const id = await this.#callKw<number>(
       odooSessionId,
@@ -474,7 +479,7 @@ export class OdooAdapter implements BackendClient {
       [
         {
           partner_id: filtered.partnerId,
-          order_line: [[0, 0, line]],
+          order_line,
         },
       ]
     );
