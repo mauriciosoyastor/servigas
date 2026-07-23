@@ -1,112 +1,58 @@
-# Task 3 Report — sessionStore + BackendClient + OdooAdapter
+# Task 3 Report: API `/api/notes`
 
 ## Status
 
-DONE
+Implementada la ruta Astro SSR `web/src/pages/api/notes.ts` con handlers
+completos para GET, POST, PATCH y DELETE. Todos requieren sesión BFF,
+usan `session.uid` como `viewerUid` y traducen errores mediante
+`bffErrorResponse`.
 
-## Commit
-
-- `416a44a feat(web): add Odoo BFF adapter and session store`
-
-## Implementación
-
-- Se agregó el puerto `BackendClient` con `login`, `logout`, `getLauncher` y `getHub`.
-- Se agregó `MemorySessionStore`, el singleton `sessionStore` y `BFF_COOKIE = "sg_bff_sid"`.
-- Se agregó `OdooAdapter` con inyección de `fetch`, autenticación JSON-RPC, extracción de `session_id`, llamadas `call_kw`, cookie de sesión, sección `summary` por defecto y logout best-effort.
-- Se agregó `getBackend()` con caché y validación de `ODOO_URL`/`ODOO_DB`.
-- Se hizo compatible `BffError` con `node --experimental-strip-types`, reemplazando parameter properties por propiedades explícitas sin cambiar su API.
-
-## Evidencia TDD
+## TDD
 
 ### RED
 
-Comando:
-
-```text
-cd web
-npm test
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/api-routes.test.mjs
 ```
 
-Resultado esperado antes de implementar:
+Exit code 1: `ERR_MODULE_NOT_FOUND` al importar
+`web/src/pages/api/notes.ts`, la causa esperada antes de implementar la ruta.
 
-```text
-Error [ERR_MODULE_NOT_FOUND]: Cannot find module '.../web/src/lib/bff/odoo-adapter.ts'
-tests 6
-pass 5
-fail 1
-exit code 1
-```
+Casos escritos antes de producción:
 
-La suite falló porque el adaptador requerido aún no existía. Después de ampliar los casos para cubrir todos los comportamientos requeridos, se confirmó nuevamente el mismo RED antes de crear código de producción.
+1. GET sin sesión devuelve 401.
+2. GET con `listKey` inválido propaga 404 seguro.
+3. POST con cuerpo vacío devuelve 400 y `Escribí una nota`.
+4. PATCH de nota ajena devuelve 403 y el mensaje permitido.
+5. POST exitoso normaliza el texto y pasa `session.uid` al backend.
 
 ### GREEN
 
-Primer intento de GREEN detectó una incompatibilidad preexistente de `errors.ts` con el runner:
-
-```text
-SyntaxError [ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX]:
-TypeScript parameter property is not supported in strip-only mode
-exit code 1
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/api-routes.test.mjs
 ```
 
-Se aplicó la corrección mínima equivalente y se volvió a ejecutar:
+Exit code 0: 18 tests, 18 pass, 0 fail.
 
-```text
-tests 15
-suites 7
-pass 15
-fail 0
-duration_ms 258.3307
-exit code 0
+## Verificación completa
+
+```powershell
+$env:NODE_ENV='test'; node --experimental-strip-types --test tests/**/*.test.mjs
 ```
 
-## Cobertura agregada
+Exit code 0: 201 tests, 201 pass, 0 fail.
 
-- Login: credenciales inválidas, éxito, URL/body JSON-RPC, cookie y error de red.
-- Launcher: endpoint, modelo `sg.app.tile`, método `get_launcher_payload` y payload.
-- Hub: modelo `sg.hub.card`, método `get_hub_payload`, cookie, sección explícita, default `summary` y error de red.
-- Logout: endpoint, cookie y tolerancia a fallos.
-- Session store: create/get/destroy, UUID y nombre de cookie.
+## Implementación
 
-## Verificación
-
-- `npm test`: 15/15 tests pasan.
-- `npm run build`: Astro server build completado, exit code 0.
-- `git diff --cached --check`: sin errores antes del commit.
-
-## Self-review
-
-- Se contrastaron endpoint, modelos, métodos, argumentos, cookie y mapeos de error contra el brief.
-- El alcance quedó limitado a los cinco archivos solicitados, tests y la corrección necesaria de compatibilidad en `errors.ts`.
-- No se encontraron defectos críticos ni importantes pendientes.
+- GET valida `listKey` y `recordId`, lista notas y entrega `{ notes }`.
+- POST valida JSON, destino y texto; normaliza `body` y entrega
+  `{ ok: true, note }`.
+- PATCH valida `id` y texto; normaliza `body` y entrega
+  `{ ok: true, note }`.
+- DELETE valida `id`, elimina la nota y entrega `{ ok: true }`.
+- JSON no-objeto o malformado devuelve `validation_error` 400.
+- No se implementó UI.
 
 ## Concerns
 
-Ninguno.
-
-## Important review fixes
-
-- `OdooAdapter.login()` ahora rechaza una autenticación con `uid` cuando Odoo no entrega la cookie `session_id`, usando `BffError("odoo_unavailable", 503, ...)`.
-- `#callKw()` ahora inspecciona `payload.error`: errores relacionados con sesión/acceso se traducen a `unauthorized` (401), y los demás a `odoo_unavailable` (503).
-- Las respuestas JSON-RPC sin `result` ya no se aceptan como payload exitoso.
-- Se agregaron cuatro pruebas unitarias para cookie ausente, error de sesión/acceso, error general de Odoo y resultado ausente.
-
-### Test de cobertura
-
-Comando:
-
-```text
-cd web
-npm test
-```
-
-Salida:
-
-```text
-tests 19
-suites 7
-pass 19
-fail 0
-duration_ms 226.3663
-exit code 0
-```
+Ninguno conocido.
