@@ -37,7 +37,7 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 				return (
 					<tr data-row-id={row.id}>
 						{columns.map((column) => (
-							<td data-col={column.key} data-kind={column.kind || 'text'}>
+							<td data-col={column.key} data-kind={column.kind || 'text'} data-label={column.label}>
 								{column.kind === 'image' ? (
 									href ? (
 										<a class="sg-record-thumb-link" href={href}>
