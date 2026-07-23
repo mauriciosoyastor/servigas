@@ -665,6 +665,20 @@ describe("OdooAdapter.getPosCatalog", () => {
               barcode: "7791234567890",
               list_price: 1500,
               qty_available: 12,
+              taxes_id: [3],
+            },
+          ],
+        });
+      }
+      if (model === "account.tax" && method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 3,
+              amount: 21,
+              amount_type: "percent",
+              price_include: false,
+              type_tax_use: "sale",
             },
           ],
         });
@@ -686,6 +700,8 @@ describe("OdooAdapter.getPosCatalog", () => {
     assert.equal(catalog.products[0].image_url, "/api/media/product.product/42/image_128");
     assert.equal(catalog.products[0].barcode, "7791234567890");
     assert.equal(catalog.products[0].qty_available, 12);
+    assert.equal(catalog.products[0].tax_rate, 21);
+    assert.equal(catalog.products[0].price_includes_tax, false);
     assert.equal(catalog.total, 1);
     assert.equal(catalog.paymentMethods.length, 2);
     assert.equal(catalog.paymentMethods[0].name, "Cash");
@@ -708,6 +724,7 @@ describe("OdooAdapter.getPosCatalog", () => {
       "barcode",
       "list_price",
       "qty_available",
+      "taxes_id",
     ]);
   });
 });
@@ -726,6 +743,24 @@ describe("OdooAdapter.checkoutPosCart", () => {
       if (model === "pos.session" && method === "search_read") {
         return Response.json({
           result: [{ id: 4, name: "Mostrador Servigas/00002", state: "opened" }],
+        });
+      }
+      if (model === "product.product" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 42, taxes_id: [3] }],
+        });
+      }
+      if (model === "account.tax" && method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 3,
+              amount: 21,
+              amount_type: "percent",
+              price_include: false,
+              type_tax_use: "sale",
+            },
+          ],
         });
       }
       if (model === "pos.payment.method" && method === "search_read") {
@@ -769,7 +804,10 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(result.channel, "pos.order");
     assert.equal(result.paymentMethodId, 2);
     assert.equal(result.paymentMethodName, "Card");
-    assert.equal(result.amountTotal, 180);
+    // 180 sin IVA + 21% = 217.80
+    assert.equal(result.amountUntaxed, 180);
+    assert.equal(result.amountTax, 37.8);
+    assert.equal(result.amountTotal, 217.8);
     assert.equal(result.partnerId, null);
     assert.equal(result.partnerName, null);
 
@@ -784,7 +822,10 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(createCall.params.args[0].partner_id, false);
     assert.equal(createCall.params.args[0].lines[0][2].product_id, 42);
     assert.equal(createCall.params.args[0].lines[0][2].discount, 10);
-    assert.equal(createCall.params.args[0].amount_total, 180);
+    assert.equal(createCall.params.args[0].lines[0][2].price_subtotal, 180);
+    assert.equal(createCall.params.args[0].lines[0][2].price_subtotal_incl, 217.8);
+    assert.equal(createCall.params.args[0].amount_tax, 37.8);
+    assert.equal(createCall.params.args[0].amount_total, 217.8);
     const writeCall = bodies.find(
       (body) =>
         body.params?.model === "pos.order" && body.params?.method === "write"
@@ -793,7 +834,7 @@ describe("OdooAdapter.checkoutPosCart", () => {
       writeCall.params.args[1].payment_ids[0][2].payment_method_id,
       2
     );
-    assert.equal(writeCall.params.args[1].amount_paid, 180);
+    assert.equal(writeCall.params.args[1].amount_paid, 217.8);
   });
 
   it("fails loud when POS session cannot open and never creates sale.order", async () => {
@@ -877,6 +918,11 @@ describe("OdooAdapter.checkoutPosCart", () => {
           result: [{ id: 9, name: "Cliente Mostrador" }],
         });
       }
+      if (model === "product.product" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 42, taxes_id: [] }],
+        });
+      }
       if (model === "pos.payment.method" && method === "search_read") {
         return Response.json({
           result: [{ id: 1, name: "Cash", is_cash_count: true }],
@@ -911,6 +957,8 @@ describe("OdooAdapter.checkoutPosCart", () => {
     );
     assert.equal(result.partnerId, 9);
     assert.equal(result.partnerName, "Cliente Mostrador");
+    assert.equal(result.amountTax, 0);
+    assert.equal(result.amountTotal, 50);
 
     const bodies = fetchImpl.mock.calls.map((call) =>
       JSON.parse(call.arguments[1].body)

@@ -102,6 +102,8 @@ export type PosCatalogProduct = {
   barcode: string | null;
   list_price: number;
   qty_available: number;
+  tax_rate: number;
+  price_includes_tax: boolean;
   image_url: string | null;
 };
 
@@ -140,5 +142,7 @@ export type PosCheckoutResult = {
   paymentMethodName: string | null;
   partnerId: number | null;
   partnerName: string | null;
+  amountUntaxed: number;
+  amountTax: number;
   amountTotal: number;
 };
