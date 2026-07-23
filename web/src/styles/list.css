@@ -293,3 +293,139 @@
 		transition: none;
 	}
 }
+
+/* Record activity notes */
+.sg-record-notes {
+	display: grid;
+	gap: 1rem;
+	margin-top: 1.25rem;
+	padding: 1.2rem;
+	border-radius: var(--sg-radius-card);
+}
+
+.sg-record-notes h2 {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.sg-record-notes-form,
+.sg-record-notes-editor {
+	display: grid;
+	gap: 0.55rem;
+}
+
+.sg-record-notes-form label {
+	color: var(--sg-text-muted-dark);
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.sg-record-notes textarea {
+	box-sizing: border-box;
+	width: 100%;
+	resize: vertical;
+	border: 1px solid var(--sg-glass-border);
+	border-radius: 0.75rem;
+	padding: 0.7rem 0.8rem;
+	color: var(--sg-text-on-dark);
+	background: rgba(0, 0, 0, 0.22);
+	font: inherit;
+	line-height: 1.45;
+}
+
+.sg-record-notes textarea:focus-visible {
+	outline: 2px solid var(--sg-flame-yellow);
+	outline-offset: 2px;
+}
+
+.sg-record-notes-form-actions,
+.sg-record-notes-footer,
+.sg-record-notes-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.sg-record-notes-footer {
+	justify-content: space-between;
+}
+
+.sg-record-notes button {
+	border: 0;
+	padding: 0.25rem 0;
+	color: var(--sg-flame-yellow);
+	background: transparent;
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.sg-record-notes button:disabled {
+	cursor: wait;
+	opacity: 0.55;
+}
+
+.sg-record-notes .sg-record-notes-primary {
+	border: 1px solid var(--sg-glass-border);
+	border-radius: var(--sg-radius-pill);
+	padding: 0.55rem 0.9rem;
+	color: var(--sg-text-on-dark);
+	background: var(--sg-glass-fill);
+}
+
+.sg-record-notes .sg-record-notes-delete {
+	color: #ffb4a2;
+}
+
+.sg-record-notes-list {
+	display: grid;
+	gap: 0;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.sg-record-notes-item {
+	display: grid;
+	gap: 0.55rem;
+	padding: 0.9rem 0;
+	border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-record-notes-body {
+	margin: 0;
+	color: var(--sg-text-on-dark);
+	line-height: 1.55;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.sg-record-notes-meta,
+.sg-record-notes-empty,
+.sg-record-notes-status,
+.sg-record-notes-item-status {
+	color: var(--sg-text-muted-dark);
+	font-size: 0.78rem;
+}
+
+.sg-record-notes-empty {
+	padding: 0.9rem 0;
+	border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-record-notes-status[data-state="ok"] {
+	color: #9be7b0;
+}
+
+.sg-record-notes-status[data-state="error"],
+.sg-record-notes-item-status[data-state="error"] {
+	color: #ffb4a2;
+}
+
+@media (max-width: 520px) {
+	.sg-record-notes-footer {
+		align-items: flex-start;
+		flex-direction: column;
+	}
+}
