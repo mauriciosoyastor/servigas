@@ -1,17 +1,17 @@
 # Plan automatizado — iteración corte Astro (opciones 1→2→3)
 
 **Fecha:** 2026-07-23  
-**Estado:** en ejecución (#1 mergeado; #2 en merge)  
+**Estado:** #1 y #2 mergeados; #3 en merge  
 **ADR:** 0016  
-**Smoke:** diferido (no bloquea esta corrida)
+**Smoke:** diferido (script listo; no bloquea esta corrida)
 
 ## Cola automática
 
 | # | Opción | Rama / PR | Done cuando | Estado |
 |---|--------|-----------|-------------|--------|
 | **1** | Liquid Glass usable en mostrador | `cursor/astro-liquid-glass-mostrador-daee` (#27) | CTA flame, search command-bar, densidad POS, tokens alineados; suite verde | mergeado |
-| **2** | Huecos camino feliz (`coming_soon` / fricciones) | `cursor/astro-happy-path-gaps-daee` (#28) | Inventario de tiles/rutas coming_soon + cerrar al menos 1 gap operativo allowlisted; suite verde | en merge |
-| **3** | Endurecer BFF (sin exigir Odoo up) | `cursor/astro-bff-harden-smoke-validation-daee` (#29) | Smoke script extendido (cotiz/RFQ/checkout steps) + validaciones API más claras; suite verde; smoke real = más tarde | siguiente |
+| **2** | Huecos camino feliz (`coming_soon` / fricciones) | `cursor/astro-happy-path-gaps-daee` (#28) | Inventario de tiles/rutas coming_soon + cerrar al menos 1 gap operativo allowlisted; suite verde | mergeado |
+| **3** | Endurecer BFF (sin exigir Odoo up) | `cursor/astro-bff-harden-smoke-validation-daee` (#29) | Smoke script extendido (cotiz/RFQ/checkout steps) + validaciones API más claras; suite verde; smoke real = más tarde | en merge |
 
 ## Reglas
 

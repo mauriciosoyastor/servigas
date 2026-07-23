@@ -90,11 +90,16 @@ la cookie local. Los 401 `unauthorized` en APIs también invalidan la sesión BF
 Errores al cliente usan códigos fijos (`checkout_failed`, `action_failed`, …)
 sin filtrar mensajes crudos de Odoo.
 
-Smoke camino feliz (requiere Astro + Odoo):
+Smoke camino feliz (requiere Astro + Odoo). Por default solo GET
+(login → launcher → hubs → productos → cotizaciones/RFQ → catálogo POS → `/pos`).
+Checkout real opcional con `SMOKE_MUTATE=1`:
 
 ```powershell
 npm run smoke:shell
+$env:SMOKE_MUTATE=1; npm run smoke:shell
 ```
+
+También: `SMOKE_BASE_URL`, `SMOKE_LOGIN`, `SMOKE_PASSWORD`.
 
 ## Referencias
 

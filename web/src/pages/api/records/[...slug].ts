@@ -22,15 +22,31 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       ? params.slug.join("/")
       : String(params.slug || "");
 
-    const body = (await request.json()) as {
+    let body: {
       action?: RecordAction;
       id?: unknown;
       values?: Record<string, unknown>;
     };
+    try {
+      const parsed = await request.json();
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        throw new BffError("validation_error", 400, "JSON inválido");
+      }
+      body = parsed as typeof body;
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      throw new BffError("validation_error", 400, "JSON inválido");
+    }
     let action: RecordAction = body.action || "update";
     const id = Number(body.id);
     if (!body.action && !Number.isFinite(id)) {
       action = "create";
+    }
+    if (
+      body.action &&
+      !["create", "update", "archive", "confirm"].includes(body.action)
+    ) {
+      throw new BffError("validation_error", 400, "Acción inválida");
     }
 
     const writes = getRecordWriteDef(slug);
