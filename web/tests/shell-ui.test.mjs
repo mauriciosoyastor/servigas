@@ -114,6 +114,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /Nueva venta/);
     assert.match(page, /nombre, código o barras/);
     assert.match(page, /sg-pos-product-stock|qty_available/);
+    assert.match(page, /data-pos-customer|partnerId/);
+    assert.match(page, /sales\/customers/);
   });
 
   it("renders invoice and customer detail pages", async () => {

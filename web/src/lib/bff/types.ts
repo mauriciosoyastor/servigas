@@ -128,6 +128,7 @@ export type PosCheckoutLine = {
 
 export type PosCheckoutOptions = {
   paymentMethodId?: number;
+  partnerId?: number;
 };
 
 export type PosCheckoutResult = {
@@ -137,5 +138,7 @@ export type PosCheckoutResult = {
   channel: "pos.order";
   paymentMethodId: number | null;
   paymentMethodName: string | null;
+  partnerId: number | null;
+  partnerName: string | null;
   amountTotal: number;
 };
