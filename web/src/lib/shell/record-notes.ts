@@ -2,18 +2,20 @@ import { getRecordListDef } from "./record-lists.ts";
 
 export const MAX_NOTE_BODY_LENGTH = 4000;
 
-const NOTE_MODELS = new Set([
+export const NOTE_MODELS = [
   "res.partner",
   "product.template",
   "sale.order",
   "purchase.order",
-]);
+] as const;
+
+const NOTE_MODELS_SET = new Set<string>(NOTE_MODELS);
 
 export function resolveNoteTarget(
   listKey: string
 ): { model: string } | null {
   const list = getRecordListDef(listKey);
-  if (!list || !NOTE_MODELS.has(list.model)) return null;
+  if (!list || !NOTE_MODELS_SET.has(list.model)) return null;
   return { model: list.model };
 }
 
@@ -39,8 +41,8 @@ export function plainTextFromOdooHtml(html: string): string {
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
     .replace(/\n+$/g, "")
     .trim();
 }

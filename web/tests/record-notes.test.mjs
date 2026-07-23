@@ -35,8 +35,14 @@ describe("record-notes body", () => {
   });
 
   it("round-trips plain text through html helpers", () => {
-    const html = odooHtmlFromPlainText('a <b> & "x"');
-    assert.match(html, /&lt;b&gt;/);
+    assert.equal(
+      plainTextFromOdooHtml(odooHtmlFromPlainText('a <b> & "x"')),
+      'a <b> & "x"'
+    );
+    assert.equal(
+      plainTextFromOdooHtml(odooHtmlFromPlainText("&quot;")),
+      "&quot;"
+    );
     assert.equal(plainTextFromOdooHtml("<p>hola<br/>mundo</p>"), "hola\nmundo");
   });
 });
