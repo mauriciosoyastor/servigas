@@ -25,8 +25,8 @@ function fieldValue(key: string): string {
 }
 
 const state = fieldValue('state');
-// RFQ confirm uses purchase/rfq allowlist even when opened from orders detail path
-const showConfirm = isConfirmableState('purchase/rfq', state);
+// Confirm uses purchase/solicitudes allowlist even when opened from orders detail path
+const showConfirm = isConfirmableState('purchase/solicitudes', state);
 ---
 
 <ShellLayout title={`${detail?.title || 'Orden de compra'} | Servigas`} active="purchase" userName={userName}>
@@ -39,9 +39,9 @@ const showConfirm = isConfirmableState('purchase/rfq', state);
 	/>
 	{detail && !error && showConfirm ? (
 		<RecordConfirmControl
-			listKey="purchase/rfq"
+			listKey="purchase/solicitudes"
 			recordId={id}
-			apiPath="/api/records/purchase/rfq"
+			apiPath="/api/records/purchase/solicitudes"
 			label="Confirmar OC"
 		/>
 	) : null}

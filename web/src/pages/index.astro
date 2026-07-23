@@ -43,15 +43,15 @@ try {
 			<span>{tiles.length} {tiles.length === 1 ? 'acceso' : 'accesos'}</span>
 		</header>
 
-		<nav class="sg-ops-strip" aria-label="Camino feliz del mostrador">
+		<nav class="sg-ops-strip" aria-label="Atajos del mostrador">
 			<a class="sg-ops-strip-primary sg-focus-ring" href="/pos">Caja / Mostrador</a>
 			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/sales/quotations/new">Nueva cotización</a>
-			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/purchase/rfq/new">Nueva RFQ</a>
+			<a class="sg-ops-strip-link sg-focus-ring" href="/lists/purchase/solicitudes/new">Nuevo pedido a proveedor</a>
 		</nav>
 
 		{launcherError ? (
 			<section class="sg-launcher-state sg-glass" role="alert">
-				<strong>No se pudo abrir el launcher</strong>
+				<strong>No se pudieron cargar los accesos</strong>
 				<p>{launcherError}</p>
 			</section>
 		) : tiles.length ? (
@@ -106,8 +106,8 @@ try {
 				const label = (tile.dataset.label || '').trim();
 				if (detail) {
 					detail.textContent = label
-						? `«${label}» todavía no tiene pantalla Astro en el camino a corte.`
-						: 'Este acceso todavía no tiene pantalla Astro en el camino a corte.';
+						? `«${label}» todavía no está disponible.`
+						: 'Esta pantalla todavía no está disponible.';
 				}
 				note.hidden = false;
 				window.clearTimeout(noteTimer);

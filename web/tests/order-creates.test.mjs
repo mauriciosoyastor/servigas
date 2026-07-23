@@ -15,11 +15,12 @@ describe("order-creates allowlist", () => {
     assert.equal(canCreateOrder("sales/quotations"), true);
   });
 
-  it("defines purchase RFQ create", () => {
-    const def = getOrderCreateDef("purchase/rfq");
+  it("defines purchase solicitudes create", () => {
+    const def = getOrderCreateDef("purchase/solicitudes");
     assert.ok(def);
     assert.equal(def.model, "purchase.order");
     assert.equal(def.lineQtyField, "product_qty");
+    assert.equal(canCreateOrder("purchase/solicitudes"), true);
     assert.equal(canCreateOrder("purchase/rfq"), true);
   });
 

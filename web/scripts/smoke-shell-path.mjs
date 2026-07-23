@@ -129,7 +129,7 @@ await step("list_quotations", async () => {
 });
 
 await step("list_rfq", async () => {
-  const res = await fetch(`${base}/api/lists/purchase/rfq`, {
+  const res = await fetch(`${base}/api/lists/purchase/solicitudes`, {
     headers: { cookie: cookieHeader() },
   });
   absorb(res);
@@ -151,7 +151,7 @@ await step("quotation_new_page", async () => {
 });
 
 await step("rfq_new_page", async () => {
-  const res = await fetch(`${base}/lists/purchase/rfq/new`, {
+  const res = await fetch(`${base}/lists/purchase/solicitudes/new`, {
     headers: { cookie: cookieHeader() },
   });
   absorb(res);

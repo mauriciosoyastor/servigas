@@ -51,7 +51,7 @@ describe("record-writes allowlist", () => {
 
   it("allows creating quotations via order-creates", () => {
     assert.equal(canCreateRecord("sales/quotations"), true);
-    assert.equal(canCreateRecord("purchase/rfq"), true);
+    assert.equal(canCreateRecord("purchase/solicitudes"), true);
   });
 
   it("filters update values to allowlisted fields only", () => {

@@ -8,11 +8,11 @@ import {
 
 /** Safe user-facing copy — never forward raw Odoo / internal messages. */
 export const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
-  unauthorized: "Sesión requerida",
+  unauthorized: "Tenés que iniciar sesión",
   bad_credentials: "Usuario o contraseña incorrectos",
   odoo_unavailable: "No se pudo conectar con el servidor",
   not_found: "No encontrado",
-  validation_error: "Datos inválidos",
+  validation_error: "Revisá los datos e intentá de nuevo",
   checkout_failed: "No se pudo registrar la venta en caja",
   action_failed: "No se pudo completar la acción",
 };
@@ -58,7 +58,7 @@ export function bffErrorResponse(
 export function requireOdooSession(cookies: APIContext["cookies"]) {
   const sid = cookies.get(BFF_COOKIE)?.value;
   if (!sid) {
-    throw new BffError("unauthorized", 401, "Sesión requerida");
+    throw new BffError("unauthorized", 401, "Tenés que iniciar sesión");
   }
   const entry = sessionStore.get(sid);
   if (!entry) {

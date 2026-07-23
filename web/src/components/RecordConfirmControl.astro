@@ -33,7 +33,7 @@ const {
 	const status = root?.querySelector('[data-record-confirm-status]');
 	if (btn instanceof HTMLButtonElement && status instanceof HTMLElement) {
 		btn.addEventListener('click', async () => {
-			if (!window.confirm('¿Confirmar este documento en Odoo?')) return;
+			if (!window.confirm('¿Confirmás este documento?')) return;
 			status.hidden = false;
 			status.textContent = 'Confirmando…';
 			status.dataset.state = 'pending';

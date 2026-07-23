@@ -565,7 +565,7 @@ describe("OdooAdapter.getRecordDetail", () => {
       fetchImpl,
     });
 
-    const detail = await adapter.getRecordDetail("sess", "sales/pos-orders", 7);
+    const detail = await adapter.getRecordDetail("sess", "sales/ventas-caja", 7);
     assert.equal(detail.lines?.columns.some((col) => col.key === "discount"), true);
     assert.equal(detail.lines?.rows[0].discount, 10);
     assert.equal(detail.lines?.rows[0].product_id, "Arandela");
@@ -800,7 +800,7 @@ describe("OdooAdapter.checkoutPosCart", () => {
     );
     assert.equal(result.orderId, 55);
     assert.equal(result.orderName, "Mostrador Servigas - 000099");
-    assert.equal(result.detailPath, "/lists/sales/pos-orders/55");
+    assert.equal(result.detailPath, "/lists/sales/ventas-caja/55");
     assert.equal(result.channel, "pos.order");
     assert.equal(result.paymentMethodId, 2);
     assert.equal(result.paymentMethodName, "Card");
@@ -1145,7 +1145,7 @@ describe("OdooAdapter.createRecord quotations", () => {
   });
 });
 
-describe("OdooAdapter.createRecord RFQ", () => {
+describe("OdooAdapter.createRecord pedido a proveedor", () => {
   it("creates a draft purchase.order with product_qty line", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: 91 }));
     const adapter = new OdooAdapter({
@@ -1154,7 +1154,7 @@ describe("OdooAdapter.createRecord RFQ", () => {
       fetchImpl,
     });
 
-    const result = await adapter.createRecord("sess", "purchase/rfq", {
+    const result = await adapter.createRecord("sess", "purchase/solicitudes", {
       partnerId: 8,
       productId: 42,
       qty: 3,

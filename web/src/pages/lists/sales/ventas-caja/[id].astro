@@ -6,9 +6,9 @@ import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
 	Astro.cookies,
-	'sales/pos-orders',
+	'sales/ventas-caja',
 	id,
-	'No encontramos este pedido de mostrador.'
+	'No encontramos esta venta de caja.'
 );
 if (loaded.kind === 'redirect') {
 	return Astro.redirect(loaded.path);
@@ -17,12 +17,12 @@ if (loaded.status) Astro.response.status = loaded.status;
 const { userName, detail, error } = loaded;
 ---
 
-<ShellLayout title={`${detail?.title || 'Pedido POS'} | Servigas`} active="sales" userName={userName}>
+<ShellLayout title={`${detail?.title || 'Venta de caja'} | Servigas`} active="sales" userName={userName}>
 	<RecordDetailBody
 		detail={detail}
 		error={error}
-		eyebrow="Ficha de pedido POS"
-		fallbackTitle="Pedido POS"
-		fallbackListPath="/lists/sales/pos-orders"
+		eyebrow="Ficha de venta de caja"
+		fallbackTitle="Venta de caja"
+		fallbackListPath="/lists/sales/ventas-caja"
 	/>
 </ShellLayout>

@@ -59,7 +59,7 @@ if (!validApp) {
 			invalidateBffSession(Astro.cookies);
 			return Astro.redirect('/login');
 		}
-		hubError = 'No pudimos cargar este hub. Intentá nuevamente en unos minutos.';
+		hubError = 'No pudimos cargar esta sección. Intentá nuevamente en unos minutos.';
 	}
 }
 
@@ -82,7 +82,7 @@ const sectionName =
 
 			{hubError ? (
 				<section class="sg-hub-state sg-glass" role="alert">
-					<strong>No se pudo abrir el hub</strong>
+					<strong>No se pudo cargar esta sección</strong>
 					<p>{hubError}</p>
 				</section>
 			) : groups.length ? (
@@ -114,7 +114,7 @@ const sectionName =
 		<ComingSoonNote />
 	</ShellLayout>
 ) : (
-	<h1>Hub no encontrado</h1>
+	<h1>Sección no encontrada</h1>
 )}
 
 <script>
@@ -155,8 +155,8 @@ const sectionName =
 			const label = (tile.dataset.label || '').trim();
 			if (detail) {
 				detail.textContent = label
-					? `«${label}» todavía no tiene pantalla Astro en el camino a corte.`
-					: 'Este acceso todavía no tiene pantalla Astro en el camino a corte.';
+					? `«${label}» todavía no está disponible.`
+					: 'Esta pantalla todavía no está disponible.';
 			}
 			note.hidden = false;
 			window.clearTimeout(noteTimer);

@@ -11,7 +11,7 @@ const { app, sections, active } = Astro.props;
 ---
 
 {sections.length > 1 ? (
-	<nav class="sg-hub-subnav" aria-label="Secciones del hub">
+	<nav class="sg-hub-subnav" aria-label="Secciones">
 		<div class="sg-hub-subnav-track" role="tablist">
 			{sections.map((section) => {
 				const href =

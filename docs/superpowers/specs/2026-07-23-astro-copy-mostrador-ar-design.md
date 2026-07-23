@@ -1,7 +1,7 @@
 # Spec — Lenguaje de mostrador (Argentina) en shell Astro
 
 **Fecha:** 2026-07-23  
-**Estado:** pending-review  
+**Estado:** approved  
 **Rama:** `cursor/astro-copy-mostrador-ar-daee`  
 **Enfoque:** A — glosario fijo + barrido de copy + renombre de rutas con redirect
 
@@ -100,12 +100,12 @@ Redirect HTTP (302 o 301) page path viejo → nuevo. Preferir un helper único d
 
 ## Criterios de aceptación
 
-- [ ] Ningún string de UI del glosario “Hoy” permanece en pages/components/list titles-hints visibles
-- [ ] Rutas nuevas responden; rutas viejas redirigen (pages) y API acepta alias o redirige
-- [ ] Home strip: “Nuevo pedido a proveedor” → path nuevo
-- [ ] POS: “Ventas de caja” → path nuevo
-- [ ] Suite `web` verde; smoke script usa paths nuevos (y/o prueba redirect)
-- [ ] Spec marcada `approved` al cerrar implementación
+- [x] Ningún string de UI del glosario “Hoy” permanece en pages/components/list titles-hints visibles
+- [x] Rutas nuevas responden; rutas viejas redirigen (pages) y API acepta alias o redirige
+- [x] Home strip: “Nuevo pedido a proveedor” → path nuevo
+- [x] POS: “Ventas de caja” → path nuevo
+- [x] Suite `web` verde; smoke script usa paths nuevos (y/o prueba redirect)
+- [x] Spec marcada `approved` al cerrar implementación
 
 ## Verificación
 

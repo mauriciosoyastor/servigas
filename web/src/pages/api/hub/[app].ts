@@ -11,7 +11,7 @@ import { isHubApp } from "../../../lib/shell/hub-apps.ts";
 export const GET: APIRoute = async ({ cookies, params, url }) => {
   try {
     if (!isHubApp(params.app || "")) {
-      throw new BffError("not_found", 404, "Hub no encontrado");
+      throw new BffError("not_found", 404, "Sección no encontrada");
     }
     const { odooSessionId } = requireOdooSession(cookies);
     const section = url.searchParams.get("section") || "summary";
