@@ -81,6 +81,6 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     await getBackend().updateRecord(odooSessionId, slug, id, values);
     return json({ ok: true });
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

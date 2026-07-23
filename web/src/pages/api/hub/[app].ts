@@ -22,6 +22,6 @@ export const GET: APIRoute = async ({ cookies, params, url }) => {
     );
     return json(payload);
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

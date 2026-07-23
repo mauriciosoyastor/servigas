@@ -13,6 +13,7 @@ import {
   BFF_COOKIE,
   sessionStore,
 } from "../src/lib/bff/session-store.ts";
+import { __setBackendForTests } from "../src/lib/bff/get-backend.ts";
 import { GET as getSession } from "../src/pages/api/auth/session.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
@@ -77,6 +78,9 @@ describe("BFF HTTP helpers", () => {
       new BffError("bad_credentials", 401, "Credenciales inválidas")
     );
     const unexpected = bffErrorResponse(new Error("secret"));
+    const checkout = bffErrorResponse(
+      new BffError("checkout_failed", 503, "raw odoo")
+    );
 
     assert.equal(known.status, 401);
     assert.deepEqual(await known.json(), {
@@ -92,6 +96,33 @@ describe("BFF HTTP helpers", () => {
         message: "No se pudo conectar con el servidor",
       },
     });
+    assert.deepEqual(await checkout.json(), {
+      error: {
+        code: "checkout_failed",
+        message: "No se pudo registrar la venta en caja",
+      },
+    });
+  });
+
+  it("invalidates the BFF session on unauthorized API errors", () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("dead-odoo", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+
+    const response = bffErrorResponse(
+      new BffError("unauthorized", 401, "La sesión de Odoo no es válida"),
+      cookies
+    );
+
+    assert.equal(response.status, 401);
+    assert.equal(sessionStore.get(bffSid), undefined);
+    assert.deepEqual(cookies.deleteCalls, [
+      { name: BFF_COOKIE, options: { path: "/" } },
+    ]);
   });
 
   it("sets, resolves, and clears the opaque BFF cookie", () => {
@@ -168,14 +199,44 @@ describe("BFF API routes", () => {
       login: "usuario",
     });
     cookies.values.set(BFF_COOKIE, bffSid);
-
-    const response = await getSession({ cookies });
-
-    assert.equal(response.status, 200);
-    assert.deepEqual(await response.json(), {
-      session: { uid: 7, name: "Usuario", login: "usuario" },
+    __setBackendForTests({
+      validateSession: async () => {},
     });
-    sessionStore.destroy(bffSid);
+
+    try {
+      const response = await getSession({ cookies });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        session: { uid: 7, name: "Usuario", login: "usuario" },
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("clears BFF session when Odoo rejects validateSession", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("stale-odoo", {
+      uid: 7,
+      name: "Usuario",
+      login: "usuario",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      validateSession: async () => {
+        throw new BffError("unauthorized", 401, "dead");
+      },
+    });
+
+    try {
+      const response = await getSession({ cookies });
+      assert.equal(response.status, 401);
+      assert.equal(sessionStore.get(bffSid), undefined);
+    } finally {
+      __setBackendForTests(undefined);
+    }
   });
 
   it("returns 401 for protected routes without a session", async () => {
@@ -220,7 +281,7 @@ describe("BFF API routes", () => {
 
     assert.equal(response.status, 404);
     assert.deepEqual(await response.json(), {
-      error: { code: "not_found", message: "Hub no encontrado" },
+      error: { code: "not_found", message: "No encontrado" },
     });
   });
 });

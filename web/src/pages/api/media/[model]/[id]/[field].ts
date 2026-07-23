@@ -30,6 +30,6 @@ export const GET: APIRoute = async ({ cookies, params }) => {
       },
     });
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

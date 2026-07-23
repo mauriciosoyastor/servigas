@@ -133,17 +133,50 @@ type OdooAdapterOptions = {
   baseUrl: string;
   db: string;
   fetchImpl?: typeof fetch;
+  /** Abort RPC / media calls after this many ms (default 15000). */
+  timeoutMs?: number;
 };
 
 export class OdooAdapter implements BackendClient {
   readonly #baseUrl: string;
   readonly #db: string;
   readonly #fetch: typeof fetch;
+  readonly #timeoutMs: number;
 
-  constructor({ baseUrl, db, fetchImpl = fetch }: OdooAdapterOptions) {
+  constructor({
+    baseUrl,
+    db,
+    fetchImpl = fetch,
+    timeoutMs = 15_000,
+  }: OdooAdapterOptions) {
     this.#baseUrl = baseUrl.replace(/\/+$/, "");
     this.#db = db;
     this.#fetch = fetchImpl;
+    this.#timeoutMs = Math.max(1000, Number(timeoutMs) || 15_000);
+  }
+
+  #abortSignal(): AbortSignal {
+    return AbortSignal.timeout(this.#timeoutMs);
+  }
+
+  #mapFetchFailure(cause: unknown): never {
+    if (cause instanceof BffError) throw cause;
+    const name =
+      cause && typeof cause === "object" && "name" in cause
+        ? String((cause as { name: unknown }).name)
+        : "";
+    if (name === "TimeoutError" || name === "AbortError") {
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        "Timeout conectando con Odoo"
+      );
+    }
+    throw new BffError(
+      "odoo_unavailable",
+      503,
+      "No se pudo conectar con el servidor"
+    );
   }
 
   async login(
@@ -188,6 +221,7 @@ export class OdooAdapter implements BackendClient {
           cookie: `session_id=${odooSessionId}`,
         },
         body: JSON.stringify({ jsonrpc: "2.0", params: {} }),
+        signal: this.#abortSignal(),
       });
     } catch {
       // Logout is best-effort; the local BFF session is destroyed separately.
@@ -1041,6 +1075,7 @@ export class OdooAdapter implements BackendClient {
         `${this.#baseUrl}/web/image/${encodeURIComponent(model)}/${id}/${encodeURIComponent(field)}`,
         {
           headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
         }
       );
       if (!response.ok) {
@@ -1051,12 +1086,7 @@ export class OdooAdapter implements BackendClient {
         contentType: response.headers.get("content-type") || "image/png",
       };
     } catch (cause) {
-      if (cause instanceof BffError) throw cause;
-      throw new BffError(
-        "odoo_unavailable",
-        503,
-        "No se pudo conectar con el servidor"
-      );
+      this.#mapFetchFailure(cause);
     }
   }
 
@@ -1156,13 +1186,10 @@ export class OdooAdapter implements BackendClient {
         method: "POST",
         headers,
         body: JSON.stringify(body),
+        signal: this.#abortSignal(),
       });
-    } catch {
-      throw new BffError(
-        "odoo_unavailable",
-        503,
-        "No se pudo conectar con el servidor"
-      );
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
     }
   }
 

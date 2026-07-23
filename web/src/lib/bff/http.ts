@@ -6,11 +6,15 @@ import {
   sessionStore,
 } from "./session-store.ts";
 
-const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
+/** Safe user-facing copy — never forward raw Odoo / internal messages. */
+export const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
   unauthorized: "Sesión requerida",
   bad_credentials: "Usuario o contraseña incorrectos",
   odoo_unavailable: "No se pudo conectar con el servidor",
-  not_found: "Hub no encontrado",
+  not_found: "No encontrado",
+  validation_error: "Datos inválidos",
+  checkout_failed: "No se pudo registrar la venta en caja",
+  action_failed: "No se pudo completar la acción",
 };
 
 export function json(data: unknown, init: ResponseInit = {}) {
@@ -23,8 +27,18 @@ export function json(data: unknown, init: ResponseInit = {}) {
   });
 }
 
-export function bffErrorResponse(err: unknown) {
+/**
+ * Map errors to safe JSON. If `unauthorized` and cookies are provided,
+ * destroy the local BFF session (Odoo session is dead or cookie invalid).
+ */
+export function bffErrorResponse(
+  err: unknown,
+  cookies?: APIContext["cookies"]
+) {
   if (err instanceof BffError) {
+    if (err.code === "unauthorized" && cookies) {
+      invalidateBffSession(cookies);
+    }
     return json(
       { error: { code: err.code, message: USER_ERROR_MESSAGES[err.code] } },
       { status: err.status }
@@ -34,7 +48,7 @@ export function bffErrorResponse(err: unknown) {
     {
       error: {
         code: "odoo_unavailable",
-        message: "No se pudo conectar con el servidor",
+        message: USER_ERROR_MESSAGES.odoo_unavailable,
       },
     },
     { status: 503 }
