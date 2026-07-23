@@ -261,6 +261,11 @@ describe("shell UI contracts", () => {
     await assert.rejects(() => source("lib/bff/odoo-proxy.ts"));
   });
 
+  it("marks list cells with data-label for mobile cards", async () => {
+    const table = await source("components/RecordTable.astro");
+    assert.match(table, /data-label=\{column\.label\}/);
+  });
+
   it("styles record lists as glass panel with mobile card reflow", async () => {
     const css = await source("styles/list.css");
 
