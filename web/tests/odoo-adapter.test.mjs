@@ -1004,6 +1004,27 @@ describe("OdooAdapter.updateRecord", () => {
       (error) => error?.code === "not_found"
     );
   });
+
+  it("writes product image_1920", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const fetchImpl = mock.fn(async () => Response.json({ result: true }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.updateRecord("sess", "inventory/products", 10, {
+      image_1920: `data:image/png;base64,${png}`,
+    });
+
+    const [, init] = fetchImpl.mock.calls[0].arguments;
+    const body = JSON.parse(init.body);
+    assert.equal(body.params.model, "product.template");
+    assert.equal(body.params.method, "write");
+    assert.deepEqual(body.params.args, [[10], { image_1920: png }]);
+  });
 });
 
 describe("OdooAdapter.createRecord", () => {

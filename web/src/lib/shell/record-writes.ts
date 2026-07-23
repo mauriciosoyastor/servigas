@@ -4,6 +4,7 @@
 
 import { getRecordListDef } from "./record-lists.ts";
 import { canCreateOrder } from "./order-creates.ts";
+import { normalizeProductImage1920 } from "./product-image.ts";
 
 export type RecordWriteDef = {
   listKey: string;
@@ -38,7 +39,7 @@ const WRITES: Record<string, WriteConfig> = {
     canArchive: true,
   },
   "inventory/products": {
-    fields: ["default_code", "list_price"],
+    fields: ["default_code", "list_price", "image_1920"],
     createFields: ["name", "default_code", "list_price"],
     createDefaults: {
       sale_ok: true,
@@ -90,6 +91,10 @@ export function filterWritableValues(
   const out: Record<string, string> = {};
   for (const field of def.fields) {
     if (!(field in values)) continue;
+    if (field === "image_1920") {
+      out.image_1920 = normalizeProductImage1920(values.image_1920);
+      continue;
+    }
     const next = asTrimmedString(values[field]);
     if (next === null) continue;
     out[field] = next;
