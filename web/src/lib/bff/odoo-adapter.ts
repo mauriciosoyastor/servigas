@@ -745,7 +745,16 @@ export class OdooAdapter implements BackendClient {
       );
     } catch (cause) {
       if (cause instanceof BffError && cause.code === "unauthorized") throw cause;
-      return this.#checkoutSaleOrderFallback(odooSessionId, clean);
+      if (cause instanceof BffError && cause.code === "checkout_failed") {
+        throw cause;
+      }
+      throw new BffError(
+        "checkout_failed",
+        503,
+        cause instanceof BffError
+          ? cause.message
+          : "No se pudo registrar la venta en caja"
+      );
     }
   }
 
@@ -928,90 +937,6 @@ export class OdooAdapter implements BackendClient {
       channel: "pos.order",
       paymentMethodId,
       paymentMethodName: String(cash?.name || "Pago"),
-      amountTotal,
-    };
-  }
-
-  async #checkoutSaleOrderFallback(
-    odooSessionId: string,
-    clean: {
-      productId: number;
-      qty: number;
-      price: number;
-      discount: number;
-    }[]
-  ): Promise<PosCheckoutResult> {
-    const partnerIds = await this.#callKw<number[]>(
-      odooSessionId,
-      "res.partner",
-      "search",
-      [[["customer_rank", ">", 0]]],
-      { limit: 1, order: "id asc" }
-    );
-    const partnerId = partnerIds[0];
-    if (!partnerId) {
-      throw new BffError(
-        "odoo_unavailable",
-        503,
-        "No hay cliente para registrar la venta"
-      );
-    }
-
-    const orderId = await this.#callKw<number>(
-      odooSessionId,
-      "sale.order",
-      "create",
-      [
-        {
-          partner_id: partnerId,
-          client_order_ref: "CAJA-ASTRO",
-          note: "Fallback caja Astro (POS no disponible)",
-          order_line: clean.map((line) => [
-            0,
-            0,
-            {
-              product_id: line.productId,
-              product_uom_qty: line.qty,
-              price_unit: line.price,
-              discount: line.discount,
-            },
-          ]),
-        },
-      ]
-    );
-
-    try {
-      await this.#callKw(odooSessionId, "sale.order", "action_confirm", [
-        [orderId],
-      ]);
-    } catch (cause) {
-      if (cause instanceof BffError && cause.code === "unauthorized") throw cause;
-    }
-
-    const [order] = await this.#callKw<Record<string, unknown>[]>(
-      odooSessionId,
-      "sale.order",
-      "read",
-      [[orderId], ["name"]]
-    );
-
-    const amountTotal = Number(
-      clean
-        .reduce(
-          (sum, line) =>
-            sum + line.price * line.qty * (1 - line.discount / 100),
-          0
-        )
-        .toFixed(2)
-    );
-
-    return {
-      orderId,
-      orderName: String(order?.name || `SO/${orderId}`),
-      detailPath: `/lists/sales/orders/${orderId}`,
-      channel: "sale.order",
-      paymentMethodId: null,
-      paymentMethodName: null,
       amountTotal,
     };
   }

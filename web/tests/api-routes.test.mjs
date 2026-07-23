@@ -96,6 +96,7 @@ describe("BFF HTTP helpers", () => {
         message: "No se pudo conectar con el servidor",
       },
     });
+    assert.equal(checkout.status, 503);
     assert.deepEqual(await checkout.json(), {
       error: {
         code: "checkout_failed",

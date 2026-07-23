@@ -3,9 +3,13 @@ export type BffErrorCode =
   | "bad_credentials"
   | "odoo_unavailable"
   | "not_found"
+<<<<<<< HEAD
   | "validation_error"
   | "checkout_failed"
   | "action_failed";
+=======
+  | "checkout_failed";
+>>>>>>> 0dad2e2 (fix(web): checkout POS fail-loud sin fallback sale.order)
 
 export class BffError extends Error {
   readonly code: BffErrorCode;

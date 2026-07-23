@@ -288,7 +288,7 @@ try {
 			receiptNameEl.textContent = payload.orderName || 'Venta';
 			const pay =
 				payload.paymentMethodName ||
-				(payload.channel === 'pos.order' ? 'POS' : 'Pedido');
+				'POS';
 			receiptMetaEl.textContent = `Pago: ${pay}`;
 			receiptTotalEl.textContent = money(Number(payload.amountTotal) || 0);
 			receiptDetailEl.href = payload.detailPath || '/lists/sales/pos-orders';

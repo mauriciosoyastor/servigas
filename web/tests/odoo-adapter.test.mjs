@@ -769,6 +769,68 @@ describe("OdooAdapter.checkoutPosCart", () => {
     );
     assert.equal(writeCall.params.args[1].amount_paid, 180);
   });
+
+  it("fails loud when POS session cannot open and never creates sale.order", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "pos.config" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 1, name: "Mostrador Servigas" }],
+        });
+      }
+      if (model === "pos.session" && method === "search_read") {
+        return Response.json({ result: [] });
+      }
+      if (model === "pos.config" && method === "open_session_cb") {
+        return Response.json({
+          error: { message: "Opening control required", data: { message: "fail" } },
+        });
+      }
+      if (model === "pos.session" && method === "create") {
+        return Response.json({
+          error: { message: "Create denied", data: { message: "fail" } },
+        });
+      }
+      // Legacy silent fallback paths — must not be used after fail-loud.
+      if (model === "res.partner" && method === "search") {
+        return Response.json({ result: [7] });
+      }
+      if (model === "sale.order" && method === "create") {
+        return Response.json({ result: 99 });
+      }
+      if (model === "sale.order" && method === "action_confirm") {
+        return Response.json({ result: true });
+      }
+      if (model === "sale.order" && method === "read") {
+        return Response.json({ result: [{ id: 99, name: "S00099" }] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.checkoutPosCart(
+          "sess",
+          [{ productId: 42, qty: 1, price: 100, discount: 0 }],
+          { paymentMethodId: 1 }
+        ),
+      (error) => error?.code === "checkout_failed"
+    );
+
+    const models = fetchImpl.mock.calls.map((call) => {
+      const body = JSON.parse(call.arguments[1].body);
+      return body.params?.model;
+    });
+    assert.ok(!models.includes("sale.order"));
+    assert.ok(!models.includes("res.partner"));
+  });
 });
 
 describe("OdooAdapter.updateRecord", () => {

@@ -11,10 +11,15 @@ export const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
   unauthorized: "Sesión requerida",
   bad_credentials: "Usuario o contraseña incorrectos",
   odoo_unavailable: "No se pudo conectar con el servidor",
+<<<<<<< HEAD
   not_found: "No encontrado",
   validation_error: "Datos inválidos",
   checkout_failed: "No se pudo registrar la venta en caja",
   action_failed: "No se pudo completar la acción",
+=======
+  not_found: "Hub no encontrado",
+  checkout_failed: "No se pudo registrar la venta en caja",
+>>>>>>> 0dad2e2 (fix(web): checkout POS fail-loud sin fallback sale.order)
 };
 
 export function json(data: unknown, init: ResponseInit = {}) {
