@@ -70,16 +70,22 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 
-## Shell Astro — camino a corte (`web/`)
+## Shell Astro — corte autorizado (condicional) (`web/`)
 
-**Gobernanza (ADR 0016):** postura **B — camino a corte**. Meta: Astro (`web/`) reemplaza el shell operativo OWL, incluyendo **POS caja**. Hoy OWL sigue siendo producción hasta **go/no-go** explícito (checklist en el ADR).
+**Corte autorizado (condicional) — 2026-07-23.**  
+Shell oficial = Astro BFF (`web/`).  
+Deuda pre-prod: smoke camino feliz contra Odoo (login → hubs → producto → cotización/RFQ → venta POS).  
+OWL queda como fallback hasta que ese smoke pase en el entorno objetivo.
 
-| Hoy | Meta (día D) |
-|-----|----------------|
-| OWL launcher/hubs/POS = prod | Astro login → hubs → listas → POS caja = shell oficial |
-| `web/` = piloto avanzado en `main` | Odoo = backend; UI OWL de negocio apagada |
+**Gobernanza (ADR 0016):** postura **B** cerrada con go condicional. Spec: [go condicional](docs/superpowers/specs/2026-07-23-astro-cutover-go-condicional-design.md).
 
-**Regla de build:** solo paridad del camino feliz o endurecer BFF. Fuera de alcance hasta después del go: offline, multi-caja, recorrido/onboarding.
+| Hoy (gobernanza) | Día D operativo (cuando pase el smoke) |
+|------------------|----------------------------------------|
+| Astro login → hubs → listas → POS caja = **shell oficial** | UI OWL de negocio apagada / residual |
+| OWL launcher/hubs/POS = **fallback** | Odoo = backend únicamente |
+| Smoke real contra Odoo = **deuda pre-prod** | Smoke verde en el entorno objetivo |
+
+**Regla de build:** solo paridad del camino feliz o endurecer BFF. Fuera de alcance post-go (hasta priorizar): offline, multi-caja, recorrido/onboarding.
 
 Skill: `astro-bff-shell` (personal). Plan spike: [plan spike](docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md). ADR: [0016](docs/adr/0016-astro-shell-cutover.md).
 

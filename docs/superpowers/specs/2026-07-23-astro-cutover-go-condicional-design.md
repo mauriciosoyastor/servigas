@@ -1,7 +1,7 @@
 # Spec — Corte autorizado (go condicional) shell Astro
 
 **Fecha:** 2026-07-23  
-**Estado:** pending-review  
+**Estado:** approved  
 **ADR:** [0016](../../adr/0016-astro-shell-cutover.md)  
 **Decisión de producto:** opción **1 — go condicional**
 
@@ -43,10 +43,10 @@ Autorizar el corte de gobernanza con condición abierta:
 
 ## Criterios de aceptación
 
-- [ ] `CONTEXT.md` no contradice “Astro = shell oficial”
-- [ ] Bitácora tiene entrada con texto canónico + verificación
-- [ ] ADR 0016: corte autorizado `[x]`; smoke `[ ]` con deuda explícita
-- [ ] Suite `web` sigue verde (docs-only; sin regresión)
+- [x] `CONTEXT.md` no contradice “Astro = shell oficial”
+- [x] Bitácora tiene entrada con texto canónico + verificación
+- [x] ADR 0016: corte autorizado `[x]`; smoke `[ ]` con deuda explícita
+- [x] Suite `web` sigue verde (docs-only; sin regresión)
 
 ## Verificación
 

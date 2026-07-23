@@ -37,11 +37,11 @@
 |------|--------|-------|
 | Identidad visual | Hecho | Tokens llama + Montserrat (`servigas_tokens.scss`) |
 | Backend Odoo | Hecho | Navbar, acentos flame, `servigas_hub.scss` |
-| Hubs App Shell (OWL) | **Prod (hasta corte)** | Inventario, Ventas, Compras, Facturación — vigente hasta go ADR 0016 |
-| POS OWL | En curso / fallback | Tema oscuro + glass; corte apunta a POS Astro |
+| Hubs App Shell (OWL) | **Fallback** | Residual hasta día D operativo (smoke verde) |
+| POS OWL | **Fallback** | Tema oscuro + glass; norte = POS Astro |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
-| Shell Astro BFF (`web/`) | **Camino a corte (B)** | Operativo en piloto (listas, writes, POS); go/no-go en ADR 0016 |
+| Shell Astro BFF (`web/`) | **Shell oficial (go condicional)** | Corte autorizado 2026-07-23; deuda = smoke real Odoo |
 | Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 **Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
@@ -49,6 +49,28 @@
 ---
 
 ## Entradas
+
+### 2026-07-23 — Corte autorizado (condicional) shell Astro
+
+**Área:** docs | web  
+**Motivo:** cerrar el go/no-go de ADR 0016 sin fingir smoke real; Astro pasa a ser shell oficial con deuda pre-prod explícita.  
+**Archivos:**
+- `CONTEXT.md`
+- `docs/adr/0016-astro-shell-cutover.md`
+- `docs/proyecto/bitacora-cambios.md`
+- `docs/superpowers/specs/2026-07-23-astro-cutover-go-condicional-design.md`
+- `docs/superpowers/plans/2026-07-23-astro-cutover-go-condicional.md`
+- `web/README.md`
+
+**Cambios:**
+- Texto canónico: corte autorizado (condicional); Astro = oficial; OWL = fallback; smoke = deuda.
+- Checklist ADR: corte autorizado `[x]`; smoke sigue abierto como deuda pre-prod.
+- Resumen ejecutivo alineado.
+
+**Verificación:** leer `CONTEXT.md` § shell + ADR 0016 checklist; `cd web && npm test`. Smoke real: `cd web && npm run smoke:shell` (más tarde).  
+**Automatización:** enganchar smoke shell a CI cuando haya Odoo deciable en el entorno.
+
+---
 
 ### 2026-07-23 — Gobernanza: camino a corte Astro (ADR 0016)
 
