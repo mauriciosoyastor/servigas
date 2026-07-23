@@ -151,6 +151,13 @@ const sectionName =
 			}
 
 			if (!note) return;
+			const detail = note.querySelector('[data-coming-soon-detail]');
+			const label = (tile.dataset.label || '').trim();
+			if (detail) {
+				detail.textContent = label
+					? `«${label}» todavía no tiene pantalla Astro en el camino a corte.`
+					: 'Este acceso todavía no tiene pantalla Astro en el camino a corte.';
+			}
 			note.hidden = false;
 			window.clearTimeout(noteTimer);
 			noteTimer = window.setTimeout(() => {

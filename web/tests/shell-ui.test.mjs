@@ -29,6 +29,7 @@ describe("shell UI contracts", () => {
     assert.match(tile, /data-tile/);
     assert.match(tile, /data-kpi|sg-tile-kpi/);
     assert.match(note, /Próximamente/);
+    assert.match(note, /data-coming-soon-detail/);
     assert.match(table, /sg-record-table/);
     assert.match(table, /sg-record-thumb/);
   });
@@ -48,6 +49,11 @@ describe("shell UI contracts", () => {
     assert.match(index, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(index, /Astro\.redirect\(["']\/login["']\)/);
     assert.match(index, /resolveTileNavigation/);
+    assert.match(index, /sg-ops-strip/);
+    assert.match(index, /href="\/pos"/);
+    assert.match(index, /quotations\/new/);
+    assert.match(index, /rfq\/new/);
+    assert.match(index, /data-coming-soon-detail/);
   });
 
   it("validates Odoo before redirecting an existing session from login", async () => {
