@@ -49,6 +49,7 @@ import {
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
 import {
+  isAllowedNoteModel,
   normalizeNoteBody,
   odooHtmlFromPlainText,
   plainTextFromOdooHtml,
@@ -822,7 +823,12 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("validation_error", 400, normalized.error);
     }
 
-    const note = await this.#readRecordNote(odooSessionId, noteId, viewerUid);
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
     this.#assertNoteOwner(note, viewerUid);
     await this.#callKw(odooSessionId, "mail.message", "write", [
       [noteId],
@@ -840,7 +846,12 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Nota no encontrada");
     }
 
-    const note = await this.#readRecordNote(odooSessionId, noteId, viewerUid);
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
     this.#assertNoteOwner(note, viewerUid);
     await this.#callKw(odooSessionId, "mail.message", "unlink", [[noteId]]);
   }
@@ -1572,15 +1583,19 @@ export class OdooAdapter implements BackendClient {
   async #readRecordNote(
     odooSessionId: string,
     noteId: number,
-    viewerUid: number
+    viewerUid: number,
+    requireAllowedModel = false
   ): Promise<RecordNote> {
     const rows = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       "mail.message",
       "read",
-      [[noteId], ["body", "author_id", "create_uid", "date"]]
+      [[noteId], ["body", "model", "author_id", "create_uid", "date"]]
     );
     if (!rows[0]) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    if (requireAllowedModel && !isAllowedNoteModel(rows[0].model)) {
       throw new BffError("not_found", 404, "Nota no encontrada");
     }
     return this.#mapMailMessage(rows[0], viewerUid);

@@ -1431,6 +1431,12 @@ describe("OdooAdapter record notes", () => {
     const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
     assert.equal(body.params.model, "mail.message");
     assert.equal(body.params.method, "search_read");
+    assert.deepEqual(body.params.args[0], [
+      ["model", "=", "res.partner"],
+      ["res_id", "=", 9],
+      ["message_type", "=", "comment"],
+    ]);
+    assert.equal(body.params.kwargs.order, "id desc");
   });
 
   it("creates via message_post on the record model", async () => {
@@ -1482,6 +1488,7 @@ describe("OdooAdapter record notes", () => {
         result: [{
           id: 77,
           body: body.params.method === "read" ? "<p>editada</p>" : "<p>original</p>",
+          model: "res.partner",
           author_id: [10, "Ana"],
           create_uid: [5, "Ana"],
           date: "2026-07-23 16:00:00",
@@ -1503,6 +1510,34 @@ describe("OdooAdapter record notes", () => {
     assert.deepEqual(write.params.args, [[77], { body: "<p>editada</p>" }]);
   });
 
+  it("rejects update for a message outside the note model allowlist", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 77,
+            body: "<p>x</p>",
+            model: "stock.picking",
+            author_id: [10, "Ana"],
+            create_uid: [5, "Ana"],
+            date: "2026-07-23 16:00:00",
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.updateRecordNote("sess", 77, "otro", 5),
+      (error) => error?.code === "not_found" && error?.status === 404
+    );
+    assert.equal(fetchImpl.mock.calls.length, 1);
+  });
+
   it("forbids update by non-author", async () => {
     const fetchImpl = mock.fn(async () =>
       Response.json({
@@ -1510,6 +1545,7 @@ describe("OdooAdapter record notes", () => {
           {
             id: 77,
             body: "<p>x</p>",
+            model: "res.partner",
             author_id: [11, "Bob"],
             create_uid: [6, "Bob"],
             date: "2026-07-23 16:00:00",
@@ -1538,6 +1574,7 @@ describe("OdooAdapter record notes", () => {
         result: [{
           id: 77,
           body: "<p>x</p>",
+          model: "res.partner",
           author_id: [10, "Ana"],
           create_uid: [5, "Ana"],
           date: "2026-07-23 16:00:00",

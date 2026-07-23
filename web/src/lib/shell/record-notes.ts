@@ -11,11 +11,15 @@ export const NOTE_MODELS = [
 
 const NOTE_MODELS_SET = new Set<string>(NOTE_MODELS);
 
+export function isAllowedNoteModel(model: unknown): boolean {
+  return typeof model === "string" && NOTE_MODELS_SET.has(model);
+}
+
 export function resolveNoteTarget(
   listKey: string
 ): { model: string } | null {
   const list = getRecordListDef(listKey);
-  if (!list || !NOTE_MODELS_SET.has(list.model)) return null;
+  if (!list || !isAllowedNoteModel(list.model)) return null;
   return { model: list.model };
 }
 
