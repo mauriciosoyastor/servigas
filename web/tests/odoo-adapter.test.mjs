@@ -1006,10 +1006,11 @@ describe("MemorySessionStore", () => {
     const bffSid = store.create("odoo-session", session);
 
     assert.match(bffSid, /^[0-9a-f-]{36}$/);
-    assert.deepEqual(store.get(bffSid), {
-      odooSessionId: "odoo-session",
-      session,
-    });
+    const entry = store.get(bffSid);
+    assert.ok(entry);
+    assert.equal(entry.odooSessionId, "odoo-session");
+    assert.deepEqual(entry.session, session);
+    assert.ok(entry.expiresAt > Date.now());
     store.destroy(bffSid);
     assert.equal(store.get(bffSid), undefined);
     assert.equal(BFF_COOKIE, "sg_bff_sid");

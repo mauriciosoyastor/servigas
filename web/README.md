@@ -79,8 +79,15 @@ factory. El sistema visual también es pluggable: mantener los límites de
 `ShellLayout`, rail, tile, card y estados, pero inyectar tokens y estilos del
 nuevo producto.
 
-Antes de producción, reemplazar `MemorySessionStore` por un store compartido
-con expiración y definir políticas de timeout, rotación y revocación.
+Sesiones BFF: por defecto `FileSessionStore` (JSON bajo `.data/bff-sessions`,
+TTL 12h). En tests usa memoria (`NODE_ENV=test`). Vars: `BFF_SESSION_STORE`,
+`BFF_SESSION_TTL_SECONDS`, `BFF_SESSION_DIR`. Redis queda para multi-instancia.
+
+Smoke camino feliz (requiere Astro + Odoo):
+
+```powershell
+npm run smoke:shell
+```
 
 ## Referencias
 
