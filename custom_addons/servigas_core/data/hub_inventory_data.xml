@@ -115,6 +115,16 @@
         </record>
 
         <!-- Cards — Productos -->
+        <record id="hub_card_inv_products_price_import" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">products</field>
+            <field name="sequence">5</field>
+            <field name="label">Cargar lista de precios</field>
+            <field name="hint">Crear productos y actualizar venta/costo</field>
+            <field name="icon">fa-upload</field>
+            <field name="enter_label">Importar →</field>
+            <field name="action_id" ref="action_sg_price_list_import"/>
+        </record>
         <record id="hub_card_inv_products_catalog" model="sg.hub.card">
             <field name="app">inventory</field>
             <field name="section">products</field>

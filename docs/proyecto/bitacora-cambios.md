@@ -50,6 +50,35 @@
 
 ## Entradas
 
+### 2026-07-23 — Cargar lista de precios (Inventario)
+
+**Área:** datos | hubs | inventario  
+**Motivo:** upsert de productos (crear + actualizar venta/costo) desde Excel/CSV con preview, sin PDF/OCR en v1.  
+**Archivos:**
+- `docs/superpowers/specs/2026-07-23-inventory-price-list-import-design.md`
+- `docs/superpowers/plans/2026-07-23-inventory-price-list-import.md`
+- `custom_addons/servigas_core/models/sg_price_list_import_logic.py`
+- `custom_addons/servigas_core/models/sg_price_list_import_wizard.py`
+- `custom_addons/servigas_core/models/sg_price_list_import_log.py`
+- `custom_addons/servigas_core/views/sg_price_list_import_views.xml`
+- `custom_addons/servigas_core/data/hub_inventory_data.xml`
+- `custom_addons/servigas_core/models/sg_hub_card.py`
+- `custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py`
+
+**Cambios:**
+- Card **Cargar lista de precios** en Inventario → Productos.
+- Wizard 4 pasos (subir → mapear → preview → aplicar) + log de auditoría.
+- Match barcode → código → nombre; filas ambiguas en Revisar.
+- Hub cards respetan `target` de la `act_window` (modal `new`).
+
+**Verificación:**
+- `python custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py -v` (15 pass)
+- Upgrade `servigas_core` → Inventario → Productos → Importar → CSV plantilla
+
+**Automatización:** lógica pura reutilizable; plantilla CSV embebida en el wizard.
+
+---
+
 ### 2026-07-23 — Listas Astro tabla glass
 
 **Área:** docs | web  

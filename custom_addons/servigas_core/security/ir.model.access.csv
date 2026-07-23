@@ -9,3 +9,9 @@ access_sg_hub_card_stock_manager,sg.hub.card stock manager,model_sg_hub_card,sto
 access_sg_hub_card_sale_manager,sg.hub.card sale manager,model_sg_hub_card,sales_team.group_sale_manager,1,1,1,1
 access_sg_hub_card_purchase_manager,sg.hub.card purchase manager,model_sg_hub_card,purchase.group_purchase_manager,1,1,1,1
 access_sg_hub_card_account_manager,sg.hub.card account manager,model_sg_hub_card,account.group_account_manager,1,1,1,1
+access_sg_price_list_import_wizard_user,sg.price.list.import.wizard user,model_sg_price_list_import_wizard,base.group_user,1,1,1,1
+access_sg_price_list_import_wizard_stock_manager,sg.price.list.import.wizard stock manager,model_sg_price_list_import_wizard,stock.group_stock_manager,1,1,1,1
+access_sg_price_list_import_line_user,sg.price.list.import.line user,model_sg_price_list_import_line,base.group_user,1,1,1,1
+access_sg_price_list_import_line_stock_manager,sg.price.list.import.line stock manager,model_sg_price_list_import_line,stock.group_stock_manager,1,1,1,1
+access_sg_price_list_import_log_user,sg.price.list.import.log user,model_sg_price_list_import_log,base.group_user,1,0,0,0
+access_sg_price_list_import_log_stock_manager,sg.price.list.import.log stock manager,model_sg_price_list_import_log,stock.group_stock_manager,1,1,1,0
