@@ -195,11 +195,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "display_name",
       "default_code",
-<<<<<<< HEAD
-      "list_price",
-=======
       "barcode",
->>>>>>> 3de146b (feat(web): buscar productos por barcode en listas shell)
+      "list_price",
       "qty_available",
       "active",
     ],
