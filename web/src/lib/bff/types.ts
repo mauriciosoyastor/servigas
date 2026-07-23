@@ -95,6 +95,15 @@ export type RecordDetailPayload = {
   lines?: RecordDetailLines | null;
 };
 
+export type RecordNote = {
+  id: number;
+  body: string;
+  authorName: string;
+  authorId: number;
+  createdAt: string;
+  canEdit: boolean;
+};
+
 export type PosCatalogProduct = {
   id: number;
   name: string;
