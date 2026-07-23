@@ -77,9 +77,6 @@ describe("BFF HTTP helpers", () => {
     const known = bffErrorResponse(
       new BffError("bad_credentials", 401, "Credenciales inválidas")
     );
-    const checkout = bffErrorResponse(
-      new BffError("checkout_failed", 503, "raw odoo debug")
-    );
     const unexpected = bffErrorResponse(new Error("secret"));
     const checkout = bffErrorResponse(
       new BffError("checkout_failed", 503, "raw odoo")
@@ -92,13 +89,6 @@ describe("BFF HTTP helpers", () => {
         message: "Usuario o contraseña incorrectos",
       },
     });
-    assert.equal(checkout.status, 503);
-    assert.deepEqual(await checkout.json(), {
-      error: {
-        code: "checkout_failed",
-        message: "No se pudo registrar la venta en caja",
-      },
-    });
     assert.equal(unexpected.status, 503);
     assert.deepEqual(await unexpected.json(), {
       error: {
@@ -106,6 +96,7 @@ describe("BFF HTTP helpers", () => {
         message: "No se pudo conectar con el servidor",
       },
     });
+    assert.equal(checkout.status, 503);
     assert.deepEqual(await checkout.json(), {
       error: {
         code: "checkout_failed",
