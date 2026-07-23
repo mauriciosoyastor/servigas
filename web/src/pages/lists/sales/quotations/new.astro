@@ -1,42 +1,13 @@
 ---
 import OrderCreateForm from '../../../../components/OrderCreateForm.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
-import { BffError } from '../../../../lib/bff/errors.ts';
-import { getBackend } from '../../../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
 
 let userName = '';
-let partners: { id: number; label: string }[] = [];
-let products: { id: number; label: string }[] = [];
-let loadError = '';
 
 try {
-	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	const { session } = requireOdooSession(Astro.cookies);
 	userName = session.name || session.login;
-	try {
-		const [customers, variants] = await Promise.all([
-			getBackend().getRecordList(odooSessionId, 'sales/customers', {
-				page: 1,
-			}),
-			getBackend().getRecordList(odooSessionId, 'inventory/variants', {
-				page: 1,
-			}),
-		]);
-		partners = customers.rows.map((row) => ({
-			id: Number(row.id),
-			label: String(row.name || row.id),
-		}));
-		products = variants.rows.map((row) => ({
-			id: Number(row.id),
-			label: String(row.display_name || row.name || row.default_code || row.id),
-		}));
-	} catch (cause) {
-		if (cause instanceof BffError && cause.code === 'unauthorized') {
-			invalidateBffSession(Astro.cookies);
-			return Astro.redirect('/login');
-		}
-		loadError = 'No pudimos cargar clientes o productos.';
-	}
 } catch {
 	invalidateBffSession(Astro.cookies);
 	return Astro.redirect('/login');
@@ -49,19 +20,12 @@ try {
 			<p>Ventas</p>
 			<h1>Nueva cotización</h1>
 		</header>
-		{loadError ? (
-			<section class="sg-glass" role="alert" style="padding:1.2rem;border-radius:var(--sg-radius-card)">
-				<strong>Error</strong>
-				<p>{loadError}</p>
-			</section>
-		) : (
-			<OrderCreateForm
-				apiPath="/api/records/sales/quotations"
-				listPath="/lists/sales/quotations"
-				partners={partners}
-				products={products}
-			/>
-		)}
+		<OrderCreateForm
+			apiPath="/api/records/sales/quotations"
+			listPath="/lists/sales/quotations"
+			partnerListKey="sales/customers"
+			productListKey="inventory/variants"
+		/>
 	</main>
 </ShellLayout>
 

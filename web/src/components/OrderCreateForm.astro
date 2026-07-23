@@ -1,29 +1,26 @@
 ---
-interface Option {
-	id: number;
-	label: string;
-}
-
 interface Props {
 	apiPath: string;
 	listPath: string;
-	partners: Option[];
-	products: Option[];
+	partnerListKey: string;
+	productListKey?: string;
 	title?: string;
 	hint?: string;
 	partnerLabel?: string;
 	partnerPlaceholder?: string;
+	productPlaceholder?: string;
 }
 
 const {
 	apiPath,
 	listPath,
-	partners,
-	products,
+	partnerListKey,
+	productListKey = 'inventory/variants',
 	title = 'Nueva cotización',
-	hint = 'Cliente + un producto. Queda en borrador para confirmar después.',
+	hint = 'Buscá cliente y producto por nombre o código. Queda en borrador para confirmar después.',
 	partnerLabel = 'Cliente',
-	partnerPlaceholder = 'Elegí un cliente…',
+	partnerPlaceholder = 'Buscar cliente…',
+	productPlaceholder = 'Buscar producto por nombre o código…',
 } = Astro.props;
 ---
 
@@ -31,24 +28,46 @@ const {
 	<strong>{title}</strong>
 	<p>{hint}</p>
 	<form class="sg-order-create-form" data-order-create-form>
-		<label>
-			<span>{partnerLabel} *</span>
-			<select class="sg-focus-ring" name="partnerId" required>
-				<option value="">{partnerPlaceholder}</option>
-				{partners.map((p) => (
-					<option value={String(p.id)}>{p.label}</option>
-				))}
-			</select>
-		</label>
-		<label>
-			<span>Producto *</span>
-			<select class="sg-focus-ring" name="productId" required>
-				<option value="">Elegí un producto…</option>
-				{products.map((p) => (
-					<option value={String(p.id)}>{p.label}</option>
-				))}
-			</select>
-		</label>
+		<div
+			class="sg-order-picker"
+			data-order-picker
+			data-picker-kind="partner"
+			data-list-key={partnerListKey}
+		>
+			<label>
+				<span>{partnerLabel} *</span>
+				<input
+					class="sg-focus-ring"
+					type="search"
+					autocomplete="off"
+					placeholder={partnerPlaceholder}
+					data-picker-query
+				/>
+			</label>
+			<input type="hidden" name="partnerId" value="" required data-picker-id />
+			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+		</div>
+		<div
+			class="sg-order-picker"
+			data-order-picker
+			data-picker-kind="product"
+			data-list-key={productListKey}
+		>
+			<label>
+				<span>Producto *</span>
+				<input
+					class="sg-focus-ring"
+					type="search"
+					autocomplete="off"
+					placeholder={productPlaceholder}
+					data-picker-query
+				/>
+			</label>
+			<input type="hidden" name="productId" value="" required data-picker-id />
+			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+		</div>
 		<label>
 			<span>Cantidad *</span>
 			<input
@@ -73,6 +92,130 @@ const {
 	const root = document.querySelector('[data-order-create]');
 	const form = root?.querySelector('[data-order-create-form]');
 	const status = root?.querySelector('[data-order-create-status]');
+
+	function buildSearchUrl(listKey, q) {
+		const query = String(q || '').trim();
+		if (!listKey || !query) return null;
+		const params = new URLSearchParams({ q: query, page: '1' });
+		return `/api/lists/${listKey}?${params.toString()}`;
+	}
+
+	function labelPartner(row) {
+		const name = row?.name;
+		if (typeof name === 'string' && name.trim()) return name.trim();
+		return String(row?.id ?? '');
+	}
+
+	function labelProduct(row) {
+		const display = row?.display_name;
+		if (typeof display === 'string' && display.trim()) return display.trim();
+		const code = row?.default_code;
+		if (typeof code === 'string' && code.trim()) return code.trim();
+		const name = row?.name;
+		if (typeof name === 'string' && name.trim()) return name.trim();
+		return String(row?.id ?? '');
+	}
+
+	function wirePicker(picker) {
+		const listKey = picker.getAttribute('data-list-key') || '';
+		const kind = picker.getAttribute('data-picker-kind') || 'partner';
+		const queryInput = picker.querySelector('[data-picker-query]');
+		const idInput = picker.querySelector('[data-picker-id]');
+		const selectedEl = picker.querySelector('[data-picker-selected]');
+		const resultsEl = picker.querySelector('[data-picker-results]');
+		if (
+			!(queryInput instanceof HTMLInputElement) ||
+			!(idInput instanceof HTMLInputElement) ||
+			!(selectedEl instanceof HTMLElement) ||
+			!(resultsEl instanceof HTMLElement)
+		) {
+			return;
+		}
+
+		let timer = 0;
+		let seq = 0;
+
+		const clearSelection = () => {
+			idInput.value = '';
+			selectedEl.hidden = true;
+			selectedEl.textContent = '';
+		};
+
+		const hideResults = () => {
+			resultsEl.hidden = true;
+			resultsEl.replaceChildren();
+		};
+
+		const choose = (id, label) => {
+			idInput.value = String(id);
+			selectedEl.hidden = false;
+			selectedEl.textContent = `Elegido: ${label}`;
+			queryInput.value = label;
+			hideResults();
+		};
+
+		const renderResults = (rows) => {
+			resultsEl.replaceChildren();
+			const labeler = kind === 'product' ? labelProduct : labelPartner;
+			for (const row of rows || []) {
+				const id = Number(row.id);
+				if (!Number.isFinite(id) || id <= 0) continue;
+				const label = labeler(row);
+				const li = document.createElement('li');
+				const btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'sg-focus-ring';
+				btn.textContent = label;
+				btn.addEventListener('click', () => choose(id, label));
+				li.appendChild(btn);
+				resultsEl.appendChild(li);
+			}
+			resultsEl.hidden = resultsEl.childElementCount === 0;
+			if (resultsEl.hidden) {
+				const empty = document.createElement('li');
+				empty.className = 'sg-order-picker-empty';
+				empty.textContent = 'Sin resultados';
+				resultsEl.appendChild(empty);
+				resultsEl.hidden = false;
+			}
+		};
+
+		const search = async () => {
+			const url = buildSearchUrl(listKey, queryInput.value);
+			if (!url) {
+				hideResults();
+				return;
+			}
+			const mySeq = ++seq;
+			try {
+				const response = await fetch(url, { credentials: 'same-origin' });
+				const payload = await response.json().catch(() => ({}));
+				if (mySeq !== seq) return;
+				if (!response.ok) {
+					hideResults();
+					return;
+				}
+				renderResults(payload.rows || []);
+			} catch {
+				if (mySeq === seq) hideResults();
+			}
+		};
+
+		queryInput.addEventListener('input', () => {
+			clearSelection();
+			window.clearTimeout(timer);
+			timer = window.setTimeout(search, 250);
+		});
+
+		queryInput.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape') hideResults();
+		});
+	}
+
+	root?.querySelectorAll('[data-order-picker]').forEach((picker) => {
+		if (picker instanceof HTMLElement) wirePicker(picker);
+	});
+
 	if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
@@ -85,6 +228,11 @@ const {
 				productId: Number(data.get('productId')),
 				qty: Number(data.get('qty')),
 			};
+			if (!values.partnerId || !values.productId) {
+				status.textContent = 'Elegí cliente y producto de la lista';
+				status.dataset.state = 'error';
+				return;
+			}
 			try {
 				const response = await fetch(apiPath, {
 					method: 'POST',
@@ -129,23 +277,70 @@ const {
 		gap: 0.85rem;
 		margin-top: 0.35rem;
 	}
-	.sg-order-create-form label {
+	.sg-order-create-form label,
+	.sg-order-picker label {
 		display: grid;
 		gap: 0.35rem;
 	}
-	.sg-order-create-form span {
+	.sg-order-create-form span,
+	.sg-order-picker span {
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--sg-text-muted-dark);
 	}
 	.sg-order-create-form input,
-	.sg-order-create-form select {
+	.sg-order-picker input[type='search'] {
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 0.75rem;
 		padding: 0.65rem 0.8rem;
 		color: var(--sg-text-on-dark);
 		background: rgba(0, 0, 0, 0.22);
 		font: inherit;
+		width: 100%;
+		box-sizing: border-box;
+	}
+	.sg-order-picker {
+		display: grid;
+		gap: 0.35rem;
+		position: relative;
+	}
+	.sg-order-picker-selected {
+		margin: 0;
+		font-size: 0.75rem;
+		color: #9be7b0;
+	}
+	.sg-order-picker-results {
+		list-style: none;
+		margin: 0;
+		padding: 0.35rem;
+		display: grid;
+		gap: 0.25rem;
+		max-height: 14rem;
+		overflow: auto;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		background: rgba(0, 0, 0, 0.45);
+		z-index: 2;
+	}
+	.sg-order-picker-results button {
+		width: 100%;
+		text-align: left;
+		border: 0;
+		border-radius: 0.55rem;
+		padding: 0.55rem 0.7rem;
+		background: transparent;
+		color: var(--sg-text-on-dark);
+		font: inherit;
+		cursor: pointer;
+	}
+	.sg-order-picker-results button:hover,
+	.sg-order-picker-results button:focus-visible {
+		background: rgba(255, 255, 255, 0.08);
+	}
+	.sg-order-picker-empty {
+		padding: 0.55rem 0.7rem;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
 	}
 	.sg-order-create-actions {
 		display: flex;
