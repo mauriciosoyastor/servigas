@@ -318,4 +318,20 @@ describe("shell UI contracts", () => {
     );
     assert.match(host, /if\s*\(\s*generation\s*!==\s*readGeneration\s*\)\s*return/);
   });
+
+  it("wires product image upload triggers on table and detail", async () => {
+    const table = await source("components/RecordTable.astro");
+    const detail = await source("components/RecordDetailBody.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
+    const productDetail = await source("pages/lists/inventory/products/[id].astro");
+
+    assert.match(table, /imageUploadApiPath/);
+    assert.match(table, /data-product-image-trigger/);
+    assert.match(detail, /imageUploadApiPath/);
+    assert.match(detail, /data-product-image-trigger/);
+    assert.match(listPage, /ProductImageUploadHost/);
+    assert.match(listPage, /imageUploadApiPath/);
+    assert.match(productDetail, /ProductImageUploadHost/);
+    assert.match(productDetail, /imageUploadApiPath/);
+  });
 });

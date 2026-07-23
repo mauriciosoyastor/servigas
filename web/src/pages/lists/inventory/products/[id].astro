@@ -2,6 +2,7 @@
 import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordEditForm from '../../../../components/RecordEditForm.astro';
+import ProductImageUploadHost from '../../../../components/ProductImageUploadHost.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
@@ -32,7 +33,10 @@ function fieldValue(key: string): string {
 		eyebrow="Ficha de producto"
 		fallbackTitle="Producto"
 		fallbackListPath="/lists/inventory/products"
+		imageUploadApiPath="/api/records/inventory/products"
+		recordId={id}
 	/>
+	{detail && !error ? <ProductImageUploadHost /> : null}
 	{detail && !error ? (
 		<>
 			<RecordEditForm

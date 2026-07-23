@@ -1,5 +1,6 @@
 ---
 import ShellLayout from '../../layouts/ShellLayout.astro';
+import ProductImageUploadHost from '../../components/ProductImageUploadHost.astro';
 import RecordTable from '../../components/RecordTable.astro';
 import ListToolbar from '../../components/ListToolbar.astro';
 import { BffError } from '../../lib/bff/errors.ts';
@@ -113,7 +114,19 @@ if (!def) {
 					<p>{listError}</p>
 				</section>
 			) : payload && payload.rows.length ? (
-				<RecordTable columns={payload.columns} rows={payload.rows} caption={payload.title} />
+				<>
+					<RecordTable
+						columns={payload.columns}
+						rows={payload.rows}
+						caption={payload.title}
+						imageUploadApiPath={
+							listKey === 'inventory/products'
+								? '/api/records/inventory/products'
+								: undefined
+						}
+					/>
+					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
+				</>
 			) : (
 				<section class="sg-list-state sg-glass">
 					<strong>Sin resultados</strong>
