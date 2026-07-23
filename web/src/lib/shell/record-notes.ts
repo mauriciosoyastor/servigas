@@ -37,18 +37,37 @@ export function normalizeNoteBody(
   return { ok: true, body };
 }
 
-export function plainTextFromOdooHtml(html: string): string {
-  return String(html || "")
+function stripMarkupToText(html: string): string {
+  return html
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/p>/gi, "\n")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<\/div>/gi, "\n")
+    .replace(/<[^>]+>/g, "");
+}
+
+function decodeBasicEntities(text: string): string {
+  return text
     .replace(/&nbsp;/g, " ")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
     .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/\n+$/g, "")
-    .trim();
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+/**
+ * Odoo sometimes stores note bodies with tags already entity-escaped
+ * (e.g. `&lt;p&gt;hola&lt;/p&gt;`). Strip once, decode, and if the source
+ * looked double-escaped, strip again so the UI never shows raw tags.
+ */
+export function plainTextFromOdooHtml(html: string): string {
+  const raw = String(html || "");
+  const doubleEscaped = /&lt;\s*\/?\s*(?:p|div|br)\b/i.test(raw);
+  let text = decodeBasicEntities(stripMarkupToText(raw));
+  if (doubleEscaped) {
+    text = stripMarkupToText(text);
+  }
+  return text.replace(/\n+$/g, "").trim();
 }
 
 export function odooHtmlFromPlainText(text: string): string {

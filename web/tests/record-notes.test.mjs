@@ -45,4 +45,12 @@ describe("record-notes body", () => {
     );
     assert.equal(plainTextFromOdooHtml("<p>hola<br/>mundo</p>"), "hola\nmundo");
   });
+
+  it("strips Odoo double-escaped paragraph markup", () => {
+    assert.equal(plainTextFromOdooHtml("&lt;p&gt;dfsddfsg&lt;/p&gt;"), "dfsddfsg");
+    assert.equal(
+      plainTextFromOdooHtml("<p>&lt;p&gt;dfsddfsg&lt;/p&gt;</p>"),
+      "dfsddfsg"
+    );
+  });
 });
