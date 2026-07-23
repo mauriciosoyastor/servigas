@@ -299,4 +299,17 @@ describe("shell UI contracts", () => {
       /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.sg-record-table tbody tr/
     );
   });
+
+  it("provides product image upload host with gallery picker and preview", async () => {
+    const host = await source("components/ProductImageUploadHost.astro");
+    assert.match(host, /data-product-image-host/);
+    assert.match(host, /type=["']file["']/);
+    assert.match(host, /accept=["']image\/\*["']/);
+    assert.doesNotMatch(host, /\bcapture=/);
+    assert.match(host, /data-product-image-preview/);
+    assert.match(host, /Guardar/);
+    assert.match(host, /Cancelar/);
+    assert.match(host, /fetch\(/);
+    assert.match(host, /image_1920/);
+  });
 });
