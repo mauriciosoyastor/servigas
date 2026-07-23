@@ -43,4 +43,4 @@
 - [x] **Step 1:** Checkbox corte autorizado `[x]`; smoke con nota deuda del go condicional; ajustar “Hoy” en decisión si hace falta.
 - [x] **Step 2:** Spec `Estado: approved`.
 - [x] **Step 3:** `cd web && npm test` (docs-only; confirmar verde).
-- [ ] **Step 4:** Commit, push, actualizar PR.
+- [x] **Step 4:** Commit, push, actualizar PR.
