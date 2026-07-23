@@ -50,6 +50,27 @@
 
 ## Entradas
 
+### 2026-07-23 — Listas Astro tabla glass
+
+**Área:** docs | web  
+**Motivo:** unificar look de listas operativas Astro en isla glass desktop + cards móvil, sin tocar BFF.  
+**Archivos:**
+- `docs/superpowers/specs/2026-07-23-astro-listas-tabla-glass-design.md`
+- `docs/superpowers/plans/2026-07-23-astro-listas-tabla-glass.md`
+- `web/src/styles/list.css`
+- `web/src/components/RecordTable.astro`
+- `web/tests/shell-ui.test.mjs`
+
+**Cambios:**
+- Spec + plan: híbrido C (tabla densa glass ≥768px; cards `<768px`; sin cambios BFF).
+- Desktop: isla `.sg-record-table-wrap` on-dark, sticky header, zebra/hover flame.
+- Móvil: `data-label` en celdas + reflow a cards; toolbar/pager apilados.
+
+**Verificación:** `cd web; $env:NODE_ENV='test'; node --experimental-strip-types --test tests/**/*.test.mjs` (175 pass). Visual: `/lists/inventory/products` (glass + imágenes), DevTools 390px (cards), `/lists/purchase/vendors` (sin imagen).  
+**Automatización:** contratos en `shell-ui.test.mjs`; checklist visual manual al cerrar features de lista.
+
+---
+
 ### 2026-07-23 — Corte autorizado (condicional) shell Astro
 
 **Área:** docs | web  
