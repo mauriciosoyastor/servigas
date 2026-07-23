@@ -11,13 +11,22 @@
 	--sg-flame-orange: #f57c00;
 	--sg-flame-deep: #e64a19;
 	--sg-flame-rust: #bf360c;
-	--sg-flame-gradient: linear-gradient(135deg, var(--sg-flame-yellow), var(--sg-flame-orange) 52%, var(--sg-flame-deep));
+	--sg-primary: var(--sg-flame-orange);
+	--sg-accent: var(--sg-flame-yellow);
+	--sg-accent-alt: var(--sg-flame-deep);
+	--sg-flame-gradient: linear-gradient(
+		135deg,
+		var(--sg-flame-yellow),
+		var(--sg-flame-orange) 52%,
+		var(--sg-flame-deep)
+	);
 	--sg-glass-fill: rgba(255, 255, 255, 0.08);
 	--sg-glass-fill-strong: rgba(255, 255, 255, 0.14);
 	--sg-glass-border: rgba(255, 255, 255, 0.12);
 	--sg-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.12);
 	--sg-glass-blur: 16px;
-	--sg-radius-card: 1.25rem;
+	--sg-radius-card: 12px;
 	--sg-radius-pill: 999px;
 	--sg-shadow-lg: 0 24px 80px rgba(0, 0, 0, 0.3);
+	--sg-shadow-flame: 0 14px 36px rgba(230, 74, 25, 0.35);
 }
