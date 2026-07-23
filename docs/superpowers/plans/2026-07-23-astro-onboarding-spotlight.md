@@ -19,18 +19,18 @@
 
 ### Task 1: Módulo + tests
 
-- [ ] Crear `web/src/lib/shell/onboarding-tour.ts`
-- [ ] Tests `web/tests/onboarding-tour.test.mjs`
-- [ ] `npm test` verde en ese archivo
+- [x] Crear `web/src/lib/shell/onboarding-tour.ts`
+- [x] Tests `web/tests/onboarding-tour.test.mjs`
+- [x] `npm test` verde
 
 ### Task 2: UI overlay + anchors
 
-- [ ] `OnboardingTour.astro` + `onboarding.css`
-- [ ] Montar en `ShellLayout`
-- [ ] `data-tour` en index, RailNav, TileCard/hubs, pos
+- [x] `OnboardingTour.astro` + `onboarding.css`
+- [x] Montar en `ShellLayout`
+- [x] `data-tour` en index, RailNav, TileCard/hubs, pos
 
 ### Task 3: Docs + cierre
 
-- [ ] ADR 0016 / CONTEXT nota onboarding
-- [ ] Spec approved; shell-ui contracts
-- [ ] Commit / push / PR #33
+- [x] ADR 0016 / CONTEXT nota onboarding
+- [x] Spec approved; shell-ui contracts
+- [x] Commit / push / PR #33
