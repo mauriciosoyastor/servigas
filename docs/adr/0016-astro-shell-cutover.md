@@ -23,18 +23,18 @@ Posturas evaluadas:
 Adoptar la **postura B — camino a corte**, con alcance de corte **completo del camino operativo**:
 
 1. **Meta:** Astro (`web/`) es el shell operativo oficial: login → launcher → hubs → listas allowlisted → **POS caja Astro**.
-2. **Hoy:** OWL / Liquid Glass en Odoo sigue siendo producción hasta un **go explícito** (bitácora + `CONTEXT`).
+2. **Hoy (2026-07-23):** **corte autorizado (condicional)** — Astro = shell oficial; OWL = fallback; smoke real = deuda pre-prod (`CONTEXT` + bitácora).
 3. **Regla de build:** solo slices que suman **paridad del camino feliz** o **endurecen el BFF**; no features de laboratorio.
-4. **Después del corte:** hubs/launcher/POS OWL dejan de ser UI de negocio; Odoo sigue como backend (y assets residuales si hacen falta).
+4. **Después del día D operativo** (smoke verde en el entorno objetivo): hubs/launcher/POS OWL dejan de ser UI de negocio; Odoo sigue como backend (y assets residuales si hacen falta).
 5. **Alcance del día D (opción 1):** shell + listas + **POS Astro** en un solo corte operativo (no fase POS diferida).
 
 ### Checklist go/no-go (mínimo)
 
-- [ ] Smoke camino feliz contra Odoo dev: login → hubs → producto → cotización/RFQ → venta POS Astro *(diferido)*
+- [ ] Smoke camino feliz contra Odoo dev: login → hubs → producto → cotización/RFQ → venta POS Astro — **deuda pre-prod del go condicional** (`cd web && npm run smoke:shell`)
 - [x] Session store durable (reemplazo de `MemorySessionStore`) — #13
 - [x] Errores BFF seguros + logout/timeout definidos — #24
 - [x] Paridad Liquid Glass “usable en mostrador” (no pixel-perfect) — #27
-- [ ] Decisión explícita: “corte autorizado” en `CONTEXT.md` + bitácora
+- [x] Decisión explícita: “corte autorizado” en `CONTEXT.md` + bitácora — go condicional 2026-07-23
 
 ### Filtro semanal
 
