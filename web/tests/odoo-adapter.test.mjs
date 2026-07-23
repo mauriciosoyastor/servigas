@@ -1055,6 +1055,45 @@ describe("OdooAdapter.archiveRecord", () => {
   });
 });
 
+describe("OdooAdapter.previewPriceListImport", () => {
+  it("classifies create/update from csv against catalog", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 10,
+              name: "Existente",
+              default_code: "SKU1",
+              barcode: "779",
+            },
+          ],
+        });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const preview = await adapter.previewPriceListImport("sess", {
+      filename: "lista.csv",
+      content:
+        "barcode,default_code,name,list_price,standard_price\n" +
+        "779,SKU1,Existente,100,40\n" +
+        ",NUEVO,Producto Nuevo,200,80\n",
+    });
+
+    assert.equal(preview.counts.update, 1);
+    assert.equal(preview.counts.create, 1);
+    assert.equal(preview.lines[0].productId, 10);
+    assert.equal(preview.lines[1].status, "create");
+  });
+});
+
 describe("OdooAdapter.createRecord products", () => {
   it("creates a product.template with defaults", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: 501 }));

@@ -50,32 +50,32 @@
 
 ## Entradas
 
-### 2026-07-23 — Cargar lista de precios (Inventario)
+### 2026-07-23 — Cargar lista de precios (shell Astro + Odoo)
 
-**Área:** datos | hubs | inventario  
-**Motivo:** upsert de productos (crear + actualizar venta/costo) desde Excel/CSV con preview, sin PDF/OCR en v1.  
+**Área:** datos | hubs | inventario | web  
+**Motivo:** upsert de productos (crear + actualizar venta/costo) desde CSV con preview; el botón vive en la lista Astro que usa el equipo (no solo hub Odoo).  
 **Archivos:**
 - `docs/superpowers/specs/2026-07-23-inventory-price-list-import-design.md`
 - `docs/superpowers/plans/2026-07-23-inventory-price-list-import.md`
-- `custom_addons/servigas_core/models/sg_price_list_import_logic.py`
-- `custom_addons/servigas_core/models/sg_price_list_import_wizard.py`
-- `custom_addons/servigas_core/models/sg_price_list_import_log.py`
+- `custom_addons/servigas_core/models/sg_price_list_import_*.py`
 - `custom_addons/servigas_core/views/sg_price_list_import_views.xml`
-- `custom_addons/servigas_core/data/hub_inventory_data.xml`
-- `custom_addons/servigas_core/models/sg_hub_card.py`
-- `custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py`
+- `web/src/lib/shell/price-list-import.ts`
+- `web/src/pages/lists/inventory/products/import.astro`
+- `web/src/pages/api/inventory/price-list-import.ts`
+- `web/src/pages/lists/[...slug].astro`
+- `web/src/lib/bff/odoo-adapter.ts`
 
 **Cambios:**
-- Card **Cargar lista de precios** en Inventario → Productos.
-- Wizard 4 pasos (subir → mapear → preview → aplicar) + log de auditoría.
-- Match barcode → código → nombre; filas ambiguas en Revisar.
-- Hub cards respetan `target` de la `act_window` (modal `new`).
+- Botón **Cargar lista de precios** en `/lists/inventory/products` (Astro).
+- Página import + BFF preview/apply; match barcode → código → nombre.
+- Wizard Odoo residual (hub) + lógica Python testeada.
 
 **Verificación:**
-- `python custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py -v` (15 pass)
-- Upgrade `servigas_core` → Inventario → Productos → Importar → CSV plantilla
+- `python custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py -v`
+- `cd web; $env:NODE_ENV='test'; node --experimental-strip-types --test tests/price-list-import.test.mjs`
+- UI: lista productos → Cargar lista de precios → CSV
 
-**Automatización:** lógica pura reutilizable; plantilla CSV embebida en el wizard.
+**Automatización:** lógica pura TS/Python + plantilla CSV.
 
 ---
 

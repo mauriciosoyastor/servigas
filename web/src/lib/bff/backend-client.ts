@@ -5,11 +5,15 @@ import type {
   PosCheckoutLine,
   PosCheckoutOptions,
   PosCheckoutResult,
+  PriceListImportApplyLine,
+  PriceListImportApplyResult,
+  PriceListImportPreview,
   RecordDetailPayload,
   RecordListPayload,
   SessionInfo,
 } from "./types.ts";
 import type { RecordListQuery } from "../shell/record-lists.ts";
+import type { PriceListMapping } from "../shell/price-list-import.ts";
 
 export interface BackendClient {
   login(
@@ -70,4 +74,16 @@ export interface BackendClient {
     id: number,
     field: string
   ): Promise<{ body: ArrayBuffer; contentType: string }>;
+  previewPriceListImport(
+    odooSessionId: string,
+    input: {
+      filename: string;
+      content: string;
+      mapping?: PriceListMapping;
+    }
+  ): Promise<PriceListImportPreview>;
+  applyPriceListImport(
+    odooSessionId: string,
+    lines: PriceListImportApplyLine[]
+  ): Promise<PriceListImportApplyResult>;
 }

@@ -222,9 +222,14 @@ describe("shell UI contracts", () => {
   it("renders product create/archive and quotation confirm", async () => {
     const productNew = await source("pages/lists/inventory/products/new.astro");
     const productDetail = await source("pages/lists/inventory/products/[id].astro");
+    const productImport = await source("pages/lists/inventory/products/import.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
     const quote = await source("pages/lists/sales/quotations/[id].astro");
     const po = await source("pages/lists/purchase/orders/[id].astro");
     assert.match(productNew, /inventory\/products/);
+    assert.match(productImport, /Cargar lista de precios/);
+    assert.match(productImport, /\/api\/inventory\/price-list-import/);
+    assert.match(listPage, /\/lists\/inventory\/products\/import/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
     assert.match(po, /Confirmar OC|purchase\/solicitudes/);

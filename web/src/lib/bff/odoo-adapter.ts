@@ -8,12 +8,23 @@ import type {
   PosCheckoutOptions,
   PosCheckoutResult,
   PosPaymentMethod,
+  PriceListImportApplyLine,
+  PriceListImportApplyResult,
+  PriceListImportPreview,
   RecordDetailLines,
   RecordDetailPayload,
   RecordListPayload,
   RecordListRow,
   SessionInfo,
 } from "./types.ts";
+import {
+  buildProductIndexes,
+  classifyRows,
+  parseTabularText,
+  resolveApplyStatus,
+  suggestMapping,
+  type PriceListMapping,
+} from "../shell/price-list-import.ts";
 import {
   buildDetailPath,
   buildSearchDomain,
@@ -487,6 +498,188 @@ export class OdooAdapter implements BackendClient {
     const detailPath =
       (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
     return { id: Number(id), detailPath };
+  }
+
+  async previewPriceListImport(
+    odooSessionId: string,
+    input: {
+      filename: string;
+      content: string;
+      mapping?: PriceListMapping;
+    }
+  ): Promise<PriceListImportPreview> {
+    const parsed = parseTabularText(input.filename, input.content);
+    if (parsed.error) {
+      throw new BffError("validation_error", 400, parsed.error);
+    }
+    if (!parsed.rows.length) {
+      throw new BffError("validation_error", 400, "El archivo no tiene filas de datos.");
+    }
+
+    const mapping = {
+      ...suggestMapping(parsed.headers),
+      ...(input.mapping || {}),
+    };
+    if (!mapping.name) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Indicá qué columna es el nombre del producto."
+      );
+    }
+    if (!mapping.list_price && !mapping.standard_price) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Indicá al menos una columna de precio (venta o costo)."
+      );
+    }
+
+    const catalog = await this.#loadProductCatalog(odooSessionId);
+    const indexes = buildProductIndexes(catalog);
+    const classified = classifyRows(parsed.rows, mapping, indexes);
+    const lines = classified.map((row) => ({
+      lineNumber: row.lineNumber,
+      selected: row.status === "create" || row.status === "update",
+      status: row.status,
+      barcode: row.barcode,
+      default_code: row.default_code,
+      name: row.name,
+      list_price: row.list_price,
+      standard_price: row.standard_price,
+      productId: row.productId,
+      candidates: row.candidates,
+      reason: row.reason,
+    }));
+    const counts = {
+      create: lines.filter((l) => l.status === "create").length,
+      update: lines.filter((l) => l.status === "update").length,
+      review: lines.filter((l) => l.status === "review").length,
+      error: lines.filter((l) => l.status === "error").length,
+    };
+    return { headers: parsed.headers, mapping, lines, counts };
+  }
+
+  async applyPriceListImport(
+    odooSessionId: string,
+    lines: PriceListImportApplyLine[]
+  ): Promise<PriceListImportApplyResult> {
+    if (!Array.isArray(lines) || !lines.length) {
+      throw new BffError("validation_error", 400, "No hay filas para importar.");
+    }
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const line of lines) {
+      const action = resolveApplyStatus(line);
+      if (action === "skip") {
+        skipped += 1;
+        continue;
+      }
+
+      if (action === "create") {
+        const name = (line.name || "").trim();
+        if (!name) {
+          skipped += 1;
+          continue;
+        }
+        const vals: Record<string, string | number | boolean> = {
+          name: name.slice(0, 512),
+          sale_ok: true,
+          purchase_ok: true,
+          is_storable: true,
+          available_in_pos: true,
+          type: "consu",
+        };
+        if (line.default_code) vals.default_code = String(line.default_code).slice(0, 128);
+        if (line.barcode) vals.barcode = String(line.barcode).slice(0, 128);
+        if (line.list_price != null && Number.isFinite(line.list_price)) {
+          vals.list_price = line.list_price;
+        }
+        if (line.standard_price != null && Number.isFinite(line.standard_price)) {
+          vals.standard_price = line.standard_price;
+        }
+        await this.#callKw(odooSessionId, "product.template", "create", [vals]);
+        created += 1;
+        continue;
+      }
+
+      const productId = Number(line.productId);
+      if (!Number.isFinite(productId) || productId <= 0) {
+        skipped += 1;
+        continue;
+      }
+      const [product] = await this.#searchRead(
+        odooSessionId,
+        "product.template",
+        [["id", "=", productId]],
+        ["id", "barcode", "default_code"],
+        1,
+        0,
+        "id"
+      );
+      if (!product) {
+        skipped += 1;
+        continue;
+      }
+      const writeVals: Record<string, string | number> = {};
+      if (line.list_price != null && Number.isFinite(line.list_price)) {
+        writeVals.list_price = line.list_price;
+      }
+      if (line.standard_price != null && Number.isFinite(line.standard_price)) {
+        writeVals.standard_price = line.standard_price;
+      }
+      if (line.barcode && !product.barcode) {
+        writeVals.barcode = String(line.barcode).slice(0, 128);
+      }
+      if (line.default_code && !product.default_code) {
+        writeVals.default_code = String(line.default_code).slice(0, 128);
+      }
+      if (Object.keys(writeVals).length) {
+        await this.#callKw(odooSessionId, "product.template", "write", [
+          [productId],
+          writeVals,
+        ]);
+      }
+      updated += 1;
+    }
+
+    return { created, updated, skipped };
+  }
+
+  async #loadProductCatalog(odooSessionId: string) {
+    const out: Array<{
+      id: number;
+      barcode: string | null;
+      default_code: string | null;
+      name: string | null;
+    }> = [];
+    const pageSize = 2000;
+    let offset = 0;
+    while (true) {
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "product.template",
+        [["active", "=", true]],
+        ["id", "name", "default_code", "barcode"],
+        pageSize,
+        offset,
+        "id"
+      );
+      for (const row of rows) {
+        out.push({
+          id: Number(row.id),
+          barcode: row.barcode ? String(row.barcode) : null,
+          default_code: row.default_code ? String(row.default_code) : null,
+          name: row.name ? String(row.name) : null,
+        });
+      }
+      if (rows.length < pageSize) break;
+      offset += pageSize;
+    }
+    return out;
   }
 
   async #createMinimalOrder(
