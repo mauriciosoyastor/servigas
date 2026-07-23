@@ -14,6 +14,6 @@ export const GET: APIRoute = async ({ cookies, url }) => {
     const payload = await getBackend().getPosCatalog(odooSessionId, { q, limit });
     return json(payload);
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

@@ -12,6 +12,6 @@ export const GET: APIRoute = async ({ cookies }) => {
     const payload = await getBackend().getLauncher(odooSessionId);
     return json(payload);
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

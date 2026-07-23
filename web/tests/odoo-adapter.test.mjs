@@ -85,6 +85,28 @@ describe("OdooAdapter.login", () => {
         err.status === 503
     );
   });
+
+  it("maps AbortSignal timeouts to odoo_unavailable", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      timeoutMs: 1000,
+      fetchImpl: async (_url, init) => {
+        assert.ok(init?.signal instanceof AbortSignal);
+        const err = new Error("aborted");
+        err.name = "TimeoutError";
+        throw err;
+      },
+    });
+
+    await assert.rejects(
+      () => adapter.login("admin", "admin"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "odoo_unavailable" &&
+        /Timeout/i.test(err.message)
+    );
+  });
 });
 
 describe("OdooAdapter.getLauncher", () => {

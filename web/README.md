@@ -79,8 +79,15 @@ factory. El sistema visual también es pluggable: mantener los límites de
 nuevo producto.
 
 Sesiones BFF: por defecto `FileSessionStore` (JSON bajo `.data/bff-sessions`,
-TTL 12h). En tests usa memoria (`NODE_ENV=test`). Vars: `BFF_SESSION_STORE`,
-`BFF_SESSION_TTL_SECONDS`, `BFF_SESSION_DIR`. Redis queda para multi-instancia.
+TTL 12h absoluto). En tests usa memoria (`NODE_ENV=test`). Vars:
+`BFF_SESSION_STORE`, `BFF_SESSION_TTL_SECONDS`, `BFF_SESSION_DIR`. Redis queda
+para multi-instancia.
+
+Timeout / logout: cada RPC a Odoo usa `ODOO_RPC_TIMEOUT_MS` (default 15s).
+`GET /api/auth/session` revalida contra Odoo; si la sesión murió, el BFF borra
+la cookie local. Los 401 `unauthorized` en APIs también invalidan la sesión BFF.
+Errores al cliente usan códigos fijos (`checkout_failed`, `action_failed`, …)
+sin filtrar mensajes crudos de Odoo.
 
 Smoke camino feliz (requiere Astro + Odoo):
 

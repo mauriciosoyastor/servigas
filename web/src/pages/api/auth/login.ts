@@ -17,6 +17,6 @@ export const POST: APIRoute = async ({ request, cookies }) => {
     setBffCookie(cookies, bffSid);
     return json({ ok: true, session });
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };

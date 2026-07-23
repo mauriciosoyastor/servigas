@@ -16,7 +16,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       paymentMethodId?: number;
     };
     if (!Array.isArray(body.lines)) {
-      throw new BffError("not_found", 404, "Carrito inválido");
+      throw new BffError("validation_error", 400, "Carrito inválido");
     }
     const result = await getBackend().checkoutPosCart(
       odooSessionId,
@@ -30,6 +30,6 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     );
     return json(result);
   } catch (err) {
-    return bffErrorResponse(err);
+    return bffErrorResponse(err, cookies);
   }
 };
