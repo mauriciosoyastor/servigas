@@ -397,6 +397,7 @@ export class OdooAdapter implements BackendClient {
       name: "Nombre",
       display_name: "Nombre",
       default_code: "Referencia",
+      barcode: "Barras",
       qty_available: "Stock",
       active: "Activo",
       vat: "CUIT",

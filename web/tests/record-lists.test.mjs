@@ -255,13 +255,16 @@ describe("record-lists allowlist", () => {
     );
   });
 
-  it("builds search domain with OR polish notation", () => {
+  it("builds search domain with OR polish notation including barcode", () => {
     const def = getRecordListDef("inventory/products");
+    assert.ok(def?.searchFields?.includes("barcode"));
     const domain = buildSearchDomain(def, "calefa");
     assert.deepEqual(domain[0], ["active", "=", true]);
     assert.equal(domain[1], "|");
-    assert.deepEqual(domain[2], ["name", "ilike", "calefa"]);
-    assert.deepEqual(domain[3], ["default_code", "ilike", "calefa"]);
+    assert.equal(domain[2], "|");
+    assert.deepEqual(domain[3], ["name", "ilike", "calefa"]);
+    assert.deepEqual(domain[4], ["default_code", "ilike", "calefa"]);
+    assert.deepEqual(domain[5], ["barcode", "ilike", "calefa"]);
   });
 
   it("routes empty-domain sale.report cards by label", () => {
