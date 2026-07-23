@@ -105,7 +105,11 @@ describe("shell UI contracts", () => {
     assert.match(page, /\/lists\/sales\/pos-orders/);
     assert.match(page, /addToCart|cartTotal/);
     assert.match(page, /data-pos-pay-method|paymentMethods/);
-    assert.match(page, /setCartDiscount|data-disc/);
+    assert.match(page, /data-pos-numpad|data-np-mode/);
+    assert.match(page, /sg-pos-scroll|overscroll-behavior/);
+    assert.match(page, /sg-pos-line-thumb|data-line-thumb/);
+    assert.match(page, /data-line-disc|data-pos-order-disc/);
+    assert.match(page, /setCartDiscount|checkoutLinesFromCart/);
     assert.match(page, /data-pos-receipt/);
     assert.match(page, /Nueva venta/);
   });

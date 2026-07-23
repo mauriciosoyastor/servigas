@@ -12,7 +12,7 @@ import {
 
 describe("pos cart", () => {
   it("starts empty", () => {
-    assert.deepEqual(emptyCart(), { lines: [] });
+    assert.deepEqual(emptyCart(), { lines: [], orderDiscount: 0 });
   });
 
   it("adds a product line and accumulates qty", () => {
@@ -70,5 +70,24 @@ describe("pos cart", () => {
     cart = setCartDiscount(cart, 7, 150);
     assert.equal(cart.lines[0].discount, 100);
     assert.equal(cartTotal(cart), 0);
+  });
+
+  it("keeps product image url on cart lines", () => {
+    let cart = addToCart(emptyCart(), {
+      productId: 3,
+      name: "Foto",
+      price: 10,
+      qty: 1,
+      imageUrl: "/media/3.jpg",
+    });
+    assert.equal(cart.lines[0].imageUrl, "/media/3.jpg");
+    cart = addToCart(cart, {
+      productId: 3,
+      name: "Foto",
+      price: 10,
+      qty: 1,
+    });
+    assert.equal(cart.lines[0].qty, 2);
+    assert.equal(cart.lines[0].imageUrl, "/media/3.jpg");
   });
 });
