@@ -640,7 +640,9 @@ describe("OdooAdapter.getPosCatalog", () => {
               id: 42,
               display_name: "Calefactor",
               default_code: "CAL-01",
+              barcode: "7791234567890",
               list_price: 1500,
+              qty_available: 12,
             },
           ],
         });
@@ -656,14 +658,35 @@ describe("OdooAdapter.getPosCatalog", () => {
       fetchImpl,
     });
 
-    const catalog = await adapter.getPosCatalog("sess", { q: "cale" });
+    const catalog = await adapter.getPosCatalog("sess", { q: "779123" });
     assert.equal(catalog.config?.name, "Mostrador Servigas");
     assert.equal(catalog.products.length, 1);
     assert.equal(catalog.products[0].image_url, "/api/media/product.product/42/image_128");
+    assert.equal(catalog.products[0].barcode, "7791234567890");
+    assert.equal(catalog.products[0].qty_available, 12);
     assert.equal(catalog.total, 1);
     assert.equal(catalog.paymentMethods.length, 2);
     assert.equal(catalog.paymentMethods[0].name, "Cash");
     assert.equal(catalog.paymentMethods[1].id, 2);
+
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    const productRead = bodies.find(
+      (body) =>
+        body.params?.model === "product.product" &&
+        body.params?.method === "search_read"
+    );
+    const domain = productRead.params.args[0];
+    assert.ok(domain.some((term) => Array.isArray(term) && term[0] === "barcode"));
+    assert.ok(domain.some((term) => Array.isArray(term) && term[0] === "default_code"));
+    assert.deepEqual(productRead.params.kwargs.fields, [
+      "display_name",
+      "default_code",
+      "barcode",
+      "list_price",
+      "qty_available",
+    ]);
   });
 });
 

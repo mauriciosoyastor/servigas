@@ -112,6 +112,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /setCartDiscount|checkoutLinesFromCart/);
     assert.match(page, /data-pos-receipt/);
     assert.match(page, /Nueva venta/);
+    assert.match(page, /nombre, código o barras/);
+    assert.match(page, /sg-pos-product-stock|qty_available/);
   });
 
   it("renders invoice and customer detail pages", async () => {

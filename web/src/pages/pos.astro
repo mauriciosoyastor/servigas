@@ -57,7 +57,7 @@ try {
 								type="search"
 								name="q"
 								value={q}
-								placeholder="Buscar por nombre o código…"
+								placeholder="Buscar por nombre, código o barras…"
 							/>
 						</label>
 						<button class="sg-focus-ring" type="submit">Buscar</button>
@@ -74,6 +74,7 @@ try {
 									data-name={product.name}
 									data-price={product.list_price}
 									data-image={product.image_url || ''}
+									data-qty={product.qty_available}
 								>
 									{product.image_url ? (
 										<img src={product.image_url} alt="" loading="lazy" />
@@ -81,7 +82,15 @@ try {
 										<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
 									)}
 									<span class="sg-pos-product-name">{product.name}</span>
-									<span class="sg-pos-product-code">{product.default_code || '—'}</span>
+									<span class="sg-pos-product-code">{product.default_code || product.barcode || '—'}</span>
+									<span
+										class:list={[
+											'sg-pos-product-stock',
+											product.qty_available <= 0 && 'is-zero',
+										]}
+									>
+										Stock {product.qty_available.toLocaleString('es-AR')}
+									</span>
 									<span class="sg-pos-product-price">
 										{product.list_price.toLocaleString('es-AR', {
 											style: 'currency',
@@ -719,6 +728,14 @@ try {
 	.sg-pos-product-code {
 		color: var(--sg-text-muted-dark);
 		font-size: 0.68rem;
+	}
+	.sg-pos-product-stock {
+		font-size: 0.68rem;
+		font-weight: 600;
+		color: #9be7b0;
+	}
+	.sg-pos-product-stock.is-zero {
+		color: #ffb4a2;
 	}
 	.sg-pos-product-price {
 		font-size: 0.9rem;

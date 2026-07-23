@@ -99,7 +99,9 @@ export type PosCatalogProduct = {
   id: number;
   name: string;
   default_code: string | null;
+  barcode: string | null;
   list_price: number;
+  qty_available: number;
   image_url: string | null;
 };
 
