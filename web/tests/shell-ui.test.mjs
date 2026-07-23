@@ -8,10 +8,14 @@ const source = (path) =>
 describe("shell UI contracts", () => {
   it("loads shared tokens and shell styles globally", async () => {
     const css = await source("styles/global.css");
+    const tokens = await source("styles/tokens.css");
 
     assert.match(css, /@import "\.\/tokens\.css"/);
     assert.match(css, /@import "\.\/shell\.css"/);
     assert.match(css, /@import "\.\/list\.css"/);
+    assert.match(tokens, /--sg-primary:/);
+    assert.match(tokens, /--sg-flame-gradient:/);
+    assert.match(tokens, /--sg-radius-card:\s*12px/);
   });
 
   it("provides the requested shell components", async () => {
@@ -23,12 +27,15 @@ describe("shell UI contracts", () => {
       source("components/RecordTable.astro"),
     ]);
 
+    assert.match(layout, /compact\?:/);
+    assert.match(layout, /is-compact/);
     assert.match(layout, /<RailNav active=/);
     assert.match(rail, /\/hubs\/inventory/);
     assert.match(rail, /\/hubs\/sales/);
     assert.match(tile, /data-tile/);
     assert.match(tile, /data-kpi|sg-tile-kpi/);
     assert.match(note, /Próximamente/);
+    assert.match(note, /data-coming-soon-detail/);
     assert.match(table, /sg-record-table/);
     assert.match(table, /sg-record-thumb/);
   });
@@ -48,6 +55,11 @@ describe("shell UI contracts", () => {
     assert.match(index, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(index, /Astro\.redirect\(["']\/login["']\)/);
     assert.match(index, /resolveTileNavigation/);
+    assert.match(index, /sg-ops-strip/);
+    assert.match(index, /href="\/pos"/);
+    assert.match(index, /quotations\/new/);
+    assert.match(index, /rfq\/new/);
+    assert.match(index, /data-coming-soon-detail/);
   });
 
   it("validates Odoo before redirecting an existing session from login", async () => {
@@ -116,6 +128,14 @@ describe("shell UI contracts", () => {
     assert.match(page, /sg-pos-product-stock|qty_available/);
     assert.match(page, /data-pos-customer|partnerId/);
     assert.match(page, /sales\/customers/);
+    assert.match(page, /compact/);
+    assert.match(page, /--sg-flame-gradient/);
+    assert.match(page, /min-height:\s*2\.75rem/);
+  });
+
+  it("uses flame gradient on login submit", async () => {
+    const login = await source("pages/login.astro");
+    assert.match(login, /--sg-flame-gradient/);
   });
 
   it("renders invoice and customer detail pages", async () => {
