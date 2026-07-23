@@ -1,6 +1,10 @@
 import type { APIContext } from "astro";
 import { BffError, type BffErrorCode } from "./errors.ts";
-import { BFF_COOKIE, sessionStore } from "./session-store.ts";
+import {
+  BFF_COOKIE,
+  getSessionTtlSeconds,
+  sessionStore,
+} from "./session-store.ts";
 
 const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
   unauthorized: "Sesión requerida",
@@ -58,6 +62,7 @@ export function setBffCookie(
     path: "/",
     sameSite: "lax",
     secure: Boolean(import.meta.env?.PROD),
+    maxAge: getSessionTtlSeconds(),
   });
 }
 

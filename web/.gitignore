@@ -17,6 +17,9 @@ pnpm-debug.log*
 .env
 .env.production
 
+# durable BFF sessions (FileSessionStore)
+.data/
+
 # macOS-specific files
 .DS_Store
 

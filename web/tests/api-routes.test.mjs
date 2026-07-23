@@ -103,15 +103,20 @@ describe("BFF HTTP helpers", () => {
     });
 
     setBffCookie(cookies, bffSid);
-    assert.deepEqual(requireOdooSession(cookies), {
-      bffSid,
-      odooSessionId: "odoo-session",
-      session: { uid: 2, name: "Admin", login: "admin" },
+    const resolved = requireOdooSession(cookies);
+    assert.equal(resolved.bffSid, bffSid);
+    assert.equal(resolved.odooSessionId, "odoo-session");
+    assert.deepEqual(resolved.session, {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
     });
+    assert.ok(resolved.expiresAt > Date.now());
     assert.equal(cookies.setCalls[0].name, BFF_COOKIE);
     assert.equal(cookies.setCalls[0].options.httpOnly, true);
     assert.equal(cookies.setCalls[0].options.path, "/");
     assert.equal(cookies.setCalls[0].options.sameSite, "lax");
+    assert.equal(cookies.setCalls[0].options.maxAge, 12 * 60 * 60);
 
     clearBffCookie(cookies);
     assert.deepEqual(cookies.deleteCalls, [{
