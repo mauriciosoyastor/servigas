@@ -1,10 +1,13 @@
-/* Dense operative lists — port of servigas_list.scss (OWL) */
+/* Dense operative lists — glass island on dark shell */
 
 .sg-record-table-wrap {
 	overflow: auto;
 	border: 1px solid var(--sg-glass-border);
 	border-radius: var(--sg-radius-card);
-	background: color-mix(in srgb, var(--sg-canvas) 92%, white);
+	background: var(--sg-glass-fill-strong);
+	backdrop-filter: blur(var(--sg-glass-blur));
+	-webkit-backdrop-filter: blur(var(--sg-glass-blur));
+	box-shadow: var(--sg-glass-rim);
 }
 
 .sg-record-table {
@@ -12,20 +15,22 @@
 	border-collapse: collapse;
 	font-family: var(--sg-font-family);
 	font-size: 0.875rem;
-	color: var(--sg-text-on-light);
+	color: var(--sg-text-on-dark);
 }
 
 .sg-record-table thead {
 	position: sticky;
 	top: 0;
 	z-index: 1;
-	background: var(--sg-canvas);
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 88%, transparent);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
 }
 
 .sg-record-table th {
 	padding: 0.7rem 0.9rem;
-	border-bottom: 2px solid color-mix(in srgb, var(--sg-flame-deep) 15%, transparent);
-	color: color-mix(in srgb, var(--sg-text-on-light) 72%, transparent);
+	border-bottom: 2px solid color-mix(in srgb, var(--sg-flame-deep) 35%, transparent);
+	color: var(--sg-text-muted-dark);
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	text-align: left;
@@ -34,20 +39,24 @@
 
 .sg-record-table td {
 	padding: 0.45rem 0.9rem;
-	border-bottom: 1px solid color-mix(in srgb, var(--sg-text-on-light) 8%, transparent);
+	border-bottom: 1px solid color-mix(in srgb, var(--sg-text-on-dark) 10%, transparent);
 	vertical-align: middle;
 }
 
+.sg-record-table tbody tr:nth-child(even) {
+	background: color-mix(in srgb, var(--sg-text-on-dark) 4%, transparent);
+}
+
 .sg-record-table tbody tr {
-	background: transparent;
+	transition: background 120ms ease;
 }
 
 .sg-record-table tbody tr:hover {
-	background: color-mix(in srgb, var(--sg-flame-orange) 6%, transparent);
+	background: color-mix(in srgb, var(--sg-flame-orange) 12%, transparent);
 }
 
 .sg-record-table td[data-col="default_code"] {
-	color: var(--sg-flame-deep);
+	color: var(--sg-flame-yellow);
 	font-weight: 500;
 }
 
@@ -81,11 +90,12 @@
 	height: 2.5rem;
 	border-radius: 0.55rem;
 	object-fit: cover;
-	background: color-mix(in srgb, var(--sg-bg-charcoal) 12%, white);
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 55%, transparent);
+	border: 1px solid var(--sg-glass-border);
 }
 
 .sg-record-thumb--empty {
-	border: 1px dashed color-mix(in srgb, var(--sg-text-on-light) 18%, transparent);
+	border: 1px dashed color-mix(in srgb, var(--sg-text-on-dark) 28%, transparent);
 }
 
 .sg-record-link,
@@ -95,7 +105,7 @@
 }
 
 .sg-record-link:hover {
-	color: var(--sg-flame-deep);
+	color: var(--sg-flame-yellow);
 	text-decoration: underline;
 }
 
@@ -119,6 +129,10 @@
 	color: var(--sg-text-on-dark);
 	background: var(--sg-glass-fill);
 	font: inherit;
+}
+
+.sg-list-search input::placeholder {
+	color: color-mix(in srgb, var(--sg-text-on-dark) 45%, transparent);
 }
 
 .sg-list-search-btn,
