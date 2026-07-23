@@ -652,8 +652,22 @@ export class OdooAdapter implements BackendClient {
       ["active", "=", true],
     ];
     if (q) {
-      domain.push("|", ["name", "ilike", q], ["default_code", "ilike", q]);
+      domain.push(
+        "|",
+        "|",
+        ["name", "ilike", q],
+        ["default_code", "ilike", q],
+        ["barcode", "ilike", q]
+      );
     }
+
+    const catalogFields = [
+      "display_name",
+      "default_code",
+      "barcode",
+      "list_price",
+      "qty_available",
+    ];
 
     let rows: Record<string, unknown>[];
     try {
@@ -661,7 +675,7 @@ export class OdooAdapter implements BackendClient {
         odooSessionId,
         "product.product",
         [...domain, ["available_in_pos", "=", true]],
-        ["display_name", "default_code", "list_price"],
+        catalogFields,
         limit,
         0,
         "default_code asc"
@@ -672,7 +686,7 @@ export class OdooAdapter implements BackendClient {
         odooSessionId,
         "product.product",
         domain,
-        ["display_name", "default_code", "list_price"],
+        catalogFields,
         limit,
         0,
         "default_code asc"
@@ -710,7 +724,12 @@ export class OdooAdapter implements BackendClient {
             row.default_code === false || row.default_code == null
               ? null
               : String(row.default_code),
+          barcode:
+            row.barcode === false || row.barcode == null
+              ? null
+              : String(row.barcode),
           list_price: Number(row.list_price) || 0,
+          qty_available: Number(row.qty_available) || 0,
           image_url: mediaPath("product.product", id, "image_128"),
         };
       }),
