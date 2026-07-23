@@ -17,7 +17,7 @@ const { listKey, recordId, fields, apiPath } = Astro.props;
 
 <section class="sg-record-edit sg-glass" data-record-edit data-list-key={listKey}>
 	<strong>Editar</strong>
-	<p>Cambios allowlisted: se guardan en Odoo vía BFF.</p>
+	<p>Los cambios se guardan al tocar Guardar.</p>
 	<form class="sg-record-edit-form" data-record-edit-form>
 		<input type="hidden" name="id" value={String(recordId)} />
 		{fields.map((field) => (

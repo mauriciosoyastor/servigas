@@ -7,16 +7,16 @@ import {
 } from "../src/lib/shell/record-actions.ts";
 
 describe("record-actions allowlist", () => {
-  it("allows confirming quotations and RFQ", () => {
+  it("allows confirming quotations and solicitudes", () => {
     const quote = getRecordActionDef("sales/quotations");
     assert.ok(quote);
     assert.equal(quote.model, "sale.order");
     assert.equal(quote.method, "action_confirm");
     assert.equal(canConfirmRecord("sales/quotations"), true);
-    const rfq = getRecordActionDef("purchase/rfq");
+    const rfq = getRecordActionDef("purchase/solicitudes");
     assert.ok(rfq);
     assert.equal(rfq.method, "button_confirm");
-    assert.equal(canConfirmRecord("purchase/rfq"), true);
+    assert.equal(canConfirmRecord("purchase/solicitudes"), true);
   });
 
   it("allows validating inventory transfers", () => {
@@ -40,6 +40,6 @@ describe("record-actions allowlist", () => {
     assert.equal(isConfirmableState("sales/quotations", "draft"), true);
     assert.equal(isConfirmableState("sales/quotations", "sent"), true);
     assert.equal(isConfirmableState("sales/quotations", "sale"), false);
-    assert.equal(isConfirmableState("purchase/rfq-draft", "sent"), false);
+    assert.equal(isConfirmableState("purchase/solicitudes-borrador", "sent"), false);
   });
 });

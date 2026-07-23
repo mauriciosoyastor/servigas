@@ -2,7 +2,7 @@
  * Allowlisted record actions (confirm, etc.) — no free-form method names from browser.
  */
 
-import { getRecordListDef } from "./record-lists.ts";
+import { getRecordListDef, resolveRecordListKey } from "./record-lists.ts";
 
 export type RecordActionDef = {
   listKey: string;
@@ -17,15 +17,15 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       method: "action_confirm",
       confirmableStates: ["draft", "sent"],
     },
-    "purchase/rfq": {
+    "purchase/solicitudes": {
       method: "button_confirm",
       confirmableStates: ["draft", "sent"],
     },
-    "purchase/rfq-draft": {
+    "purchase/solicitudes-borrador": {
       method: "button_confirm",
       confirmableStates: ["draft"],
     },
-    "purchase/rfq-sent": {
+    "purchase/solicitudes-enviadas": {
       method: "button_confirm",
       confirmableStates: ["sent"],
     },
@@ -35,13 +35,18 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
     },
   };
 
+function canonicalActionKey(listKey: string): string {
+  return resolveRecordListKey(listKey) || listKey;
+}
+
 export function getRecordActionDef(listKey: string): RecordActionDef | null {
-  const cfg = ACTIONS[listKey];
+  const key = canonicalActionKey(listKey);
+  const cfg = ACTIONS[key];
   if (!cfg) return null;
-  const list = getRecordListDef(listKey);
+  const list = getRecordListDef(key);
   if (!list) return null;
   return {
-    listKey,
+    listKey: key,
     model: list.model,
     method: cfg.method,
     confirmableStates: [...cfg.confirmableStates],

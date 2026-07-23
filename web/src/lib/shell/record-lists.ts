@@ -12,7 +12,7 @@ export type RecordListKey =
   | "inventory/no-price"
   | "inventory/transfers"
   | "inventory/transfers-all"
-  | "inventory/quants"
+  | "inventory/existencias"
   | "inventory/orderpoints"
   | "inventory/locations"
   | "inventory/warehouses"
@@ -22,7 +22,7 @@ export type RecordListKey =
   | "sales/quotations"
   | "sales/to-invoice"
   | "sales/upselling"
-  | "sales/pos-orders"
+  | "sales/ventas-caja"
   | "sales/customers"
   | "sales/customers-with-orders"
   | "sales/teams"
@@ -33,9 +33,9 @@ export type RecordListKey =
   | "sales/by-customer"
   | "sales/by-salesperson"
   | "purchase/orders"
-  | "purchase/rfq"
-  | "purchase/rfq-draft"
-  | "purchase/rfq-sent"
+  | "purchase/solicitudes"
+  | "purchase/solicitudes-borrador"
+  | "purchase/solicitudes-enviadas"
   | "purchase/to-approve"
   | "purchase/to-receive"
   | "purchase/partial"
@@ -165,7 +165,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "inventory/products",
     path: "/lists/inventory/products",
     title: "Productos",
-    hint: "Plantillas activas — buscá por nombre, código o barras",
+    hint: "Productos activos — buscá por nombre, código o barras",
     model: "product.template",
     domain: [["active", "=", true]],
     fields: [
@@ -188,7 +188,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/variants": {
     key: "inventory/variants",
     path: "/lists/inventory/variants",
-    title: "Variantes SKU",
+    title: "Variantes",
     hint: "Referencias de inventario — nombre, código o barras",
     model: "product.product",
     domain: [["active", "=", true]],
@@ -238,7 +238,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/stockables": {
     key: "inventory/stockables",
     path: "/lists/inventory/stockables",
-    title: "Stock almacenable",
+    title: "Productos con stock",
     hint: "Existencias — nombre, código o barras",
     model: "product.product",
     domain: [
@@ -265,7 +265,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "inventory/no-price",
     path: "/lists/inventory/no-price",
     title: "Sin precio de venta",
-    hint: "list_price en cero — nombre, código o barras",
+    hint: "Sin precio cargado — nombre, código o barras",
     model: "product.template",
     domain: [["list_price", "=", 0]],
     fields: ["name", "default_code", "barcode", "list_price", "active"],
@@ -329,10 +329,10 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name", "origin"],
     detailPath: "/lists/inventory/transfers/:id",
   },
-  "inventory/quants": {
-    key: "inventory/quants",
-    path: "/lists/inventory/quants",
-    title: "Existencias (quants)",
+  "inventory/existencias": {
+    key: "inventory/existencias",
+    path: "/lists/inventory/existencias",
+    title: "Existencias por ubicación",
     hint: "Cantidades por ubicación",
     model: "stock.quant",
     domain: [["quantity", "!=", 0]],
@@ -459,7 +459,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "sales/orders",
     path: "/lists/sales/orders",
     title: "Pedidos confirmados",
-    hint: "Pedidos de venta en estado sale",
+    hint: "Pedidos de venta confirmados",
     model: "sale.order",
     domain: [["state", "=", "sale"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -506,8 +506,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/upselling": {
     key: "sales/upselling",
     path: "/lists/sales/upselling",
-    title: "Oportunidades upsell",
-    hint: "Pedidos con upselling pendiente",
+    title: "Pedidos con venta pendiente",
+    hint: "Pedidos con venta pendiente de facturar",
     model: "sale.order",
     domain: [["invoice_status", "=", "upselling"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -519,11 +519,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name"],
     detailPath: "/lists/sales/orders/:id",
   },
-  "sales/pos-orders": {
-    key: "sales/pos-orders",
-    path: "/lists/sales/pos-orders",
-    title: "Pedidos POS",
-    hint: "Historial de mostrador",
+  "sales/ventas-caja": {
+    key: "sales/ventas-caja",
+    path: "/lists/sales/ventas-caja",
+    title: "Ventas de caja",
+    hint: "Ventas registradas en caja",
     model: "pos.order",
     domain: [],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -533,13 +533,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hubBack: "/hubs/sales",
     railApp: "sales",
     searchFields: ["name"],
-    detailPath: "/lists/sales/pos-orders/:id",
+    detailPath: "/lists/sales/ventas-caja/:id",
   },
   "sales/customers": {
     key: "sales/customers",
     path: "/lists/sales/customers",
     title: "Clientes",
-    hint: "Contactos con rango de cliente",
+    hint: "Agenda de clientes",
     model: "res.partner",
     domain: [["customer_rank", ">", 0]],
     fields: ["name", "vat", "email", "phone", "street", "city"],
@@ -595,7 +595,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     path: "/lists/sales/tags",
     detailPath: "/lists/sales/tags/:id",
     title: "Etiquetas de venta",
-    hint: "Tags CRM para oportunidades",
+    hint: "Etiquetas para ventas",
     model: "crm.tag",
     domain: [],
     fields: ["name", "color"],
@@ -741,11 +741,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name"],
     detailPath: "/lists/purchase/orders/:id",
   },
-  "purchase/rfq": {
-    key: "purchase/rfq",
-    path: "/lists/purchase/rfq",
-    title: "Solicitudes abiertas",
-    hint: "RFQ en borrador o enviadas",
+  "purchase/solicitudes": {
+    key: "purchase/solicitudes",
+    path: "/lists/purchase/solicitudes",
+    title: "Pedidos a proveedor abiertos",
+    hint: "Borradores y enviados a proveedores",
     model: "purchase.order",
     domain: [["state", "in", ["draft", "sent"]]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -757,11 +757,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name"],
     detailPath: "/lists/purchase/orders/:id",
   },
-  "purchase/rfq-draft": {
-    key: "purchase/rfq-draft",
-    path: "/lists/purchase/rfq-draft",
-    title: "Borradores RFQ",
-    hint: "Solicitudes en borrador",
+  "purchase/solicitudes-borrador": {
+    key: "purchase/solicitudes-borrador",
+    path: "/lists/purchase/solicitudes-borrador",
+    title: "Pedidos a proveedor (borrador)",
+    hint: "Todavía no enviados al proveedor",
     model: "purchase.order",
     domain: [["state", "=", "draft"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -773,11 +773,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name"],
     detailPath: "/lists/purchase/orders/:id",
   },
-  "purchase/rfq-sent": {
-    key: "purchase/rfq-sent",
-    path: "/lists/purchase/rfq-sent",
-    title: "RFQ enviadas",
-    hint: "Solicitudes enviadas a proveedores",
+  "purchase/solicitudes-enviadas": {
+    key: "purchase/solicitudes-enviadas",
+    path: "/lists/purchase/solicitudes-enviadas",
+    title: "Pedidos a proveedor (enviados)",
+    hint: "Ya enviados, a la espera de respuesta",
     model: "purchase.order",
     domain: [["state", "=", "sent"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -793,7 +793,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/to-approve",
     path: "/lists/purchase/to-approve",
     title: "Por aprobar",
-    hint: "RFQ pendientes de aprobación",
+    hint: "Pedidos a proveedor pendientes de aprobación",
     model: "purchase.order",
     domain: [["state", "=", "to approve"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -885,7 +885,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/vendors",
     path: "/lists/purchase/vendors",
     title: "Proveedores",
-    hint: "Contactos con rango de proveedor",
+    hint: "Agenda de proveedores",
     model: "res.partner",
     domain: [["supplier_rank", ">", 0]],
     fields: ["name", "vat", "email", "phone", "street", "city"],
@@ -928,7 +928,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/portals",
     path: "/lists/purchase/portals",
     title: "Portales proveedores",
-    hint: "Integraciones de sync manual",
+    hint: "Carga manual desde portales",
     model: "servigas.integration",
     domain: [
       ["integration_type", "=", "supplier_portal"],
@@ -1381,11 +1381,27 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
 const MEDIA_MODELS = new Set(["product.template", "product.product"]);
 const MEDIA_FIELDS = new Set(["image_128", "image_256"]);
 
-export function getRecordListDef(key: string): RecordListDef | null {
-  if (key in LISTS) return LISTS[key as RecordListKey];
-  // Pretty URL alias: /lists/integrations → integrations/all
-  if (key === "integrations") return LISTS["integrations/all"];
+/** Old list keys still accepted (API / bookmarks); resolve to canonical. */
+export const LIST_KEY_ALIASES: Record<string, RecordListKey> = {
+  "inventory/quants": "inventory/existencias",
+  "sales/pos-orders": "sales/ventas-caja",
+  "purchase/rfq": "purchase/solicitudes",
+  "purchase/rfq-draft": "purchase/solicitudes-borrador",
+  "purchase/rfq-sent": "purchase/solicitudes-enviadas",
+  integrations: "integrations/all",
+};
+
+export function resolveRecordListKey(key: string): RecordListKey | null {
+  if (key in LISTS) return key as RecordListKey;
+  const aliased = LIST_KEY_ALIASES[key];
+  if (aliased && aliased in LISTS) return aliased;
   return null;
+}
+
+export function getRecordListDef(key: string): RecordListDef | null {
+  const resolved = resolveRecordListKey(key);
+  if (!resolved) return null;
+  return LISTS[resolved];
 }
 
 export function listRecordListKeys(): RecordListKey[] {
@@ -1497,7 +1513,7 @@ const LABEL_RULES: LabelRule[] = [
   {
     model: "stock.quant",
     patterns: [/quant/i, /existencia/i],
-    path: "/lists/inventory/quants",
+    path: "/lists/inventory/existencias",
   },
   {
     model: "stock.warehouse.orderpoint",
@@ -1542,7 +1558,7 @@ const LABEL_RULES: LabelRule[] = [
   {
     model: "pos.order",
     patterns: [/pos/i, /mostrador/i],
-    path: "/lists/sales/pos-orders",
+    path: "/lists/sales/ventas-caja",
   },
   {
     model: "res.partner",
@@ -1582,12 +1598,12 @@ const LABEL_RULES: LabelRule[] = [
   {
     model: "purchase.order",
     patterns: [/borrador.*rfq/i, /rfq.*borrador/i],
-    path: "/lists/purchase/rfq-draft",
+    path: "/lists/purchase/solicitudes-borrador",
   },
   {
     model: "purchase.order",
     patterns: [/rfq enviada/i, /enviada/i],
-    path: "/lists/purchase/rfq-sent",
+    path: "/lists/purchase/solicitudes-enviadas",
   },
   {
     model: "purchase.order",
@@ -1607,7 +1623,7 @@ const LABEL_RULES: LabelRule[] = [
   {
     model: "purchase.order",
     patterns: [/solicitud/i, /rfq/i, /cotizaci.n/i],
-    path: "/lists/purchase/rfq",
+    path: "/lists/purchase/solicitudes",
   },
   {
     model: "purchase.order",
@@ -1794,7 +1810,7 @@ const ROUTE_RULES: RouteRule[] = [
   },
   {
     model: "stock.quant",
-    path: "/lists/inventory/quants",
+    path: "/lists/inventory/existencias",
   },
   {
     model: "stock.warehouse.orderpoint",
@@ -1842,7 +1858,7 @@ const ROUTE_RULES: RouteRule[] = [
   },
   {
     model: "pos.order",
-    path: "/lists/sales/pos-orders",
+    path: "/lists/sales/ventas-caja",
   },
   {
     model: "res.partner",
@@ -1897,17 +1913,17 @@ const ROUTE_RULES: RouteRule[] = [
   },
   {
     model: "purchase.order",
-    path: "/lists/purchase/rfq-draft",
+    path: "/lists/purchase/solicitudes-borrador",
     match: (d) => domainHas(d, '"draft"') && !domainHas(d, '"state","in"'),
   },
   {
     model: "purchase.order",
-    path: "/lists/purchase/rfq-sent",
+    path: "/lists/purchase/solicitudes-enviadas",
     match: (d) => domainHas(d, '"sent"') && !domainHas(d, '"state","in"'),
   },
   {
     model: "purchase.order",
-    path: "/lists/purchase/rfq",
+    path: "/lists/purchase/solicitudes",
     match: (d) =>
       domainHas(d, "draft") ||
       domainHas(d, "sent") ||

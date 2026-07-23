@@ -298,7 +298,10 @@ describe("BFF API routes", () => {
     });
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), {
-      error: { code: "validation_error", message: "Datos inválidos" },
+      error: {
+        code: "validation_error",
+        message: "Revisá los datos e intentá de nuevo",
+      },
     });
   });
 
@@ -321,7 +324,10 @@ describe("BFF API routes", () => {
     });
     assert.equal(response.status, 400);
     assert.deepEqual(await response.json(), {
-      error: { code: "validation_error", message: "Datos inválidos" },
+      error: {
+        code: "validation_error",
+        message: "Revisá los datos e intentá de nuevo",
+      },
     });
     sessionStore.destroy(bffSid);
   });

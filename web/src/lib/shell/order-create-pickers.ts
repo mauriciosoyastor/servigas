@@ -1,5 +1,5 @@
 /**
- * Helpers for searchable partner/product pickers on quotation & RFQ create.
+ * Helpers for searchable partner/product pickers on cotización / pedido a proveedor.
  */
 
 const PICKER_LIST_KEYS = new Set([

@@ -41,7 +41,7 @@ try {
 				<h1>Caja</h1>
 			</div>
 			<div class="sg-pos-heading-actions">
-				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/pos-orders">Historial POS</a>
+				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas de caja</a>
 				<a class="sg-pos-link sg-focus-ring" href="/">Inicio</a>
 			</div>
 		</header>
@@ -135,7 +135,7 @@ try {
 					>
 						<section class="sg-pos-numpad" data-pos-numpad aria-label="Teclado">
 							<div class="sg-pos-numpad-modes" role="group" aria-label="Modo">
-								<button type="button" class="sg-focus-ring" data-np-mode="qty">Qty</button>
+								<button type="button" class="sg-focus-ring" data-np-mode="qty">Cant.</button>
 								<button type="button" class="sg-focus-ring" data-np-mode="price">Precio</button>
 								<button
 									type="button"
@@ -457,7 +457,7 @@ try {
 					: '';
 			receiptMetaEl.textContent = `Pago: ${pay}${customer}${taxNote}`;
 			receiptTotalEl.textContent = money(Number(payload.amountTotal) || 0);
-			receiptDetailEl.href = payload.detailPath || '/lists/sales/pos-orders';
+			receiptDetailEl.href = payload.detailPath || '/lists/sales/ventas-caja';
 			receiptEl.hidden = false;
 		};
 

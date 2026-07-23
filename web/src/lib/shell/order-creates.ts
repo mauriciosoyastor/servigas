@@ -1,6 +1,8 @@
 /**
- * Allowlisted order creates (quotation / RFQ), multi-line.
+ * Allowlisted order creates (cotización / pedido a proveedor), multi-line.
  */
+
+import { resolveRecordListKey } from "./record-lists.ts";
 
 export type OrderCreateDef = {
   listKey: string;
@@ -16,8 +18,8 @@ const ORDER_CREATES: Record<string, OrderCreateDef> = {
     partnerRankField: "customer_rank",
     lineQtyField: "product_uom_qty",
   },
-  "purchase/rfq": {
-    listKey: "purchase/rfq",
+  "purchase/solicitudes": {
+    listKey: "purchase/solicitudes",
     model: "purchase.order",
     partnerRankField: "supplier_rank",
     lineQtyField: "product_qty",
@@ -36,8 +38,12 @@ export type OrderCreateValues = {
   lines: OrderCreateLine[];
 };
 
+function canonicalOrderKey(listKey: string): string {
+  return resolveRecordListKey(listKey) || listKey;
+}
+
 export function getOrderCreateDef(listKey: string): OrderCreateDef | null {
-  return ORDER_CREATES[listKey] || null;
+  return ORDER_CREATES[canonicalOrderKey(listKey)] || null;
 }
 
 export function canCreateOrder(listKey: string): boolean {

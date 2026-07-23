@@ -6,7 +6,10 @@ import { BffError } from '../../lib/bff/errors.ts';
 import { getBackend } from '../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
 import type { RecordListPayload } from '../../lib/bff/types.ts';
-import { getRecordListDef } from '../../lib/shell/record-lists.ts';
+import {
+	getRecordListDef,
+	resolveRecordListKey,
+} from '../../lib/shell/record-lists.ts';
 import { canCreateRecord } from '../../lib/shell/record-writes.ts';
 
 const slugParts = Array.isArray(Astro.params.slug)
@@ -15,7 +18,13 @@ const slugParts = Array.isArray(Astro.params.slug)
 			.split('/')
 			.filter(Boolean);
 
-const listKey = slugParts.join('/');
+const rawListKey = slugParts.join('/');
+const resolvedKey = resolveRecordListKey(rawListKey);
+if (resolvedKey && resolvedKey !== rawListKey) {
+	return Astro.redirect(`/lists/${resolvedKey}${Astro.url.search}`);
+}
+
+const listKey = resolvedKey || rawListKey;
 const def = getRecordListDef(listKey);
 const createPath = canCreateRecord(listKey) ? `${def?.path}/new` : null;
 const createLabel =
@@ -27,8 +36,8 @@ const createLabel =
 				? 'Nuevo producto'
 				: listKey === 'sales/quotations'
 					? 'Nueva cotización'
-					: listKey === 'purchase/rfq'
-						? 'Nueva RFQ'
+					: listKey === 'purchase/solicitudes'
+						? 'Nuevo pedido a proveedor'
 						: 'Nuevo';
 
 let userName = '';
@@ -79,7 +88,7 @@ if (!def) {
 					{createPath ? (
 						<a class="sg-list-create sg-focus-ring" href={createPath}>{createLabel}</a>
 					) : null}
-					<a class="sg-list-back sg-focus-ring" href={def.hubBack}>← Volver al hub</a>
+					<a class="sg-list-back sg-focus-ring" href={def.hubBack}>← Volver</a>
 				</div>
 			</header>
 

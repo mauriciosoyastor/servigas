@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildSearchDomain,
   getRecordListDef,
+  resolveRecordListKey,
   resolveRecordListPath,
 } from "../src/lib/shell/record-lists.ts";
 
@@ -24,6 +25,30 @@ describe("record-lists allowlist", () => {
     assert.ok(def);
     assert.equal(def.key, "integrations/all");
     assert.equal(def.path, "/lists/integrations");
+  });
+
+  it("aliases legacy list keys to mostrador paths", () => {
+    assert.equal(resolveRecordListKey("purchase/rfq"), "purchase/solicitudes");
+    assert.equal(
+      resolveRecordListKey("sales/pos-orders"),
+      "sales/ventas-caja"
+    );
+    assert.equal(
+      resolveRecordListKey("inventory/quants"),
+      "inventory/existencias"
+    );
+    assert.equal(
+      getRecordListDef("purchase/rfq")?.path,
+      "/lists/purchase/solicitudes"
+    );
+    assert.equal(
+      getRecordListDef("sales/pos-orders")?.title,
+      "Ventas de caja"
+    );
+    assert.equal(
+      getRecordListDef("inventory/quants")?.title,
+      "Existencias por ubicación"
+    );
   });
 
   it("maps product.template actions to products", () => {
@@ -337,8 +362,8 @@ describe("record-lists allowlist", () => {
       "/lists/sales/quotations/:id"
     );
     assert.equal(
-      getRecordListDef("sales/pos-orders")?.detailPath,
-      "/lists/sales/pos-orders/:id"
+      getRecordListDef("sales/ventas-caja")?.detailPath,
+      "/lists/sales/ventas-caja/:id"
     );
     assert.equal(
       getRecordListDef("purchase/orders")?.detailPath,
@@ -388,13 +413,13 @@ describe("record-lists allowlist", () => {
     );
   });
 
-  it("exposes detail paths for RFQ, credit notes, drafts and variants", () => {
+  it("exposes detail paths for solicitudes, credit notes, drafts and variants", () => {
     assert.equal(
-      getRecordListDef("purchase/rfq")?.detailPath,
+      getRecordListDef("purchase/solicitudes")?.detailPath,
       "/lists/purchase/orders/:id"
     );
     assert.equal(
-      getRecordListDef("purchase/rfq-draft")?.detailPath,
+      getRecordListDef("purchase/solicitudes-borrador")?.detailPath,
       "/lists/purchase/orders/:id"
     );
     assert.equal(

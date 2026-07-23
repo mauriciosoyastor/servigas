@@ -5,15 +5,27 @@
  */
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
-import { getRecordListDef } from '../../../../lib/shell/record-lists.ts';
+import {
+	getRecordListDef,
+	resolveRecordListKey,
+} from '../../../../lib/shell/record-lists.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
 const app = String(Astro.params.app || '');
 const list = String(Astro.params.list || '');
-const listKey = `${app}/${list}`;
-const def = getRecordListDef(listKey);
+const rawListKey = `${app}/${list}`;
+const resolvedKey = resolveRecordListKey(rawListKey);
+if (resolvedKey && resolvedKey !== rawListKey) {
+	return Astro.redirect(
+		`/lists/${resolvedKey}/${Astro.params.id || ''}${Astro.url.search}`
+	);
+}
 
-if (!def?.detailPath || !def.detailPath.includes(`/${list}/:id`)) {
+const listKey = resolvedKey || rawListKey;
+const def = getRecordListDef(listKey);
+const listSegment = listKey.split('/')[1] || list;
+
+if (!def?.detailPath || !def.detailPath.includes(`/${listSegment}/:id`)) {
 	return Astro.redirect(def?.path || '/');
 }
 

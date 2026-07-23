@@ -36,6 +36,8 @@ describe("shell UI contracts", () => {
     assert.match(tile, /data-kpi|sg-tile-kpi/);
     assert.match(note, /Próximamente/);
     assert.match(note, /data-coming-soon-detail/);
+    assert.match(note, /todavía no está disponible/);
+    assert.doesNotMatch(note, /camino a corte|pantalla Astro/);
     assert.match(table, /sg-record-table/);
     assert.match(table, /sg-record-thumb/);
   });
@@ -58,7 +60,7 @@ describe("shell UI contracts", () => {
     assert.match(index, /sg-ops-strip/);
     assert.match(index, /href="\/pos"/);
     assert.match(index, /quotations\/new/);
-    assert.match(index, /rfq\/new/);
+    assert.match(index, /solicitudes\/new/);
     assert.match(index, /data-coming-soon-detail/);
   });
 
@@ -114,7 +116,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /getPosCatalog\(/);
     assert.match(page, /data-pos-caja/);
     assert.match(page, /\/api\/pos\/checkout/);
-    assert.match(page, /\/lists\/sales\/pos-orders/);
+    assert.match(page, /\/lists\/sales\/ventas-caja/);
     assert.match(page, /addToCart|cartTotal/);
     assert.match(page, /data-pos-pay-method|paymentMethods/);
     assert.match(page, /data-pos-numpad|data-np-mode/);
@@ -214,7 +216,7 @@ describe("shell UI contracts", () => {
     assert.match(productNew, /inventory\/products/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
-    assert.match(po, /Confirmar OC|purchase\/rfq/);
+    assert.match(po, /Confirmar OC|purchase\/solicitudes/);
   });
 
   it("renders quotation create page with searchable pickers", async () => {
@@ -234,12 +236,12 @@ describe("shell UI contracts", () => {
     assert.doesNotMatch(form, /<select/);
   });
 
-  it("renders RFQ create page with searchable pickers", async () => {
-    const page = await source("pages/lists/purchase/rfq/new.astro");
+  it("renders purchase order create page with searchable pickers", async () => {
+    const page = await source("pages/lists/purchase/solicitudes/new.astro");
     assert.match(page, /OrderCreateForm/);
-    assert.match(page, /purchase\/rfq/);
+    assert.match(page, /purchase\/solicitudes/);
     assert.match(page, /partnerListKey=["']purchase\/vendors["']/);
-    assert.match(page, /Proveedor|Nueva RFQ/);
+    assert.match(page, /Proveedor|Nuevo pedido a proveedor/);
   });
 
   it("does not keep option B proxy/work surfaces", async () => {

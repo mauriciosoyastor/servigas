@@ -1171,7 +1171,7 @@ export class OdooAdapter implements BackendClient {
     return {
       orderId,
       orderName: String(order?.name || `POS/${orderId}`),
-      detailPath: `/lists/sales/pos-orders/${orderId}`,
+      detailPath: `/lists/sales/ventas-caja/${orderId}`,
       channel: "pos.order",
       paymentMethodId,
       paymentMethodName: String(cash?.name || "Pago"),

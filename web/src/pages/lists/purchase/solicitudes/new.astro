@@ -14,19 +14,19 @@ try {
 }
 ---
 
-<ShellLayout title="Nueva RFQ | Servigas" active="purchase" userName={userName}>
+<ShellLayout title="Nuevo pedido a proveedor | Servigas" active="purchase" userName={userName}>
 	<main class="sg-create-page">
 		<header>
 			<p>Compras</p>
-			<h1>Nueva RFQ</h1>
+			<h1>Nuevo pedido a proveedor</h1>
 		</header>
 		<OrderCreateForm
-			apiPath="/api/records/purchase/rfq"
-			listPath="/lists/purchase/rfq"
+			apiPath="/api/records/purchase/solicitudes"
+			listPath="/lists/purchase/solicitudes"
 			partnerListKey="purchase/vendors"
 			productListKey="inventory/variants"
-			title="Alta de solicitud de compra"
-			hint="Buscá proveedor y agregá líneas (qty, precio, % desc.). Queda en borrador para confirmar."
+			title="Pedido a proveedor"
+			hint="Buscá proveedor y agregá líneas (cant., precio, % desc.). Queda en borrador para confirmar."
 			partnerLabel="Proveedor"
 			partnerPlaceholder="Buscar proveedor…"
 		/>
