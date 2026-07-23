@@ -63,82 +63,151 @@ try {
 						<button class="sg-focus-ring" type="submit">Buscar</button>
 					</form>
 					<p class="sg-pos-meta">{catalog?.total ?? 0} productos</p>
-					<div class="sg-pos-grid" data-pos-grid>
-						{(catalog?.products || []).map((product) => (
-							<button
-								class="sg-pos-product sg-focus-ring"
-								type="button"
-								data-pos-add
-								data-id={product.id}
-								data-name={product.name}
-								data-price={product.list_price}
-							>
-								{product.image_url ? (
-									<img src={product.image_url} alt="" loading="lazy" />
-								) : (
-									<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
-								)}
-								<span class="sg-pos-product-name">{product.name}</span>
-								<span class="sg-pos-product-code">{product.default_code || '—'}</span>
-								<span class="sg-pos-product-price">
-									{product.list_price.toLocaleString('es-AR', {
-										style: 'currency',
-										currency: 'ARS',
-										maximumFractionDigits: 0,
-									})}
-								</span>
-							</button>
-						))}
+					<div class="sg-pos-scroll sg-pos-catalog-scroll" tabindex="0" aria-label="Lista de productos">
+						<div class="sg-pos-grid" data-pos-grid>
+							{(catalog?.products || []).map((product) => (
+								<button
+									class="sg-pos-product sg-focus-ring"
+									type="button"
+									data-pos-add
+									data-id={product.id}
+									data-name={product.name}
+									data-price={product.list_price}
+									data-image={product.image_url || ''}
+								>
+									{product.image_url ? (
+										<img src={product.image_url} alt="" loading="lazy" />
+									) : (
+										<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
+									)}
+									<span class="sg-pos-product-name">{product.name}</span>
+									<span class="sg-pos-product-code">{product.default_code || '—'}</span>
+									<span class="sg-pos-product-price">
+										{product.list_price.toLocaleString('es-AR', {
+											style: 'currency',
+											currency: 'ARS',
+											maximumFractionDigits: 0,
+										})}
+									</span>
+								</button>
+							))}
+						</div>
+						{(catalog?.products || []).length === 0 ? (
+							<p class="sg-pos-empty">No hay productos para mostrar.</p>
+						) : null}
 					</div>
-					{(catalog?.products || []).length === 0 ? (
-						<p class="sg-pos-empty">No hay productos para mostrar.</p>
-					) : null}
 				</section>
 
 				<aside class="sg-pos-cart sg-glass" aria-label="Ticket">
-					<strong>Ticket</strong>
-					<ul class="sg-pos-cart-lines" data-pos-lines></ul>
-					<p class="sg-pos-cart-empty" data-pos-empty>
-						Ticket vacío. Tocá un producto del catálogo para empezar.
-					</p>
-					<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
-						<legend>Pago</legend>
-						{(catalog?.paymentMethods || []).map((method, index) => (
-							<label>
-								<input
-									type="radio"
-									name="pos-pay"
-									value={method.id}
-									checked={index === 0}
-									data-pos-pay-method
-								/>
-								<span>{method.name}</span>
-							</label>
-						))}
-						{(catalog?.paymentMethods || []).length === 0 ? (
-							<p class="sg-pos-empty">Sin métodos de pago configurados.</p>
-						) : null}
-					</fieldset>
-					<div class="sg-pos-cart-total">
-						<span>Total</span>
-						<strong data-pos-total>$ 0</strong>
+					<div class="sg-pos-cart-ticket">
+						<strong>Ticket</strong>
+						<ul
+							class="sg-pos-scroll sg-pos-cart-lines"
+							data-pos-lines
+							tabindex="0"
+							aria-label="Líneas del ticket"
+						></ul>
+						<p class="sg-pos-cart-empty" data-pos-empty>
+							Ticket vacío. Tocá un producto del catálogo para empezar.
+						</p>
 					</div>
-					<button class="sg-pos-pay sg-focus-ring" type="button" data-pos-checkout disabled>
-						Registrar venta
-					</button>
-					<p class="sg-pos-cart-status" data-pos-status hidden></p>
-					<section class="sg-pos-receipt" data-pos-receipt hidden>
-						<strong>Venta registrada</strong>
-						<p data-pos-receipt-name></p>
-						<p data-pos-receipt-meta></p>
-						<p class="sg-pos-receipt-total" data-pos-receipt-total></p>
-						<div class="sg-pos-receipt-actions">
-							<button type="button" class="sg-focus-ring" data-pos-receipt-new>
-								Nueva venta
+					<div
+						class="sg-pos-scroll sg-pos-cart-ops"
+						tabindex="0"
+						aria-label="Teclado y cobro"
+					>
+						<section class="sg-pos-numpad" data-pos-numpad aria-label="Teclado">
+							<div class="sg-pos-numpad-modes" role="group" aria-label="Modo">
+								<button type="button" class="sg-focus-ring" data-np-mode="qty">Qty</button>
+								<button type="button" class="sg-focus-ring" data-np-mode="price">Precio</button>
+								<button
+									type="button"
+									class="sg-focus-ring"
+									data-np-mode="discount"
+									title="Descuento % de la línea seleccionada"
+								>
+									% línea
+								</button>
+								<button
+									type="button"
+									class="sg-focus-ring"
+									data-np-mode="order_discount"
+									title="Descuento % sobre el total del ticket"
+								>
+									Desc. total
+								</button>
+							</div>
+							<p class="sg-pos-numpad-hint" data-np-hint>Elegí una línea y un modo</p>
+							<p class="sg-pos-numpad-buffer" data-np-buffer aria-live="polite">—</p>
+							<p class="sg-pos-numpad-order" data-np-order-disc hidden></p>
+							<div class="sg-pos-numpad-keys" data-np-keys>
+								{['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
+									<button
+										type="button"
+										class="sg-focus-ring"
+										data-np-key={key === '⌫' ? 'back' : key}
+									>
+										{key}
+									</button>
+								))}
+							</div>
+							<button type="button" class="sg-pos-numpad-apply sg-focus-ring" data-np-apply>
+								Aplicar
 							</button>
-							<a class="sg-focus-ring" data-pos-receipt-detail href="#">Ver pedido</a>
+						</section>
+						<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
+							<legend>Pago</legend>
+							{(catalog?.paymentMethods || []).map((method, index) => (
+								<label>
+									<input
+										type="radio"
+										name="pos-pay"
+										value={method.id}
+										checked={index === 0}
+										data-pos-pay-method
+									/>
+									<span>{method.name}</span>
+								</label>
+							))}
+							{(catalog?.paymentMethods || []).length === 0 ? (
+								<p class="sg-pos-empty">Sin métodos de pago configurados.</p>
+							) : null}
+						</fieldset>
+						<div class="sg-pos-cart-totals">
+							<div class="sg-pos-cart-subrow" data-pos-order-disc-row hidden>
+								<span>Desc. total</span>
+								<strong data-pos-order-disc-value>0%</strong>
+							</div>
+							<div class="sg-pos-cart-total">
+								<span>Total</span>
+								<strong data-pos-total>$ 0</strong>
+							</div>
+							<button
+								type="button"
+								class="sg-pos-total-disc sg-focus-ring"
+								data-pos-order-disc
+								title="Descuento personalizable sobre el total del ticket"
+							>
+								Desc. al total…
+							</button>
 						</div>
-					</section>
+						<button class="sg-pos-pay sg-focus-ring" type="button" data-pos-checkout disabled>
+							Registrar venta
+						</button>
+						<p class="sg-pos-cart-status" data-pos-status hidden></p>
+						<section class="sg-pos-receipt" data-pos-receipt hidden>
+							<strong>Venta registrada</strong>
+							<p data-pos-receipt-name></p>
+							<p data-pos-receipt-meta></p>
+							<p class="sg-pos-receipt-total" data-pos-receipt-total></p>
+							<div class="sg-pos-receipt-actions">
+								<button type="button" class="sg-focus-ring" data-pos-receipt-new>
+									Nueva venta
+								</button>
+								<a class="sg-focus-ring" data-pos-receipt-detail href="#">Ver pedido</a>
+							</div>
+						</section>
+					</div>
 				</aside>
 			</div>
 		)}
@@ -149,16 +218,28 @@ try {
 	import {
 		addToCart,
 		cartTotal,
+		checkoutLinesFromCart,
 		emptyCart,
 		lineSubtotal,
 		removeFromCart,
 		setCartDiscount,
+		setCartPrice,
 		setCartQty,
+		setOrderDiscount,
 	} from '../lib/pos/cart.ts';
+	import {
+		bufferValue,
+		emptyNumpad,
+		pressBackspace,
+		pressDigit,
+		selectLine,
+		setNumpadMode,
+	} from '../lib/pos/numpad.ts';
 
 	const root = document.querySelector('[data-pos-caja]');
 	if (root) {
 		let cart = emptyCart();
+		let pad = emptyNumpad();
 		const linesEl = root.querySelector('[data-pos-lines]');
 		const emptyEl = root.querySelector('[data-pos-empty]');
 		const totalEl = root.querySelector('[data-pos-total]');
@@ -170,6 +251,11 @@ try {
 		const receiptTotalEl = root.querySelector('[data-pos-receipt-total]');
 		const receiptDetailEl = root.querySelector('[data-pos-receipt-detail]');
 		const receiptNewBtn = root.querySelector('[data-pos-receipt-new]');
+		const bufferEl = root.querySelector('[data-np-buffer]');
+		const orderDiscEl = root.querySelector('[data-np-order-disc]');
+		const hintEl = root.querySelector('[data-np-hint]');
+		const orderDiscRow = root.querySelector('[data-pos-order-disc-row]');
+		const orderDiscValueEl = root.querySelector('[data-pos-order-disc-value]');
 
 		const money = (value) =>
 			value.toLocaleString('es-AR', {
@@ -209,35 +295,141 @@ try {
 			receiptEl.hidden = false;
 		};
 
+		const beginDiscount = (mode, productId = null) => {
+			if (productId != null) {
+				pad = selectLine(pad, productId);
+			}
+			pad = setNumpadMode(pad, mode);
+			render();
+		};
+
+		const syncNumpadChrome = () => {
+			if (bufferEl) {
+				bufferEl.textContent = pad.buffer || '—';
+			}
+			root.querySelectorAll('[data-np-mode]').forEach((btn) => {
+				const mode = btn.getAttribute('data-np-mode');
+				btn.setAttribute('aria-pressed', mode === pad.mode ? 'true' : 'false');
+				btn.classList.toggle('is-active', mode === pad.mode);
+			});
+			const orderPct = Number(cart.orderDiscount) || 0;
+			if (orderDiscEl) {
+				orderDiscEl.hidden = orderPct <= 0;
+				orderDiscEl.textContent =
+					orderPct > 0 ? `Desc. total activo: ${orderPct}%` : '';
+			}
+			if (orderDiscRow && orderDiscValueEl) {
+				orderDiscRow.hidden = orderPct <= 0;
+				orderDiscValueEl.textContent = `−${orderPct}%`;
+			}
+			if (hintEl) {
+				if (pad.mode === 'qty') {
+					hintEl.textContent = pad.selectedProductId
+						? 'Cantidad: escribí y Aplicar'
+						: 'Seleccioná una línea del ticket';
+				} else if (pad.mode === 'price') {
+					hintEl.textContent = pad.selectedProductId
+						? 'Precio unitario: escribí y Aplicar'
+						: 'Seleccioná una línea del ticket';
+				} else if (pad.mode === 'discount') {
+					hintEl.textContent = pad.selectedProductId
+						? 'Desc. % de la línea: escribí (0–100) y Aplicar'
+						: 'Tocá % en una línea o seleccioná producto';
+				} else if (pad.mode === 'order_discount') {
+					hintEl.textContent =
+						'Desc. % del total del ticket: escribí (0–100) y Aplicar';
+				}
+			}
+		};
+
+		const applyNumpad = () => {
+			const value = bufferValue(pad);
+			if (value == null) return;
+			if (pad.mode === 'order_discount') {
+				cart = setOrderDiscount(cart, value);
+				pad = { ...pad, buffer: '' };
+				render();
+				return;
+			}
+			if (pad.selectedProductId == null) return;
+			const id = pad.selectedProductId;
+			if (pad.mode === 'qty') {
+				cart = setCartQty(cart, id, value);
+			} else if (pad.mode === 'price') {
+				cart = setCartPrice(cart, id, value);
+			} else if (pad.mode === 'discount') {
+				cart = setCartDiscount(cart, id, value);
+			}
+			pad = { ...pad, buffer: '' };
+			if (!cart.lines.some((line) => line.productId === id)) {
+				pad = selectLine(pad, cart.lines[0]?.productId ?? null);
+			}
+			render();
+		};
+
 		const render = () => {
 			if (!(linesEl && emptyEl && totalEl && checkoutBtn)) return;
+			if (
+				pad.selectedProductId != null &&
+				!cart.lines.some((line) => line.productId === pad.selectedProductId)
+			) {
+				pad = selectLine(pad, cart.lines[0]?.productId ?? null);
+			}
 			linesEl.innerHTML = '';
 			for (const line of cart.lines) {
 				const li = document.createElement('li');
+				const selected = pad.selectedProductId === line.productId;
+				li.classList.toggle('is-selected', selected);
+				li.setAttribute('data-line-id', String(line.productId));
 				li.innerHTML = `
-					<div>
-						<strong></strong>
-						<span></span>
-						<label class="sg-pos-discount">
-							<span>Desc. %</span>
-							<input type="number" min="0" max="100" step="1" data-disc />
-						</label>
-					</div>
-					<div class="sg-pos-qty">
-						<button type="button" data-dec aria-label="Menos">−</button>
-						<em></em>
-						<button type="button" data-inc aria-label="Más">+</button>
-						<button type="button" data-rm aria-label="Quitar">×</button>
+					<button type="button" class="sg-pos-line-select sg-focus-ring" data-select>
+						<span class="sg-pos-line-thumb" data-line-thumb aria-hidden="true"></span>
+						<span class="sg-pos-line-copy">
+							<strong></strong>
+							<span data-line-total></span>
+							<small></small>
+						</span>
+					</button>
+					<div class="sg-pos-line-actions">
+						<button type="button" class="sg-pos-line-disc" data-line-disc aria-label="Descuento de línea">
+							%
+						</button>
+						<div class="sg-pos-qty">
+							<button type="button" data-dec aria-label="Menos">−</button>
+							<em></em>
+							<button type="button" data-inc aria-label="Más">+</button>
+							<button type="button" data-rm aria-label="Quitar">×</button>
+						</div>
 					</div>
 				`;
 				li.querySelector('strong').textContent = line.name;
-				li.querySelector('span').textContent = money(lineSubtotal(line));
+				li.querySelector('[data-line-total]').textContent = money(lineSubtotal(line));
+				const meta = [];
+				meta.push(`${line.qty} × ${money(line.price)}`);
+				if (line.discount) meta.push(`−${line.discount}%`);
+				li.querySelector('small').textContent = meta.join(' · ');
 				li.querySelector('em').textContent = String(line.qty);
-				const discInput = li.querySelector('[data-disc]');
-				discInput.value = String(line.discount || 0);
-				discInput.addEventListener('change', () => {
-					cart = setCartDiscount(cart, line.productId, Number(discInput.value));
+				const discBtn = li.querySelector('[data-line-disc]');
+				if (line.discount) {
+					discBtn.textContent = `−${Math.round(line.discount)}%`;
+					discBtn.classList.add('has-disc');
+				}
+				const thumb = li.querySelector('[data-line-thumb]');
+				if (line.imageUrl) {
+					const img = document.createElement('img');
+					img.src = line.imageUrl;
+					img.alt = '';
+					img.loading = 'lazy';
+					thumb.appendChild(img);
+				} else {
+					thumb.classList.add('is-empty');
+				}
+				li.querySelector('[data-select]').addEventListener('click', () => {
+					pad = selectLine(pad, line.productId);
 					render();
+				});
+				discBtn.addEventListener('click', () => {
+					beginDiscount('discount', line.productId);
 				});
 				li.querySelector('[data-dec]').addEventListener('click', () => {
 					cart = setCartQty(cart, line.productId, line.qty - 1);
@@ -256,18 +448,58 @@ try {
 			emptyEl.hidden = cart.lines.length > 0;
 			totalEl.textContent = money(cartTotal(cart));
 			checkoutBtn.disabled = cart.lines.length === 0;
+			syncNumpadChrome();
 		};
 
 		root.querySelectorAll('[data-pos-add]').forEach((button) => {
 			button.addEventListener('click', () => {
+				const productId = Number(button.getAttribute('data-id'));
+				const imageUrl = button.getAttribute('data-image') || '';
 				cart = addToCart(cart, {
-					productId: Number(button.getAttribute('data-id')),
+					productId,
 					name: button.getAttribute('data-name') || 'Producto',
 					price: Number(button.getAttribute('data-price') || 0),
 					qty: 1,
+					imageUrl: imageUrl || undefined,
 				});
+				pad = selectLine(pad, productId);
 				render();
 			});
+		});
+
+		root.querySelectorAll('[data-np-mode]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const mode = btn.getAttribute('data-np-mode');
+				if (
+					mode === 'qty' ||
+					mode === 'price' ||
+					mode === 'discount' ||
+					mode === 'order_discount'
+				) {
+					pad = setNumpadMode(pad, mode);
+					syncNumpadChrome();
+				}
+			});
+		});
+
+		root.querySelector('[data-pos-order-disc]')?.addEventListener('click', () => {
+			beginDiscount('order_discount');
+		});
+
+		root.querySelectorAll('[data-np-key]').forEach((btn) => {
+			btn.addEventListener('click', () => {
+				const key = btn.getAttribute('data-np-key');
+				if (key === 'back') {
+					pad = pressBackspace(pad);
+				} else if (key) {
+					pad = pressDigit(pad, key);
+				}
+				syncNumpadChrome();
+			});
+		});
+
+		root.querySelector('[data-np-apply]')?.addEventListener('click', () => {
+			applyNumpad();
 		});
 
 		checkoutBtn?.addEventListener('click', async () => {
@@ -284,12 +516,7 @@ try {
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
 						paymentMethodId: selectedPaymentMethodId(),
-						lines: cart.lines.map((line) => ({
-							productId: line.productId,
-							qty: line.qty,
-							price: line.price,
-							discount: line.discount,
-						})),
+						lines: checkoutLinesFromCart(cart),
 					}),
 				});
 				const payload = await response.json().catch(() => ({}));
@@ -299,6 +526,7 @@ try {
 				statusEl.textContent = 'Listo';
 				statusEl.dataset.state = 'ok';
 				cart = emptyCart();
+				pad = emptyNumpad();
 				render();
 				showReceipt(payload);
 			} catch (error) {
@@ -316,6 +544,7 @@ try {
 				statusEl.textContent = '';
 			}
 			cart = emptyCart();
+			pad = emptyNumpad();
 			render();
 		});
 
@@ -337,13 +566,18 @@ try {
 	.sg-pos {
 		max-width: 92rem;
 		margin: 0 auto;
+		display: flex;
+		flex-direction: column;
+		min-height: 0;
+		height: calc(100dvh - 10.5rem);
 	}
 	.sg-pos-heading {
 		display: flex;
 		align-items: end;
 		justify-content: space-between;
 		gap: 1rem;
-		margin-bottom: 1.25rem;
+		margin-bottom: 1rem;
+		flex: 0 0 auto;
 		flex-wrap: wrap;
 	}
 	.sg-pos-heading p {
@@ -374,19 +608,45 @@ try {
 	}
 	.sg-pos-layout {
 		display: grid;
-		grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 0.9fr);
+		grid-template-columns: minmax(0, 1.6fr) minmax(0, 0.9fr);
 		gap: 1rem;
-		align-items: start;
+		align-items: stretch;
+		flex: 1 1 auto;
+		min-height: 0;
+	}
+	.sg-pos-scroll {
+		overflow-x: hidden;
+		overflow-y: auto;
+		overscroll-behavior: contain;
+		scrollbar-width: none;
+		-ms-overflow-style: none;
+		min-height: 0;
+	}
+	.sg-pos-scroll::-webkit-scrollbar {
+		width: 0;
+		height: 0;
+		display: none;
 	}
 	.sg-pos-catalog,
 	.sg-pos-cart {
 		border-radius: var(--sg-radius-card);
 		padding: 1rem;
+		min-width: 0;
+		min-height: 0;
+		max-height: 100%;
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		overflow: hidden;
+	}
+	.sg-pos-catalog-scroll {
+		flex: 1 1 auto;
 	}
 	.sg-pos-search {
 		display: flex;
 		gap: 0.5rem;
-		margin-bottom: 0.75rem;
+		margin-bottom: 0;
+		flex: 0 0 auto;
 	}
 	.sg-pos-search label {
 		flex: 1;
@@ -412,9 +672,10 @@ try {
 		cursor: pointer;
 	}
 	.sg-pos-meta {
-		margin: 0 0 0.75rem;
+		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.78rem;
+		flex: 0 0 auto;
 	}
 	.sg-pos-grid {
 		display: grid;
@@ -464,10 +725,19 @@ try {
 		font-weight: 700;
 	}
 	.sg-pos-cart {
-		position: sticky;
-		top: 1rem;
-		display: grid;
-		gap: 0.75rem;
+		position: static;
+	}
+	.sg-pos-cart-ticket {
+		display: flex;
+		flex-direction: column;
+		gap: 0.55rem;
+		flex: 1 1 42%;
+		min-height: 7rem;
+		min-width: 0;
+		overflow: hidden;
+	}
+	.sg-pos-cart-ticket > strong {
+		flex: 0 0 auto;
 	}
 	.sg-pos-cart-lines {
 		list-style: none;
@@ -475,55 +745,189 @@ try {
 		padding: 0;
 		display: grid;
 		gap: 0.65rem;
-		max-height: 50vh;
-		overflow: auto;
+		align-content: start;
+		flex: 1 1 auto;
+		min-width: 0;
 	}
-	.sg-pos-cart-lines li {
+	.sg-pos-cart-ops {
+		display: grid;
+		gap: 0.75rem;
+		align-content: start;
+		flex: 1 1 58%;
+		min-height: 11rem;
+		padding-top: 0.15rem;
+		border-top: 1px solid var(--sg-glass-border);
+	}
+	/* :global — líneas del ticket se renderizan en JS sin data-astro-cid */
+	.sg-pos-cart :global(.sg-pos-cart-lines li) {
 		display: flex;
 		justify-content: space-between;
-		gap: 0.75rem;
+		align-items: flex-start;
+		gap: 0.5rem;
+		min-width: 0;
+		max-width: 100%;
 		padding-bottom: 0.65rem;
 		border-bottom: 1px solid var(--sg-glass-border);
+		box-sizing: border-box;
 	}
-	.sg-pos-cart-lines strong {
+	.sg-pos-cart :global(.sg-pos-cart-lines li.is-selected) {
+		background: rgba(255, 255, 255, 0.06);
+		padding: 0.45rem 0.35rem 0.65rem;
+		border-radius: 0.65rem;
+	}
+	.sg-pos-cart :global(.sg-pos-line-select) {
+		flex: 1 1 auto;
+		min-width: 0;
+		max-width: 100%;
+		display: flex;
+		align-items: flex-start;
+		gap: 0.45rem;
+		border: 0;
+		padding: 0;
+		color: inherit;
+		background: transparent;
+		text-align: left;
+		cursor: pointer;
+	}
+	.sg-pos-cart :global(.sg-pos-line-thumb) {
+		flex: 0 0 1.85rem;
+		width: 1.85rem;
+		height: 1.85rem;
+		margin-top: 0.05rem;
+		border-radius: 0.35rem;
+		overflow: hidden;
+		background: rgba(255, 255, 255, 0.1);
+		border: 1px solid rgba(255, 255, 255, 0.12);
+	}
+	.sg-pos-cart :global(.sg-pos-line-thumb img) {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+	.sg-pos-cart :global(.sg-pos-line-thumb.is-empty) {
+		opacity: 0.35;
+	}
+	.sg-pos-cart :global(.sg-pos-line-copy) {
+		min-width: 0;
+		flex: 1 1 auto;
+		display: grid;
+		gap: 0.15rem;
+	}
+	.sg-pos-cart :global(.sg-pos-cart-lines strong) {
 		display: block;
 		font-size: 0.82rem;
 		line-height: 1.3;
+		overflow-wrap: anywhere;
+		word-break: break-word;
 	}
-	.sg-pos-cart-lines span {
+	.sg-pos-cart :global(.sg-pos-cart-lines [data-line-total]) {
 		color: var(--sg-text-muted-dark);
 		font-size: 0.75rem;
 	}
-	.sg-pos-qty {
+	.sg-pos-cart :global(.sg-pos-cart-lines small) {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.68rem;
+		overflow-wrap: anywhere;
+	}
+	.sg-pos-cart :global(.sg-pos-line-actions) {
+		display: flex;
+		flex-direction: column;
+		align-items: flex-end;
+		gap: 0.3rem;
+		flex: 0 0 auto;
+	}
+	.sg-pos-cart :global(.sg-pos-line-disc) {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.2rem 0.45rem;
+		min-width: 2.1rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font-size: 0.68rem;
+		font-weight: 700;
+		cursor: pointer;
+	}
+	.sg-pos-cart :global(.sg-pos-line-disc.has-disc) {
+		background: rgba(255, 255, 255, 0.12);
+	}
+	.sg-pos-cart :global(.sg-pos-qty) {
 		display: flex;
 		align-items: center;
-		gap: 0.3rem;
+		flex: 0 0 auto;
+		gap: 0.25rem;
 	}
-	.sg-pos-qty button {
-		width: 1.6rem;
-		height: 1.6rem;
+	.sg-pos-cart :global(.sg-pos-qty button) {
+		width: 1.5rem;
+		height: 1.5rem;
+		flex: 0 0 auto;
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 999px;
 		color: inherit;
 		background: rgba(0, 0, 0, 0.2);
 		cursor: pointer;
 	}
-	.sg-pos-discount {
-		display: flex;
-		align-items: center;
+	.sg-pos-cart :global(.sg-pos-qty em) {
+		min-width: 0.9rem;
+		text-align: center;
+		font-style: normal;
+		font-size: 0.8rem;
+	}
+	.sg-pos-numpad {
+		display: grid;
+		gap: 0.55rem;
+		padding-top: 0;
+		border-top: 0;
+	}
+	.sg-pos-numpad-modes {
+		display: grid;
+		grid-template-columns: repeat(2, minmax(0, 1fr));
 		gap: 0.35rem;
-		margin-top: 0.35rem;
+	}
+	.sg-pos-numpad-hint {
+		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.7rem;
+		line-height: 1.3;
 	}
-	.sg-pos-discount input {
-		width: 3.4rem;
+	.sg-pos-numpad-modes button,
+	.sg-pos-numpad-keys button,
+	.sg-pos-numpad-apply {
 		border: 1px solid var(--sg-glass-border);
-		border-radius: 0.45rem;
-		padding: 0.2rem 0.35rem;
+		border-radius: 0.65rem;
+		padding: 0.55rem 0.25rem;
 		color: var(--sg-text-on-dark);
-		background: rgba(0, 0, 0, 0.22);
-		font: inherit;
+		background: rgba(0, 0, 0, 0.2);
+		font-size: 0.72rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-pos-numpad-modes button.is-active {
+		background: rgba(255, 255, 255, 0.14);
+	}
+	.sg-pos-numpad-buffer {
+		margin: 0;
+		min-height: 1.4rem;
+		text-align: right;
+		font-size: 1.25rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+	.sg-pos-numpad-order {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+	}
+	.sg-pos-numpad-keys {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.35rem;
+	}
+	.sg-pos-numpad-apply {
+		width: 100%;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.65rem 1rem;
+		background: var(--sg-glass-fill);
 	}
 	.sg-pos-pay-methods {
 		margin: 0;
@@ -553,11 +957,33 @@ try {
 		color: var(--sg-text-muted-dark);
 		font-size: 0.85rem;
 	}
+	.sg-pos-cart-totals {
+		display: grid;
+		gap: 0.45rem;
+	}
+	.sg-pos-cart-subrow,
 	.sg-pos-cart-total {
 		display: flex;
 		justify-content: space-between;
 		align-items: baseline;
+	}
+	.sg-pos-cart-subrow {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.85rem;
+	}
+	.sg-pos-cart-total {
 		font-size: 1.1rem;
+	}
+	.sg-pos-total-disc {
+		justify-self: stretch;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.85rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.2);
+		font-size: 0.8rem;
+		font-weight: 650;
+		cursor: pointer;
 	}
 	.sg-pos-pay:disabled {
 		opacity: 0.45;
@@ -609,11 +1035,26 @@ try {
 		padding: 1.5rem;
 	}
 	@media (max-width: 900px) {
+		.sg-pos {
+			height: auto;
+			min-height: calc(100dvh - 12rem);
+		}
 		.sg-pos-layout {
 			grid-template-columns: 1fr;
+			height: auto;
+		}
+		.sg-pos-catalog {
+			max-height: 48vh;
 		}
 		.sg-pos-cart {
+			max-height: none;
 			position: static;
+		}
+		.sg-pos-cart-ticket {
+			max-height: 28vh;
+		}
+		.sg-pos-cart-ops {
+			max-height: 52vh;
 		}
 	}
 </style>
