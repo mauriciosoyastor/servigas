@@ -20,8 +20,14 @@ const items = [
 		aria-label="Servigas, inicio"
 		data-tour="rail-home"
 	>
-		<span class="sg-brand-mark" aria-hidden="true">S</span>
-		<span class="sg-brand-name">Servigas</span>
+		<img
+			class="sg-brand-logo"
+			src="/servigas-logo.png?v=1"
+			alt=""
+			width="72"
+			height="72"
+			decoding="async"
+		/>
 	</a>
 
 	<nav class="sg-rail-nav">
@@ -57,25 +63,14 @@ const items = [
 	.sg-brand {
 		display: grid;
 		justify-items: center;
-		gap: 0.35rem;
 		color: white;
 		text-decoration: none;
 	}
-	.sg-brand-mark {
-		display: grid;
-		width: 2.65rem;
-		height: 2.65rem;
-		place-items: center;
-		border-radius: 0.9rem;
-		background: var(--sg-flame-gradient);
-		box-shadow: 0 8px 28px rgba(230, 74, 25, 0.35);
-		font-size: 1.3rem;
-		font-weight: 700;
-	}
-	.sg-brand-name {
-		font-size: 0.62rem;
-		font-weight: 600;
-		letter-spacing: 0.02em;
+	.sg-brand-logo {
+		display: block;
+		width: 4.5rem;
+		height: auto;
+		object-fit: contain;
 	}
 	.sg-rail-nav {
 		display: grid;
