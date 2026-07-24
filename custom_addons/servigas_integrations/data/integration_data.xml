@@ -9,7 +9,7 @@
             <field name="status">active</field>
             <field name="color">2</field>
             <field name="description">Puente manual entre Odoo y Factura Web para la facturación fiscal temporal.</field>
-            <field name="process_notes">Exportar ventas desde Odoo y completar la planilla puente en datos/import/planilla_puente_factura_web.xlsx antes de cargar en Factura Web.</field>
+            <field name="process_notes">Exportar FC desde Servigas y completar la planilla puente en datos/import/planilla_puente_factura_web.xlsx. Al cargar en Factura Web, usá el tipo sugerido del cliente: CF → Factura B/C; Con CUIT → Factura A/B (según condición IVA). El tipo final lo confirma AFIP/l10n_ar.</field>
             <field name="resource_path">datos/import/planilla_puente_factura_web.xlsx</field>
         </record>
 

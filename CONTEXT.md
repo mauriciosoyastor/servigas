@@ -10,7 +10,7 @@
 | **Rubro** | Casa de repuestos — calefacción, termotanques, cocinas, calefactores, anafes |
 | **País** | Argentina |
 | **Canal principal** | Mostrador (POS) |
-| **Facturación fiscal** | Factura Web (temporal); AFIP/ARCA al final del proyecto |
+| **Facturación fiscal** | Factura Web (temporal); prep. CF/CUIT + tipo sugerido (fases 1–3b); AFIP/ARCA emisión = fase 3c |
 
 ## Objetivo
 
@@ -21,7 +21,7 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 - Inventario con ubicaciones internas (Recepción, Depósito, Mostrador)
 - Punto de venta (POS) — búsqueda por código fabricante
 - Compras y recepciones
-- Contabilidad operativa (sin facturación electrónica en esta fase)
+- Contabilidad operativa + FC Astro (destino CF/CUIT, tipo sugerido); sin emisión electrónica AFIP aún
 - Catálogo importado desde planillas Excel de proveedores
 - Puente manual Odoo ↔ Factura Web
 - Frontend personalizado con **Liquid Glass v2** (ver abajo)
@@ -152,4 +152,5 @@ Tokens: `astorproptech/docs/design/tokens.md`
 - [x] Venta de prueba POS validada (smoke `SMOKE_MUTATE=1` 2026-07-23)
 - [ ] Stock masivo (conteo físico)
 - [ ] Ubicaciones internas configuradas — checklist: [docs/proyecto/checklist-ubicaciones-internas.md](docs/proyecto/checklist-ubicaciones-internas.md)
-- [ ] AFIP / facturación en Odoo
+- [x] Destino CF/CUIT + tipo comprobante sugerido (fases 1–3a); checklist `l10n_ar` (3b)
+- [ ] AFIP / emisión electrónica en Odoo (fase 3c) — ver [checklist-l10n-ar-afip.md](docs/proyecto/checklist-l10n-ar-afip.md)

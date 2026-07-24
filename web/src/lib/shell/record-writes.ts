@@ -3,7 +3,12 @@
  */
 
 import { getRecordListDef } from "./record-lists.ts";
+import { canCreateInvoice } from "./invoice-creates.ts";
 import { canCreateOrder } from "./order-creates.ts";
+import {
+  INVOICE_DEST_CF,
+  invoiceDestVatError,
+} from "./invoice-dest.ts";
 import { normalizeProductImage1920 } from "./product-image.ts";
 
 export type RecordWriteDef = {
@@ -27,9 +32,17 @@ type WriteConfig = {
 
 const WRITES: Record<string, WriteConfig> = {
   "sales/customers": {
-    fields: ["phone", "email", "vat", "street", "city"],
-    createFields: ["name", "vat", "phone", "email", "street", "city"],
-    createDefaults: { customer_rank: 1 },
+    fields: ["sg_invoice_dest", "phone", "email", "vat", "street", "city"],
+    createFields: [
+      "name",
+      "sg_invoice_dest",
+      "vat",
+      "phone",
+      "email",
+      "street",
+      "city",
+    ],
+    createDefaults: { customer_rank: 1, sg_invoice_dest: INVOICE_DEST_CF },
     canArchive: true,
   },
   "purchase/vendors": {
@@ -68,7 +81,11 @@ export function getRecordWriteDef(listKey: string): RecordWriteDef | null {
 
 export function canCreateRecord(listKey: string): boolean {
   const def = getRecordWriteDef(listKey);
-  return Boolean(def?.createFields.length) || canCreateOrder(listKey);
+  return (
+    Boolean(def?.createFields.length) ||
+    canCreateOrder(listKey) ||
+    canCreateInvoice(listKey)
+  );
 }
 
 export function canArchiveRecord(listKey: string): boolean {
@@ -101,6 +118,15 @@ export function filterWritableValues(
   }
 
   return Object.keys(out).length ? out : null;
+}
+
+/** Mensaje de validación fiscal o null si ok / no aplica. */
+export function customerInvoiceDestError(
+  listKey: string,
+  values: Record<string, unknown>
+): string | null {
+  if (listKey !== "sales/customers") return null;
+  return invoiceDestVatError(values);
 }
 
 export function filterCreateValues(

@@ -2,6 +2,7 @@
 import RecordCreateForm from '../../../../components/RecordCreateForm.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
+import { INVOICE_DEST_OPTIONS } from '../../../../lib/shell/invoice-dest.ts';
 
 let userName = '';
 try {
@@ -24,9 +25,16 @@ try {
 			apiPath="/api/records/sales/customers"
 			listPath="/lists/sales/customers"
 			title="Alta de cliente"
-			hint="Datos del cliente. CUIT opcional (recomendado para Factura Web)."
+			hint="Elegí destino fiscal: Consumidor final o Con CUIT. Si es Con CUIT, el CUIT es obligatorio."
 			fields={[
 				{ key: 'name', label: 'Nombre', required: true },
+				{
+					key: 'sg_invoice_dest',
+					label: 'Destino fiscal',
+					required: true,
+					type: 'select',
+					options: [...INVOICE_DEST_OPTIONS],
+				},
 				{ key: 'vat', label: 'CUIT' },
 				{ key: 'phone', label: 'Teléfono' },
 				{ key: 'email', label: 'Email' },

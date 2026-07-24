@@ -188,6 +188,7 @@ try {
 							</label>
 							<input type="hidden" value="" data-pos-customer-id />
 							<p class="sg-pos-customer-selected" data-pos-customer-selected hidden></p>
+							<p class="sg-pos-customer-warn" data-pos-customer-warn hidden></p>
 							<ul class="sg-pos-customer-results" data-pos-customer-results hidden></ul>
 							<button type="button" class="sg-pos-customer-clear sg-focus-ring" data-pos-customer-clear hidden>
 								Sin cliente
@@ -328,13 +329,33 @@ try {
 		const customerIdInput = root.querySelector('[data-pos-customer-id]');
 		const customerQuery = root.querySelector('[data-pos-customer-query]');
 		const customerSelected = root.querySelector('[data-pos-customer-selected]');
+		const customerWarn = root.querySelector('[data-pos-customer-warn]');
 		const customerResults = root.querySelector('[data-pos-customer-results]');
 		const customerClear = root.querySelector('[data-pos-customer-clear]');
+		const POS_CUIT_MISSING_MSG =
+			'Falta CUIT; completá la ficha antes de facturar.';
+
+		const invoiceDestBadge = (dest) =>
+			String(dest || 'cf').toLowerCase() === 'cuit' ? 'CUIT' : 'CF';
+
+		const customerNeedsCuitWarn = (dest, vat) =>
+			String(dest || 'cf').toLowerCase() === 'cuit' && !String(vat || '').trim();
 
 		const selectedPartnerId = () => {
 			if (!(customerIdInput instanceof HTMLInputElement)) return undefined;
 			const id = Number(customerIdInput.value);
 			return Number.isFinite(id) && id > 0 ? id : undefined;
+		};
+
+		const setCustomerWarn = (show) => {
+			if (!(customerWarn instanceof HTMLElement)) return;
+			if (show) {
+				customerWarn.hidden = false;
+				customerWarn.textContent = POS_CUIT_MISSING_MSG;
+			} else {
+				customerWarn.hidden = true;
+				customerWarn.textContent = '';
+			}
 		};
 
 		const clearCustomer = () => {
@@ -344,6 +365,7 @@ try {
 				customerSelected.hidden = true;
 				customerSelected.textContent = '';
 			}
+			setCustomerWarn(false);
 			if (customerResults instanceof HTMLElement) {
 				customerResults.hidden = true;
 				customerResults.replaceChildren();
@@ -351,15 +373,17 @@ try {
 			if (customerClear instanceof HTMLElement) customerClear.hidden = true;
 		};
 
-		const chooseCustomer = (id, label) => {
+		const chooseCustomer = (id, label, dest, vat) => {
 			if (customerIdInput instanceof HTMLInputElement) {
 				customerIdInput.value = String(id);
 			}
 			if (customerQuery instanceof HTMLInputElement) customerQuery.value = label;
 			if (customerSelected instanceof HTMLElement) {
 				customerSelected.hidden = false;
-				customerSelected.textContent = `Cliente: ${label}`;
+				const badge = invoiceDestBadge(dest);
+				customerSelected.textContent = `Cliente: ${label} · ${badge}`;
 			}
+			setCustomerWarn(customerNeedsCuitWarn(dest, vat));
 			if (customerResults instanceof HTMLElement) {
 				customerResults.hidden = true;
 				customerResults.replaceChildren();
@@ -400,12 +424,17 @@ try {
 					const id = Number(row.id);
 					if (!Number.isFinite(id) || id <= 0) continue;
 					const label = String(row.name || id);
+					const dest = row.sg_invoice_dest;
+					const vat = row.vat;
+					const badge = invoiceDestBadge(dest);
 					const li = document.createElement('li');
 					const btn = document.createElement('button');
 					btn.type = 'button';
 					btn.className = 'sg-focus-ring';
-					btn.textContent = label;
-					btn.addEventListener('click', () => chooseCustomer(id, label));
+					btn.textContent = `${label} · ${badge}`;
+					btn.addEventListener('click', () =>
+						chooseCustomer(id, label, dest, vat)
+					);
 					li.appendChild(btn);
 					customerResults.appendChild(li);
 				}
@@ -429,6 +458,7 @@ try {
 				customerSelected.hidden = true;
 				customerSelected.textContent = '';
 			}
+			setCustomerWarn(false);
 			if (customerClear instanceof HTMLElement) customerClear.hidden = true;
 			window.clearTimeout(customerTimer);
 			customerTimer = window.setTimeout(searchCustomers, 250);
@@ -1199,6 +1229,12 @@ try {
 		margin: 0;
 		font-size: 0.72rem;
 		color: #9be7b0;
+	}
+	.sg-pos-customer-warn {
+		margin: 0;
+		font-size: 0.72rem;
+		line-height: 1.35;
+		color: #ffb4a2;
 	}
 	.sg-pos-customer-results {
 		list-style: none;

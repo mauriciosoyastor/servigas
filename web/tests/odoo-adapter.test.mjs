@@ -1070,6 +1070,62 @@ describe("OdooAdapter.createRecord", () => {
       street: "Av. Demo 100",
       city: "CABA",
       customer_rank: 1,
+      sg_invoice_dest: "cf",
+    });
+  });
+
+  it("rejects customer create with cuit dest and empty vat", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 1 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "sales/customers", {
+          name: "Empresa",
+          sg_invoice_dest: "cuit",
+          vat: "",
+        }),
+      (err) =>
+        err?.code === "validation_error" &&
+        /Con CUIT/.test(String(err?.message || ""))
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+
+  it("creates a customer invoice draft with lines", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 55 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord(
+      "sess",
+      "accounting/customer-invoices",
+      {
+        partnerId: 6,
+        lines: [{ productId: 42, qty: 2, price: 100 }],
+      }
+    );
+    assert.equal(result.id, 55);
+    assert.equal(
+      result.detailPath,
+      "/lists/accounting/customer-invoices/55"
+    );
+    const body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.model, "account.move");
+    assert.equal(body.params.method, "create");
+    assert.deepEqual(body.params.args[0], {
+      move_type: "out_invoice",
+      partner_id: 6,
+      invoice_line_ids: [
+        [0, 0, { product_id: 42, quantity: 2, price_unit: 100 }],
+      ],
     });
   });
 });
@@ -1299,6 +1355,187 @@ describe("OdooAdapter.confirmRecord", () => {
     await assert.rejects(
       () => adapter.confirmRecord("sess", "sales/quotations", 12),
       (error) => error?.code === "not_found"
+    );
+  });
+
+  it("posts customer invoice after partner fiscal check", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "account.move" && method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("state") && fields.length <= 2) {
+          return Response.json({ result: [{ id: 55, state: "posted" }] });
+        }
+        return Response.json({
+          result: [
+            {
+              id: 55,
+              state: "draft",
+              name: "/",
+              partner_id: [6, "Cliente"],
+              move_type: "out_invoice",
+            },
+          ],
+        });
+      }
+      if (model === "res.partner" && method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 6,
+              sg_invoice_dest: "cf",
+              vat: "",
+              street: "",
+              city: "",
+            },
+          ],
+        });
+      }
+      if (method === "action_post") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.confirmRecord(
+      "sess",
+      "accounting/customer-invoices",
+      55
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.state, "posted");
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    assert.ok(bodies.some((body) => body.params?.method === "action_post"));
+  });
+
+  it("creates invoice from sale order ready to invoice", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "sale.order" && method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("invoice_status")) {
+          return Response.json({
+            result: [
+              {
+                id: 12,
+                name: "S00012",
+                invoice_status: "to invoice",
+                invoice_ids: [],
+                partner_id: [6, "Cliente"],
+                state: "sale",
+              },
+            ],
+          });
+        }
+        return Response.json({
+          result: [{ id: 12, invoice_ids: [77] }],
+        });
+      }
+      if (model === "sale.order" && method === "_create_invoices") {
+        return Response.json({ result: [77] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createInvoiceFromOrder(
+      "sess",
+      "sales/orders",
+      12
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.id, 77);
+    assert.equal(
+      result.detailPath,
+      "/lists/accounting/customer-invoices/77"
+    );
+  });
+
+  it("rejects create invoice when order is not to invoice", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 12,
+            invoice_status: "invoiced",
+            invoice_ids: [1],
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.createInvoiceFromOrder("sess", "sales/orders", 12),
+      (err) =>
+        err?.code === "validation_error" &&
+        /no está listo/.test(String(err?.message || ""))
+    );
+  });
+
+  it("rejects posting FC when CUIT partner lacks vat", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "account.move" && method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 55,
+              state: "draft",
+              partner_id: [6, "Empresa"],
+              move_type: "out_invoice",
+            },
+          ],
+        });
+      }
+      if (model === "res.partner" && method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 6,
+              sg_invoice_dest: "cuit",
+              vat: "",
+              street: "Calle",
+              city: "CABA",
+            },
+          ],
+        });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.confirmRecord("sess", "accounting/customer-invoices", 55),
+      (err) =>
+        err?.code === "validation_error" &&
+        /CUIT para publicar/.test(String(err?.message || ""))
     );
   });
 

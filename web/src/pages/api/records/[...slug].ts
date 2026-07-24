@@ -7,6 +7,8 @@ import {
   requireOdooSession,
 } from "../../../lib/bff/http.ts";
 import { canConfirmRecord } from "../../../lib/shell/record-actions.ts";
+import { canCreateInvoice } from "../../../lib/shell/invoice-creates.ts";
+import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import {
   canArchiveRecord,
@@ -14,7 +16,12 @@ import {
   getRecordWriteDef,
 } from "../../../lib/shell/record-writes.ts";
 
-type RecordAction = "create" | "update" | "archive" | "confirm";
+type RecordAction =
+  | "create"
+  | "update"
+  | "archive"
+  | "confirm"
+  | "create_invoice";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -44,7 +51,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     }
     if (
       body.action &&
-      !["create", "update", "archive", "confirm"].includes(body.action)
+      !["create", "update", "archive", "confirm", "create_invoice"].includes(
+        body.action
+      )
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
     }
@@ -53,7 +62,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     const canAct =
       Boolean(writes) ||
       (action === "confirm" && canConfirmRecord(slug)) ||
-      (action === "create" && canCreateOrder(slug));
+      (action === "create_invoice" && canCreateInvoiceFromOrder(slug)) ||
+      (action === "create" &&
+        (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
       throw new BffError("not_found", 404, "Escritura no permitida");
     }
@@ -87,6 +98,18 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         throw new BffError("not_found", 404, "Confirmación no permitida");
       }
       const result = await getBackend().confirmRecord(
+        odooSessionId,
+        slug,
+        id
+      );
+      return json(result);
+    }
+
+    if (action === "create_invoice") {
+      if (!canCreateInvoiceFromOrder(slug)) {
+        throw new BffError("not_found", 404, "Facturación no permitida");
+      }
+      const result = await getBackend().createInvoiceFromOrder(
         odooSessionId,
         slug,
         id

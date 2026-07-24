@@ -110,25 +110,38 @@ function orderCols(): RecordListColumnDef[] {
   ];
 }
 
-function moveCols(): RecordListColumnDef[] {
-  return [
+function moveCols(includeInvoiceDest = false): RecordListColumnDef[] {
+  const cols: RecordListColumnDef[] = [
     { key: "name", label: "Número" },
     { key: "partner_id", label: "Contacto" },
+  ];
+  if (includeInvoiceDest) {
+    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+  }
+  cols.push(
     { key: "invoice_date", label: "Fecha" },
     { key: "amount_total", label: "Total" },
     { key: "payment_state", label: "Pago" },
-    { key: "state", label: "Estado" },
-  ];
+    { key: "state", label: "Estado" }
+  );
+  return cols;
 }
 
-function partnerCols(): RecordListColumnDef[] {
-  return [
+function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
+  const cols: RecordListColumnDef[] = [
     { key: "name", label: "Nombre" },
+  ];
+  if (includeInvoiceDest) {
+    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+    cols.push({ key: "sg_doc_type_short", label: "Tipo sug." });
+  }
+  cols.push(
     { key: "vat", label: "CUIT" },
     { key: "email", label: "Email" },
     { key: "phone", label: "Teléfono" },
-    { key: "city", label: "Ciudad" },
-  ];
+    { key: "city", label: "Ciudad" }
+  );
+  return cols;
 }
 
 function integrationCols(): RecordListColumnDef[] {
@@ -462,7 +475,14 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Pedidos de venta confirmados",
     model: "sale.order",
     domain: [["state", "=", "sale"]],
-    fields: ["name", "partner_id", "date_order", "amount_total", "state"],
+    fields: [
+      "name",
+      "partner_id",
+      "date_order",
+      "amount_total",
+      "state",
+      "invoice_status",
+    ],
     columns: orderCols(),
     limit: 50,
     order: "date_order desc",
@@ -494,7 +514,14 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Pedidos con factura pendiente",
     model: "sale.order",
     domain: [["invoice_status", "=", "to invoice"]],
-    fields: ["name", "partner_id", "date_order", "amount_total", "state"],
+    fields: [
+      "name",
+      "partner_id",
+      "date_order",
+      "amount_total",
+      "state",
+      "invoice_status",
+    ],
     columns: orderCols(),
     limit: 50,
     order: "date_order desc",
@@ -542,8 +569,17 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Agenda de clientes",
     model: "res.partner",
     domain: [["customer_rank", ">", 0]],
-    fields: ["name", "vat", "email", "phone", "street", "city"],
-    columns: partnerCols(),
+    fields: [
+      "name",
+      "sg_invoice_dest",
+      "sg_doc_type_short",
+      "vat",
+      "email",
+      "phone",
+      "street",
+      "city",
+    ],
+    columns: partnerCols(true),
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
@@ -558,9 +594,19 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con al menos un pedido de venta",
     model: "res.partner",
     domain: [["sale_order_count", ">", 0]],
-    fields: ["name", "vat", "email", "phone", "street", "city", "sale_order_count"],
+    fields: [
+      "name",
+      "sg_invoice_dest",
+      "sg_doc_type_short",
+      "vat",
+      "email",
+      "phone",
+      "street",
+      "city",
+      "sale_order_count",
+    ],
     columns: [
-      ...partnerCols(),
+      ...partnerCols(true),
       { key: "sale_order_count", label: "Pedidos" },
     ],
     limit: 50,
@@ -1026,12 +1072,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(true),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1079,6 +1126,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
@@ -1086,7 +1134,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "move_type",
     ],
     columns: [
-      ...moveCols(),
+      ...moveCols(true),
       { key: "move_type", label: "Tipo" },
     ],
     limit: 50,
@@ -1106,12 +1154,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(true),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",

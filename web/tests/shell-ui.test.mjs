@@ -269,12 +269,14 @@ describe("shell UI contracts", () => {
     assert.match(page, /\/api\/records\/sales\/customers/);
     assert.match(page, /phone|email/);
     assert.match(page, /vat|CUIT/);
+    assert.match(page, /sg_invoice_dest|Destino fiscal/);
     assert.match(page, /street|city/);
     assert.match(page, /RecordArchiveControl|data-record-archive/);
     assert.match(page, /slot=["']notes["']/);
     assert.match(body, /data-record-ficha/);
     assert.match(body, /data-edit-open/);
     assert.match(body, /sg-ficha-layout/);
+    assert.match(body, /select/);
   });
 
   it("renders partner create pages and list create CTA", async () => {
@@ -284,11 +286,54 @@ describe("shell UI contracts", () => {
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(customerNew, /RecordCreateForm/);
     assert.match(customerNew, /vat|CUIT/);
+    assert.match(customerNew, /sg_invoice_dest|Destino fiscal/);
+    assert.match(customerNew, /Consumidor final|Con CUIT/);
     assert.match(createForm, /action:\s*['"]create['"]/);
+    assert.match(createForm, /select/);
     assert.match(vendorNew, /purchase\/vendors/);
     assert.match(vendorNew, /vat|CUIT/);
     assert.match(listPage, /canCreateRecord/);
     assert.match(listPage, /sg-list-create|Nuevo cliente/);
+  });
+
+  it("wires CF/CUIT badge and non-blocking warn in POS customer picker", async () => {
+    const pos = await source("pages/pos.astro");
+    assert.match(pos, /data-pos-customer-warn/);
+    assert.match(pos, /Falta CUIT; completá la ficha antes de facturar/);
+    assert.match(pos, /sg_invoice_dest/);
+    assert.match(pos, /invoiceDestBadge|CUIT/);
+  });
+
+  it("wires customer invoice create and publish UI", async () => {
+    const invoiceNew = await source(
+      "pages/lists/accounting/customer-invoices/new.astro"
+    );
+    const invoiceDetail = await source(
+      "pages/lists/accounting/customer-invoices/[id].astro"
+    );
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(invoiceNew, /OrderCreateForm/);
+    assert.match(invoiceNew, /accounting\/customer-invoices/);
+    assert.match(invoiceDetail, /RecordConfirmControl/);
+    assert.match(invoiceDetail, /Publicar/);
+    assert.match(invoiceDetail, /action_post|customer-invoices/);
+    assert.match(listPage, /Nueva factura/);
+  });
+
+  it("wires Crear FC on sale order detail when to invoice", async () => {
+    const orderDetail = await source("pages/lists/sales/orders/[id].astro");
+    const control = await source("components/RecordCreateInvoiceControl.astro");
+    assert.match(orderDetail, /RecordCreateInvoiceControl/);
+    assert.match(orderDetail, /isOrderReadyToInvoice|invoice_status/);
+    assert.match(orderDetail, /Crear FC/);
+    assert.match(control, /create_invoice/);
+  });
+
+  it("surfaces suggested doc type hint on invoice create partner pick", async () => {
+    const form = await source("components/OrderCreateForm.astro");
+    assert.match(form, /Tipo sugerido/);
+    assert.match(form, /Factura A\/B|Factura B\/C/);
+    assert.match(form, /AFIP\/l10n_ar/);
   });
 
   it("renders product create/archive and quotation confirm", async () => {

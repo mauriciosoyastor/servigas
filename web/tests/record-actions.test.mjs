@@ -36,6 +36,20 @@ describe("record-actions allowlist", () => {
     assert.equal(canConfirmRecord("sales/orders"), false);
   });
 
+  it("allows publishing draft customer invoices", () => {
+    const def = getRecordActionDef("accounting/customer-invoices");
+    assert.ok(def);
+    assert.equal(def.method, "action_post");
+    assert.deepEqual(def.confirmableStates, ["draft"]);
+    assert.equal(canConfirmRecord("accounting/customer-invoices"), true);
+    assert.equal(canConfirmRecord("accounting/drafts"), true);
+    assert.equal(isConfirmableState("accounting/customer-invoices", "draft"), true);
+    assert.equal(
+      isConfirmableState("accounting/customer-invoices", "posted"),
+      false
+    );
+  });
+
   it("gates confirm by state", () => {
     assert.equal(isConfirmableState("sales/quotations", "draft"), true);
     assert.equal(isConfirmableState("sales/quotations", "sent"), true);

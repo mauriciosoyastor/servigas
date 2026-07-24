@@ -1,8 +1,10 @@
 ---
+import RecordCreateInvoiceControl from '../../../../components/RecordCreateInvoiceControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+import { isOrderReadyToInvoice } from '../../../../lib/shell/order-invoice.ts';
 
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
@@ -16,6 +18,14 @@ if (loaded.kind === 'redirect') {
 }
 if (loaded.status) Astro.response.status = loaded.status;
 const { userName, detail, error } = loaded;
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined) return '';
+	return String(hit.value);
+}
+
+const showCreateInvoice = isOrderReadyToInvoice(fieldValue('invoice_status'));
 ---
 
 <ShellLayout title={`${detail?.title || 'Pedido'} | Servigas`} active="sales" userName={userName}>
@@ -29,6 +39,15 @@ const { userName, detail, error } = loaded;
 	>
 		{detail && !error ? (
 			<RecordNotes slot="notes" listKey="sales/orders" recordId={id} />
+		) : null}
+		{detail && !error && showCreateInvoice ? (
+			<RecordCreateInvoiceControl
+				slot="secondary"
+				listKey="sales/orders"
+				recordId={id}
+				apiPath="/api/records/sales/orders"
+				label="Crear FC"
+			/>
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>
