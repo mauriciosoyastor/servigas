@@ -26,7 +26,8 @@ export const GET: APIRoute = async ({ cookies, params }) => {
       status: 200,
       headers: {
         "content-type": media.contentType,
-        "cache-control": "private, max-age=300",
+        // No cachear: tras subir image_1920 el mismo URL debe mostrar la foto nueva.
+        "cache-control": "private, no-store",
       },
     });
   } catch (err) {

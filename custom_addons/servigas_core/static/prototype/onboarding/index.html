@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PROTOTYPE — Onboarding operativos Servigas</title>
+  <style>
+    :root {
+      --sg-bg: #0f1419;
+      --sg-panel: rgba(255, 255, 255, 0.1);
+      --sg-border: rgba(255, 255, 255, 0.28);
+      --sg-text: #f4f1ea;
+      --sg-muted: rgba(244, 241, 234, 0.65);
+      --sg-accent: #e8a317;
+      --sg-primary: #c45c26;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Montserrat", system-ui, sans-serif;
+      background: radial-gradient(1200px 600px at 20% 0%, #1c2834, var(--sg-bg));
+      color: var(--sg-text);
+    }
+    .banner {
+      background: #5c2b00;
+      color: #ffd9a8;
+      font-size: 12px;
+      padding: 6px 12px;
+      text-align: center;
+    }
+    .stage {
+      position: relative;
+      max-width: 960px;
+      margin: 24px auto;
+      padding: 16px;
+      min-height: 420px;
+    }
+    .mock-shell {
+      display: grid;
+      grid-template-columns: 72px 1fr;
+      gap: 12px;
+      min-height: 380px;
+      border: 1px solid var(--sg-border);
+      border-radius: 16px;
+      background: rgba(0, 0, 0, 0.25);
+      overflow: hidden;
+    }
+    .mock-rail {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 12px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .mock-rail span {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid transparent;
+    }
+    .mock-rail span[data-hint].hot {
+      border-color: var(--sg-accent);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+      position: relative;
+      z-index: 2;
+    }
+    .mock-main {
+      padding: 20px;
+      position: relative;
+    }
+    .tiles {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .tile {
+      border-radius: 14px;
+      border: 1px solid var(--sg-border);
+      background: var(--sg-panel);
+      backdrop-filter: blur(12px);
+      padding: 16px;
+      min-height: 88px;
+    }
+    .tile.hot {
+      outline: 2px solid var(--sg-accent);
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.45);
+      position: relative;
+      z-index: 2;
+    }
+    .coach {
+      position: fixed;
+      right: 24px;
+      bottom: 24px;
+      width: min(320px, calc(100vw - 32px));
+      z-index: 10;
+      border-radius: 16px;
+      border: 1px solid var(--sg-border);
+      background: rgba(20, 24, 30, 0.92);
+      backdrop-filter: blur(16px);
+      padding: 16px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+    }
+    .coach .label {
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--sg-muted);
+      margin-bottom: 6px;
+    }
+    .coach h1 {
+      font-size: 18px;
+      margin: 0 0 8px;
+    }
+    .coach p {
+      margin: 0 0 14px;
+      color: var(--sg-muted);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 8px 12px;
+      font: inherit;
+      cursor: pointer;
+    }
+    button.primary {
+      background: var(--sg-primary);
+      color: white;
+    }
+    button.ghost {
+      background: transparent;
+      color: var(--sg-muted);
+      border: 1px solid var(--sg-border);
+    }
+    .done {
+      text-align: center;
+      padding: 48px 16px;
+    }
+    .track-switch {
+      margin-top: 12px;
+      padding-top: 12px;
+      border-top: 1px solid var(--sg-border);
+    }
+  </style>
+</head>
+<body>
+  <div class="banner">PROTOTYPE throwaway — no es el tour in-app. Contrato: <code>sg_onboarding_tour.js</code></div>
+  <div class="stage">
+    <div class="mock-shell" id="shell">
+      <aside class="mock-rail" id="rail">
+        <span data-hint="rail.home" title="Inicio"></span>
+        <span data-hint="rail.sections" title="Secciones"></span>
+        <span data-hint="rail.back_to_hub" title="Volver"></span>
+        <span data-hint="tile.punto_de_venta" title="POS"></span>
+      </aside>
+      <main class="mock-main" id="main"></main>
+    </div>
+  </div>
+  <div class="coach" id="coach"></div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

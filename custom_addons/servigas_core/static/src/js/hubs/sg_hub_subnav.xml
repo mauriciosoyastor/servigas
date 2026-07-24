@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgHubSubnav">
+        <nav class="sg-hub-subnav" aria-label="Secciones del hub">
+            <div class="sg-hub-subnav__track" role="tablist">
+                <t t-foreach="props.sections" t-as="section" t-key="section.code">
+                    <button
+                        type="button"
+                        role="tab"
+                        t-attf-class="sg-hub-subnav__pill {{ section.code === props.activeSection ? 'sg-hub-subnav__pill--active' : '' }}"
+                        t-att-aria-selected="section.code === props.activeSection ? 'true' : 'false'"
+                        t-att-disabled="props.loading"
+                        t-on-click="() => this.onPillClick(section.code)"
+                    >
+                        <t t-esc="section.name"/>
+                    </button>
+                </t>
+            </div>
+        </nav>
+    </t>
+
+</templates>

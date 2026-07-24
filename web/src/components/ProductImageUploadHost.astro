@@ -169,19 +169,10 @@
 				if (!response.ok) {
 					throw new Error(payload?.error?.message || "No se pudo guardar la imagen");
 				}
-				// Mismo patrón que RecordEditForm: refresh SSR con la nueva media.
-				const target = pending.targetSelector
-					? document.querySelector(pending.targetSelector)
-					: null;
-				if (target instanceof HTMLImageElement) {
-					const url = new URL(target.src, window.location.origin);
-					url.searchParams.set("v", String(Date.now()));
-					target.src = url.pathname + url.search;
-					closeModal();
-				} else {
-					closeModal();
-					window.setTimeout(() => window.location.reload(), 250);
-				}
+				// Siempre reload SSR: un cache-bust del <img> no alcanza si el browser
+				// ya cacheó el placeholder vacío del mismo /api/media/... URL.
+				closeModal();
+				window.setTimeout(() => window.location.reload(), 250);
 			} catch (error) {
 				btnSave.disabled = false;
 				setStatus(

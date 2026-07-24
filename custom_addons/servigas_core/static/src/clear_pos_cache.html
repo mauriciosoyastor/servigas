@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Servigas — limpiar cache POS</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 36rem; margin: 3rem auto; padding: 0 1rem; line-height: 1.45; background:#111; color:#eee; }
+    button { font-size: 1rem; padding: 0.75rem 1.25rem; cursor: pointer; border:0; border-radius:8px; background:#8B2E1F; color:#fff; }
+    code { background: #222; padding: 0.1rem 0.35rem; }
+    .ok { color: #6dce8b; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <h1>Limpiar cache del Mostrador</h1>
+  <p>El POS cachea CSS con Service Worker y <code>Cache-Control: immutable</code>.
+    Por eso no ves el tema nuevo hasta limpiar.</p>
+  <button id="go">Limpiar cache y abrir POS</button>
+  <p id="log"></p>
+  <script>
+    document.getElementById("go").onclick = async () => {
+      const log = document.getElementById("log");
+      try {
+        if ("serviceWorker" in navigator) {
+          const regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map((r) => r.unregister()));
+        }
+        if ("caches" in window) {
+          const keys = await caches.keys();
+          await Promise.all(keys.map((k) => caches.delete(k)));
+        }
+        log.className = "ok";
+        log.textContent = "Listo. Abriendo Mostrador…";
+        location.replace("/pos/ui?sg_cache_bust=" + Date.now());
+      } catch (e) {
+        log.textContent = "Error: " + e.message;
+      }
+    };
+  </script>
+</body>
+</html>

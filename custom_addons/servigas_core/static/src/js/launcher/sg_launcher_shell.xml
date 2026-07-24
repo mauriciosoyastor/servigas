@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgLauncherShell">
+        <div t-attf-class="sg-launcher-shell o_action {{ props.isRootMenu ? 'sg-launcher-shell--root' : '' }} {{ props.isHub ? 'sg-launcher-shell--hub' : '' }} {{ !props.showTitle and !props.showSubtitle ? 'sg-launcher-shell--compact' : '' }}">
+            <div class="sg-launcher-scroll sg-view-enter">
+                <header
+                    t-if="props.showBack or props.showHome or (props.showTitle and props.title) or (props.showSubtitle and props.subtitle)"
+                    class="sg-launcher-header"
+                >
+                    <div t-if="props.showBack or props.showHome" class="sg-launcher-header__toolbar">
+                        <t t-if="props.showBack">
+                            <button
+                                type="button"
+                                class="sg-launcher-nav-btn"
+                                title="Volver"
+                                aria-label="Volver"
+                                t-on-click="onBack"
+                            >
+                                <i class="fa fa-arrow-left" aria-hidden="true"/>
+                            </button>
+                        </t>
+                        <t t-else="">
+                            <span class="sg-launcher-nav-btn sg-launcher-nav-btn--placeholder"/>
+                        </t>
+                        <t t-if="props.showHome">
+                            <button
+                                type="button"
+                                class="sg-launcher-nav-btn"
+                                title="Inicio"
+                                aria-label="Inicio"
+                                t-on-click="onHome"
+                            >
+                                <i class="fa fa-home" aria-hidden="true"/>
+                            </button>
+                        </t>
+                    </div>
+                    <h1 t-if="props.showTitle and props.title" class="sg-launcher-title" t-esc="props.title"/>
+                    <p t-if="props.showSubtitle and props.subtitle" class="sg-launcher-subtitle" t-esc="props.subtitle"/>
+                </header>
+                <t t-slot="default"/>
+            </div>
+        </div>
+    </t>
+
+</templates>

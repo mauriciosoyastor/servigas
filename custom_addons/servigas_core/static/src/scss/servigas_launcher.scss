@@ -1,0 +1,410 @@
+// Servigas — App Launcher post-login + SalesHub (Liquid Glass v2)
+// Layout horizontal: cuerpo + barra lateral con métrica (paleta login)
+
+.sg-launcher-shell {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--sg-paper);
+    font-family: var(--sg-font-family);
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        background:
+            radial-gradient(
+                ellipse 70% 45% at 15% 0%,
+                rgba(245, 124, 0, 0.1) 0%,
+                transparent 55%
+            ),
+            radial-gradient(
+                ellipse 55% 35% at 85% 100%,
+                rgba(230, 74, 25, 0.08) 0%,
+                transparent 50%
+            );
+    }
+}
+
+.sg-launcher-shell--root {
+    .sg-launcher-header__toolbar {
+        display: none;
+    }
+
+    // Home sin título: aire superior del canvas.
+    // Contrato: resolveLauncherHomeGridInset().paddingTop
+    .sg-launcher-body {
+        padding-top: 3.25rem;
+    }
+
+    .sg-launcher-grid {
+        padding-top: 0;
+    }
+}
+
+.sg-launcher-shell--hub {
+    .sg-launcher-header__toolbar {
+        margin-bottom: 0;
+    }
+
+    // Hub sin header (SECCIÓN vive en el rail): aire superior del canvas.
+    // Contrato: resolveHubKpiGridInset().paddingTop — también en section-body
+    // porque el shorthand `.sg-launcher-grid { padding: 0 … }` compite en bundles viejos.
+    .sg-hub-section-body,
+    .sg-launcher-body {
+        padding-top: 3.25rem;
+    }
+
+    .sg-launcher-grid {
+        padding-top: 0;
+    }
+
+    .sg-hub-group .sg-launcher-grid {
+        padding-top: 0.75rem;
+    }
+
+    .sg-hub-group--first {
+        padding-top: 0;
+    }
+}
+
+.sg-launcher-shell--compact {
+    .sg-launcher-header {
+        padding-bottom: 0.5rem;
+    }
+
+    &.sg-launcher-shell--root .sg-launcher-header {
+        display: none;
+    }
+}
+
+.sg-hub-section {
+    &__title {
+        font-size: 0.75rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: rgba(26, 26, 26, 0.45);
+        padding: 1.5rem 1.5rem 0.75rem;
+        max-width: 80rem;
+        margin-inline: auto;
+    }
+
+    &--first .sg-hub-section__title {
+        padding-top: 0.75rem;
+    }
+}
+
+.sg-launcher-scroll {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.sg-launcher-header {
+    padding: 1.25rem 1.5rem 1rem;
+    max-width: 80rem;
+    margin-inline: auto;
+    width: 100%;
+
+    &__toolbar {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 0.75rem;
+    }
+}
+
+.sg-launcher-nav-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    min-width: 2.75rem;
+    min-height: 2.75rem;
+    padding: 0;
+    border: 1px solid rgba(26, 26, 26, 0.08);
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.85);
+    color: rgba(26, 26, 26, 0.7);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 150ms ease, color 150ms ease, box-shadow 150ms ease;
+
+    &:hover {
+        background: #ffffff;
+        color: var(--sg-text-on-light);
+        box-shadow: 0 2px 8px rgba(26, 26, 26, 0.1);
+    }
+
+    &:focus-visible {
+        outline: 2px solid $sg-flame-orange;
+        outline-offset: 2px;
+    }
+
+    &--placeholder {
+        visibility: hidden;
+        pointer-events: none;
+    }
+}
+
+.sg-launcher-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--sg-text-on-light);
+    margin: 0;
+}
+
+.sg-launcher-subtitle {
+    font-size: 0.95rem;
+    color: rgba(26, 26, 26, 0.55);
+    margin: 0.35rem 0 0;
+}
+
+.sg-launcher-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+    padding: 0 1.5rem 2.5rem;
+    max-width: 80rem;
+    margin-inline: auto;
+}
+
+.sg-launcher-grid--loading {
+    opacity: 0.55;
+    pointer-events: none;
+}
+
+.sg-hub-group {
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-bottom: 0.5rem;
+
+    &__header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem 0.25rem;
+    }
+
+    &__icon {
+        font-size: 0.9rem;
+        color: rgba(26, 26, 26, 0.4);
+    }
+
+    &__title {
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: rgba(26, 26, 26, 0.45);
+        margin: 0;
+    }
+
+    .sg-launcher-grid {
+        padding-top: 0.75rem;
+    }
+}
+
+.sg-hub-empty {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: rgba(26, 26, 26, 0.5);
+    font-size: 0.95rem;
+}
+
+// --- Tile horizontal (referencia KPI cards con barra lateral) ---
+
+.sg-launcher-tile {
+    display: flex;
+    min-height: 120px;
+    border-radius: $sg-radius-card;
+    background: #ffffff;
+    border: 1px solid rgba(26, 26, 26, 0.06);
+    box-shadow: 0 4px 16px rgba(26, 26, 26, 0.08);
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 150ms ease, box-shadow 150ms ease;
+
+    &:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(230, 74, 25, 0.15);
+    }
+
+    &:focus-visible {
+        outline: 2px solid $sg-flame-orange;
+        outline-offset: 2px;
+    }
+
+    &__body {
+        flex: 1;
+        padding: 1.25rem;
+        min-width: 0;
+    }
+
+    &__icon {
+        font-size: 1.25rem;
+        color: rgba(26, 26, 26, 0.45);
+        margin-bottom: 0.5rem;
+        line-height: 1;
+    }
+
+    &__label {
+        font-size: 0.95rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--sg-text-on-light);
+        margin: 0;
+        line-height: 1.25;
+    }
+
+    &__hint {
+        font-size: 0.8rem;
+        color: rgba(26, 26, 26, 0.55);
+        margin: 0.35rem 0 0;
+        line-height: 1.4;
+    }
+
+    &__accent {
+        width: 18%;
+        min-width: 3.5rem;
+        max-width: 4.5rem;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+        padding: 1rem 0.35rem;
+        color: $sg-text-on-dark;
+        flex-shrink: 0;
+    }
+
+    &__metric {
+        font-size: 1rem;
+        font-weight: 700;
+        line-height: 1.2;
+        text-align: center;
+        word-break: break-word;
+    }
+
+    &__metric--loading {
+        display: inline-block;
+        width: 2rem;
+        height: 1.25rem;
+        border-radius: 4px;
+        background: rgba(255, 255, 255, 0.35);
+        animation: sg-launcher-metric-shimmer 1.2s ease-in-out infinite;
+    }
+}
+
+// Paleta preestablecida (login / servigas_tokens.scss)
+$sg-launcher-accents: (
+    "flame-yellow": $sg-flame-yellow,
+    "flame-orange": $sg-flame-orange,
+    "flame-deep": $sg-flame-deep,
+    "flame-rust": $sg-flame-rust,
+    "bg-mid": $sg-bg-mid,
+    "bg-charcoal": $sg-bg-charcoal,
+    "bg-deep": $sg-bg-deep,
+);
+
+@each $key, $color in $sg-launcher-accents {
+    .sg-launcher-tile--#{$key} .sg-launcher-tile__accent {
+        background: $color;
+    }
+}
+
+.sg-launcher-tile--flame-yellow .sg-launcher-tile__accent {
+    color: $sg-text-on-light;
+
+    .sg-launcher-tile__metric--loading {
+        background: rgba(26, 26, 26, 0.12);
+    }
+}
+
+@keyframes sg-launcher-metric-shimmer {
+    0% {
+        opacity: 0.5;
+    }
+    50% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0.5;
+    }
+}
+
+.sg-view-enter {
+    animation: sg-view-fade-in 280ms ease;
+}
+
+.sg-stagger-item {
+    animation: sg-view-fade-in 320ms ease backwards;
+}
+
+@for $i from 1 through 12 {
+    .sg-stagger-item:nth-child(#{$i}) {
+        animation-delay: #{($i - 1) * 45ms};
+    }
+}
+
+@keyframes sg-view-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 1024px) {
+    .sg-launcher-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .sg-launcher-header {
+        padding-inline: 1rem;
+    }
+
+    .sg-launcher-grid {
+        grid-template-columns: 1fr;
+        padding-inline: 1rem;
+        padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+    }
+
+    .sg-launcher-tile {
+        min-height: 100px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sg-view-enter,
+    .sg-stagger-item,
+    .sg-launcher-shell .sg-view-enter,
+    .sg-launcher-shell .sg-stagger-item {
+        animation: none !important;
+    }
+
+    .sg-launcher-tile,
+    .sg-launcher-nav-btn {
+        transition: none !important;
+
+        &:hover {
+            transform: none;
+        }
+    }
+
+    .sg-launcher-tile__metric--loading {
+        animation: none !important;
+    }
+}

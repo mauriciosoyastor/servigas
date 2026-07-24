@@ -1,0 +1,65 @@
+// Servigas — Listas densas operativas (sin glass por fila)
+// Patrón Liquid Glass v2: legibilidad en catálogos y movimientos de alto volumen.
+
+.o_list_view {
+    .o_list_table {
+        font-family: var(--sg-font-family);
+        font-size: 0.875rem;
+
+        thead {
+            background: var(--sg-canvas);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+
+            th {
+                font-weight: 600;
+                letter-spacing: 0.02em;
+                color: rgba(26, 26, 26, 0.72);
+                border-bottom: 2px solid rgba($sg-flame-deep, 0.15);
+            }
+        }
+
+        tbody tr {
+            background: transparent;
+            backdrop-filter: none;
+
+            &:hover {
+                background: rgba($sg-flame-orange, 0.06);
+            }
+
+            &.o_data_row.o_selected_row {
+                background: rgba($sg-flame-deep, 0.1);
+            }
+        }
+
+        td,
+        th {
+            padding-top: 0.45rem;
+            padding-bottom: 0.45rem;
+            vertical-align: middle;
+        }
+    }
+}
+
+// Productos e inventario — columnas clave legibles
+.o_list_view .o_field_cell[name="default_code"],
+.o_list_view .o_field_cell[name="barcode"],
+.o_list_view .o_field_cell[name="qty_available"] {
+    font-weight: 500;
+}
+
+.o_list_view .o_field_cell[name="default_code"] {
+    color: $sg-flame-deep;
+}
+
+// Movimientos de stock
+.o_list_view .o_field_cell[name="product_id"] {
+    font-weight: 500;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .o_list_view .o_list_table tbody tr {
+        transition: none;
+    }
+}
