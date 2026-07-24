@@ -84,6 +84,11 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<{ ok: true; state: string | null }>;
+  createInvoiceFromOrder(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; id: number; detailPath: string }>;
   getPosCatalog(
     odooSessionId: string,
     query?: { q?: string; limit?: number }

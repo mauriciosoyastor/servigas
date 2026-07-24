@@ -1417,6 +1417,81 @@ describe("OdooAdapter.confirmRecord", () => {
     assert.ok(bodies.some((body) => body.params?.method === "action_post"));
   });
 
+  it("creates invoice from sale order ready to invoice", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "sale.order" && method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("invoice_status")) {
+          return Response.json({
+            result: [
+              {
+                id: 12,
+                name: "S00012",
+                invoice_status: "to invoice",
+                invoice_ids: [],
+                partner_id: [6, "Cliente"],
+                state: "sale",
+              },
+            ],
+          });
+        }
+        return Response.json({
+          result: [{ id: 12, invoice_ids: [77] }],
+        });
+      }
+      if (model === "sale.order" && method === "_create_invoices") {
+        return Response.json({ result: [77] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createInvoiceFromOrder(
+      "sess",
+      "sales/orders",
+      12
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.id, 77);
+    assert.equal(
+      result.detailPath,
+      "/lists/accounting/customer-invoices/77"
+    );
+  });
+
+  it("rejects create invoice when order is not to invoice", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 12,
+            invoice_status: "invoiced",
+            invoice_ids: [1],
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.createInvoiceFromOrder("sess", "sales/orders", 12),
+      (err) =>
+        err?.code === "validation_error" &&
+        /no está listo/.test(String(err?.message || ""))
+    );
+  });
+
   it("rejects posting FC when CUIT partner lacks vat", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};

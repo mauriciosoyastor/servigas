@@ -1,0 +1,98 @@
+---
+interface Props {
+	listKey: string;
+	recordId: number;
+	apiPath: string;
+	label?: string;
+}
+
+const {
+	listKey,
+	recordId,
+	apiPath,
+	label = 'Crear FC',
+} = Astro.props;
+---
+
+<section class="sg-record-confirm" data-record-create-invoice data-list-key={listKey}>
+	<button
+		class="sg-focus-ring"
+		type="button"
+		data-create-invoice-btn
+		data-id={recordId}
+		data-api={apiPath}
+	>
+		{label}
+	</button>
+	<span class="sg-record-confirm-status" data-create-invoice-status hidden></span>
+</section>
+
+<script>
+	const root = document.querySelector('[data-record-create-invoice]');
+	const btn = root?.querySelector('[data-create-invoice-btn]');
+	const status = root?.querySelector('[data-create-invoice-status]');
+	if (btn instanceof HTMLButtonElement && status instanceof HTMLElement) {
+		btn.addEventListener('click', async () => {
+			if (!window.confirm('¿Crear factura de cliente desde este pedido?')) return;
+			status.hidden = false;
+			status.textContent = 'Creando FC…';
+			status.dataset.state = 'pending';
+			btn.disabled = true;
+			try {
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'create_invoice',
+						id: Number(btn.dataset.id),
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo crear la FC');
+				}
+				status.textContent = 'FC creada';
+				status.dataset.state = 'ok';
+				window.setTimeout(() => {
+					window.location.href =
+						payload.detailPath || '/lists/accounting/customer-invoices';
+				}, 400);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo crear la FC';
+				status.dataset.state = 'error';
+				btn.disabled = false;
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-record-confirm {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1rem;
+	}
+	.sg-record-confirm button {
+		border: 1px solid rgba(155, 231, 176, 0.5);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: #9be7b0;
+		background: rgba(20, 60, 35, 0.4);
+		font-size: 0.85rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-record-confirm-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-confirm-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-record-confirm-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

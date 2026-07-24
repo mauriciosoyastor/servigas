@@ -293,6 +293,15 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Nueva factura/);
   });
 
+  it("wires Crear FC on sale order detail when to invoice", async () => {
+    const orderDetail = await source("pages/lists/sales/orders/[id].astro");
+    const control = await source("components/RecordCreateInvoiceControl.astro");
+    assert.match(orderDetail, /RecordCreateInvoiceControl/);
+    assert.match(orderDetail, /isOrderReadyToInvoice|invoice_status/);
+    assert.match(orderDetail, /Crear FC/);
+    assert.match(control, /create_invoice/);
+  });
+
   it("renders product create/archive and quotation confirm", async () => {
     const productNew = await source("pages/lists/inventory/products/new.astro");
     const productDetail = await source("pages/lists/inventory/products/[id].astro");

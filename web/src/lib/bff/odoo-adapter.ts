@@ -45,6 +45,10 @@ import {
 } from "../shell/invoice-creates.ts";
 import { publishInvoiceDestError } from "../shell/invoice-dest.ts";
 import {
+  canCreateInvoiceFromOrder,
+  isOrderReadyToInvoice,
+} from "../shell/order-invoice.ts";
+import {
   filterOrderCreateValues,
   getOrderCreateDef,
 } from "../shell/order-creates.ts";
@@ -452,6 +456,7 @@ export class OdooAdapter implements BackendClient {
       email: "Email",
       phone: "Teléfono",
       sg_invoice_dest: "Destino fiscal",
+      invoice_status: "Estado factura",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;
@@ -1073,6 +1078,131 @@ export class OdooAdapter implements BackendClient {
       ok: true,
       state: after?.state == null ? null : String(after.state),
     };
+  }
+
+  async createInvoiceFromOrder(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; id: number; detailPath: string }> {
+    if (!canCreateInvoiceFromOrder(listKey)) {
+      throw new BffError("not_found", 404, "Facturación no permitida");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sale.order",
+      "read",
+      [[id], ["name", "invoice_status", "invoice_ids", "partner_id", "state"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Pedido no encontrado");
+    }
+    if (!isOrderReadyToInvoice(order.invoice_status as string)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Este pedido no está listo para facturar"
+      );
+    }
+
+    const beforeIds = this.#idsFromM2m(order.invoice_ids);
+
+    try {
+      await this.#callKw(
+        odooSessionId,
+        "sale.order",
+        "_create_invoices",
+        [[id]],
+        { final: true }
+      );
+    } catch (cause) {
+      if (cause instanceof BffError && cause.code === "unauthorized") {
+        throw cause;
+      }
+      // Fallback: wizard estándar de Odoo
+      try {
+        const wizardId = await this.#callKw<number>(
+          odooSessionId,
+          "sale.advance.payment.inv",
+          "create",
+          [{ advance_payment_method: "delivered" }],
+          {
+            context: {
+              active_model: "sale.order",
+              active_ids: [id],
+              active_id: id,
+            },
+          }
+        );
+        await this.#callKw(
+          odooSessionId,
+          "sale.advance.payment.inv",
+          "create_invoices",
+          [[wizardId]],
+          {
+            context: {
+              active_model: "sale.order",
+              active_ids: [id],
+              active_id: id,
+            },
+          }
+        );
+      } catch (wizardCause) {
+        if (
+          wizardCause instanceof BffError &&
+          wizardCause.code === "unauthorized"
+        ) {
+          throw wizardCause;
+        }
+        throw new BffError(
+          "action_failed",
+          502,
+          "No se pudo crear la factura desde el pedido"
+        );
+      }
+    }
+
+    const [after] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sale.order",
+      "read",
+      [[id], ["invoice_ids"]]
+    );
+    const afterIds = this.#idsFromM2m(after?.invoice_ids);
+    const created = afterIds.filter((invoiceId) => !beforeIds.includes(invoiceId));
+    const invoiceId =
+      created.length > 0
+        ? Math.max(...created)
+        : afterIds.length > 0
+          ? Math.max(...afterIds)
+          : 0;
+    if (!invoiceId) {
+      throw new BffError(
+        "action_failed",
+        502,
+        "Odoo no devolvió una factura de cliente"
+      );
+    }
+
+    const list = getRecordListDef("accounting/customer-invoices");
+    const detailPath =
+      (list && buildDetailPath(list, invoiceId)) ||
+      `/lists/accounting/customer-invoices/${invoiceId}`;
+    return { ok: true, id: invoiceId, detailPath };
+  }
+
+  #idsFromM2m(value: unknown): number[] {
+    if (!Array.isArray(value)) return [];
+    const out: number[] = [];
+    for (const item of value) {
+      const id = Number(item);
+      if (Number.isFinite(id) && id > 0) out.push(id);
+    }
+    return out;
   }
 
   async #validateStockPicking(

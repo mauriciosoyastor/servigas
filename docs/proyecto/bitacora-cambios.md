@@ -50,6 +50,25 @@
 
 ## Entradas
 
+### 2026-07-24 — Crear FC desde pedido (fase 2b)
+
+**Área:** ventas | contabilidad | web  
+**Motivo:** cerrar arco D: pedido a facturar → FC borrador → Publicar.  
+**Archivos:**
+- `web/src/lib/shell/order-invoice.ts`
+- `web/src/lib/bff/odoo-adapter.ts` (`createInvoiceFromOrder`)
+- `web/src/components/RecordCreateInvoiceControl.astro`
+- `web/src/pages/lists/sales/orders/[id].astro`
+- Spec: `docs/superpowers/specs/2026-07-24-fc-from-sale-order-design.md`
+
+**Cambios:**
+- Botón **Crear FC** si `invoice_status = to invoice`.
+- BFF `action: create_invoice` → `_create_invoices` / wizard; redirect a FC.
+- Publicar sigue validando CF/CUIT (2a).
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** allowlist order-invoice reutilizable.
+
 ### 2026-07-24 — FC create + publicar con destino (fase 2a)
 
 **Área:** contabilidad | web | BFF  
