@@ -66,7 +66,22 @@ const initials = userName
 								data-login-input
 							/>
 						</label>
+						<label>
+							<span>Contraseña actual</span>
+							<input
+								class="sg-focus-ring"
+								name="currentPassword"
+								type="password"
+								autocomplete="current-password"
+								required
+								data-login-password
+							/>
+						</label>
+						<p class="sg-settings-hint">
+							Seguís en Ajustes. Solo te pedimos la clave para confirmar el cambio.
+						</p>
 						<p class="sg-settings-error" data-login-error role="alert" hidden></p>
+						<p class="sg-settings-success" data-login-success role="status" hidden></p>
 						<div class="sg-settings-login-actions">
 							<button class="sg-landing-cta sg-focus-ring" type="submit">
 								Guardar usuario
@@ -128,37 +143,50 @@ const initials = userName
 	const loginInput = document.querySelector<HTMLInputElement>('[data-login-input]');
 	const loginEdit = document.querySelector<HTMLButtonElement>('[data-login-edit]');
 	const loginCancel = document.querySelector<HTMLButtonElement>('[data-login-cancel]');
+	const loginPassword = document.querySelector<HTMLInputElement>('[data-login-password]');
 	const loginError = document.querySelector<HTMLElement>('[data-login-error]');
+	const loginSuccess = document.querySelector<HTMLElement>('[data-login-success]');
 	const loginSubmit = loginForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
 
-	const showLoginView = () => {
+	const showLoginView = (opts?: { keepSuccess?: boolean }) => {
 		if (!loginView || !loginForm) return;
 		loginForm.hidden = true;
 		loginView.hidden = false;
 		if (loginError) loginError.hidden = true;
+		if (loginSuccess && !opts?.keepSuccess) loginSuccess.hidden = true;
+		if (loginPassword) loginPassword.value = '';
 	};
 
 	const showLoginEdit = () => {
 		if (!loginView || !loginForm || !loginInput || !loginDisplay) return;
 		loginInput.value = loginDisplay.textContent?.trim() || '';
+		if (loginPassword) loginPassword.value = '';
 		loginView.hidden = true;
 		loginForm.hidden = false;
 		if (loginError) loginError.hidden = true;
+		if (loginSuccess) loginSuccess.hidden = true;
 		loginInput.focus();
 		loginInput.select();
 	};
 
 	loginEdit?.addEventListener('click', showLoginEdit);
-	loginCancel?.addEventListener('click', showLoginView);
+	loginCancel?.addEventListener('click', () => showLoginView());
 
 	loginForm?.addEventListener('submit', async (event) => {
 		event.preventDefault();
-		if (!loginSubmit || !loginError || !loginInput) return;
+		if (!loginSubmit || !loginError || !loginInput || !loginPassword || !loginDisplay) return;
 
 		loginError.hidden = true;
+		if (loginSuccess) loginSuccess.hidden = true;
 		const login = loginInput.value.trim();
+		const currentPassword = loginPassword.value;
 		if (!login) {
 			loginError.textContent = 'El usuario no puede estar vacío';
+			loginError.hidden = false;
+			return;
+		}
+		if (!currentPassword) {
+			loginError.textContent = 'Confirmá tu contraseña actual para cambiar el usuario';
 			loginError.hidden = false;
 			return;
 		}
@@ -168,13 +196,20 @@ const initials = userName
 			const response = await fetch('/api/auth/change-login', {
 				method: 'POST',
 				headers: { 'content-type': 'application/json' },
-				body: JSON.stringify({ login }),
+				body: JSON.stringify({ login, currentPassword }),
 			});
 			const payload = await response.json();
 			if (!response.ok) {
 				throw new Error(payload?.error?.message || 'No se pudo actualizar el usuario');
 			}
-			window.location.assign('/login?loginChanged=1');
+			const nextLogin = String(payload?.session?.login || login);
+			loginDisplay.textContent = nextLogin;
+			loginInput.value = nextLogin;
+			if (loginSuccess) {
+				loginSuccess.textContent = 'Usuario actualizado. Seguís con la sesión abierta.';
+			}
+			showLoginView({ keepSuccess: true });
+			if (loginSuccess) loginSuccess.hidden = false;
 		} catch (cause) {
 			loginError.textContent =
 				cause instanceof Error ? cause.message : 'No se pudo actualizar el usuario';
@@ -431,6 +466,18 @@ const initials = userName
 	.sg-settings-error {
 		margin: 0 !important;
 		color: var(--sg-ember-coral) !important;
+	}
+	.sg-settings-success {
+		margin: 0 !important;
+		color: color-mix(in srgb, var(--sg-flame-yellow) 85%, white) !important;
+		font-size: 0.82rem !important;
+	}
+	.sg-settings-hint {
+		margin: 0 !important;
+		color: rgba(255, 255, 255, 0.55) !important;
+		font-size: 0.78rem !important;
+		font-weight: 400 !important;
+		line-height: 1.4 !important;
 	}
 	.sg-landing-cta {
 		justify-self: start;

@@ -22,7 +22,11 @@ export type SessionEntry = {
 export type SessionStore = {
   create(odooSessionId: string, session: SessionInfo): string;
   get(bffSid: string): SessionEntry | undefined;
-  updateSession(bffSid: string, session: SessionInfo): boolean;
+  updateSession(
+    bffSid: string,
+    session: SessionInfo,
+    odooSessionId?: string
+  ): boolean;
   destroy(bffSid: string): void;
 };
 
@@ -69,11 +73,16 @@ export class MemorySessionStore implements SessionStore {
     return entry;
   }
 
-  updateSession(bffSid: string, session: SessionInfo): boolean {
+  updateSession(
+    bffSid: string,
+    session: SessionInfo,
+    odooSessionId?: string
+  ): boolean {
     const entry = this.get(bffSid);
     if (!entry) return false;
     this.#map.set(bffSid, {
       ...entry,
+      odooSessionId: odooSessionId ?? entry.odooSessionId,
       session,
       expiresAt: Date.now() + this.#ttlSeconds * 1000,
     });
@@ -135,11 +144,16 @@ export class FileSessionStore implements SessionStore {
     }
   }
 
-  updateSession(bffSid: string, session: SessionInfo): boolean {
+  updateSession(
+    bffSid: string,
+    session: SessionInfo,
+    odooSessionId?: string
+  ): boolean {
     const entry = this.get(bffSid);
     if (!entry) return false;
     this.#write(bffSid, {
       ...entry,
+      odooSessionId: odooSessionId ?? entry.odooSessionId,
       session,
       expiresAt: Date.now() + this.#ttlSeconds * 1000,
     });
@@ -206,8 +220,8 @@ export const sessionStore: SessionStore = {
   get(bffSid) {
     return getSessionStore().get(bffSid);
   },
-  updateSession(bffSid, session) {
-    return getSessionStore().updateSession(bffSid, session);
+  updateSession(bffSid, session, odooSessionId) {
+    return getSessionStore().updateSession(bffSid, session, odooSessionId);
   },
   destroy(bffSid) {
     getSessionStore().destroy(bffSid);

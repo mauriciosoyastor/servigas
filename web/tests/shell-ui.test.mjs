@@ -202,7 +202,9 @@ describe("shell UI contracts", () => {
     assert.match(settings, /\/api\/auth\/change-login/);
     assert.match(settings, /data-login-edit/);
     assert.match(settings, /PasswordField|data-password-toggle/);
-    assert.match(settings, /login\?loginChanged=1/);
+    assert.match(settings, /data-login-password/);
+    assert.match(settings, /Seguís en Ajustes|Seguis en Ajustes|sesión abierta|sesion abierta/);
+    assert.doesNotMatch(settings, /login\?loginChanged=1/);
     assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
     assert.doesNotMatch(settings, /todavía no está disponible/);
