@@ -16,6 +16,7 @@ import {
 import { __setBackendForTests } from "../src/lib/bff/get-backend.ts";
 import { GET as getSession } from "../src/pages/api/auth/session.ts";
 import { POST as postLogin } from "../src/pages/api/auth/login.ts";
+import { POST as postChangePassword } from "../src/pages/api/auth/change-password.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
 import { POST as postRecord } from "../src/pages/api/records/[...slug].ts";
@@ -493,6 +494,262 @@ describe("BFF API routes", () => {
         "Primera nota",
         7,
       ]);
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+});
+
+describe("POST /api/auth/change-password", () => {
+  it("returns 401 without BFF session", async () => {
+    const response = await postChangePassword({
+      cookies: new FakeCookies(),
+      request: new Request("http://localhost/api/auth/change-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: "a",
+          newPassword: "b",
+        }),
+      }),
+    });
+    assert.equal(response.status, 401);
+  });
+
+  it("validates required passwords", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ currentPassword: "", newPassword: "" }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      const body = await response.json();
+      assert.equal(body.error.code, "validation_error");
+      assert.equal(sessionStore.get(bffSid)?.odooSessionId, "odoo");
+    } finally {
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("changes password then destroys BFF session and clears cookie", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    const calls = [];
+    __setBackendForTests({
+      changePassword: async (...args) => {
+        calls.push(["changePassword", ...args]);
+      },
+      logout: async (...args) => {
+        calls.push(["logout", ...args]);
+      },
+    });
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: "old",
+            newPassword: "new",
+          }),
+        }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true });
+      assert.deepEqual(calls, [
+        ["changePassword", "odoo-sid", "old", "new"],
+        ["logout", "odoo-sid"],
+      ]);
+      assert.equal(sessionStore.get(bffSid), undefined);
+      assert.ok(cookies.deleteCalls.some((c) => c.name === BFF_COOKIE));
+    } finally {
+      __setBackendForTests(undefined);
+    }
+  });
+
+  it("keeps BFF session when current password is wrong", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      changePassword: async () => {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      },
+    });
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: "bad",
+            newPassword: "new",
+          }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), {
+        error: {
+          code: "validation_error",
+          message: "La contraseña actual no es correcta",
+        },
+      });
+      assert.equal(sessionStore.get(bffSid)?.odooSessionId, "odoo-sid");
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+});
+
+describe("POST /api/auth/change-password", () => {
+  it("returns 401 without BFF session", async () => {
+    const response = await postChangePassword({
+      cookies: new FakeCookies(),
+      request: new Request("http://localhost/api/auth/change-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          currentPassword: "a",
+          newPassword: "b",
+        }),
+      }),
+    });
+    assert.equal(response.status, 401);
+  });
+
+  it("validates required passwords", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ currentPassword: "", newPassword: "" }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      const body = await response.json();
+      assert.equal(body.error.code, "validation_error");
+      assert.equal(sessionStore.get(bffSid)?.odooSessionId, "odoo");
+    } finally {
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("changes password then destroys BFF session and clears cookie", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    const calls = [];
+    __setBackendForTests({
+      changePassword: async (...args) => {
+        calls.push(["changePassword", ...args]);
+      },
+      logout: async (...args) => {
+        calls.push(["logout", ...args]);
+      },
+    });
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: "old",
+            newPassword: "new",
+          }),
+        }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true });
+      assert.deepEqual(calls, [
+        ["changePassword", "odoo-sid", "old", "new"],
+        ["logout", "odoo-sid"],
+      ]);
+      assert.equal(sessionStore.get(bffSid), undefined);
+      assert.ok(cookies.deleteCalls.some((c) => c.name === BFF_COOKIE));
+    } finally {
+      __setBackendForTests(undefined);
+    }
+  });
+
+  it("keeps BFF session when current password is wrong", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      changePassword: async () => {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      },
+    });
+    try {
+      const response = await postChangePassword({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-password", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            currentPassword: "bad",
+            newPassword: "new",
+          }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), {
+        error: {
+          code: "validation_error",
+          message: "La contraseña actual no es correcta",
+        },
+      });
+      assert.equal(sessionStore.get(bffSid)?.odooSessionId, "odoo-sid");
     } finally {
       __setBackendForTests(undefined);
       sessionStore.destroy(bffSid);
