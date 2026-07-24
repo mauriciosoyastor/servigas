@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgMobileBottomBar">
+        <nav class="sg-mobile-bar" aria-label="Navegación móvil">
+            <t t-foreach="slots" t-as="slot" t-key="slot.id">
+                <button
+                    t-if="slot.id !== 'user'"
+                    type="button"
+                    t-attf-class="sg-mobile-bar__item {{ isActive(slot) ? 'sg-mobile-bar__item--active' : '' }}"
+                    t-att-title="slot.label"
+                    t-att-aria-label="slot.label"
+                    t-on-click="() => this.onSlotClick(slot)"
+                >
+                    <i t-attf-class="fa {{ slot.icon }}" aria-hidden="true"/>
+                    <span class="sg-mobile-bar__label" t-esc="slot.label"/>
+                </button>
+                <div t-else="" class="sg-mobile-bar__item sg-mobile-bar__item--user">
+                    <UserMenu/>
+                </div>
+            </t>
+        </nav>
+    </t>
+
+</templates>

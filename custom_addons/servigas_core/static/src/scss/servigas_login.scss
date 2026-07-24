@@ -1,0 +1,171 @@
+// Servigas — pantalla de login (/web/login)
+// Tema oscuro Liquid Glass v2 — cargar en web.assets_frontend
+
+.sg-login-page {
+    --sg-bg-deep: #{$sg-bg-deep};
+    --sg-bg-charcoal: #{$sg-bg-charcoal};
+    --sg-text-on-dark: #{$sg-text-on-dark};
+    --sg-text-muted-dark: #{$sg-text-muted-dark};
+    --sg-glass-fill: rgba(255, 255, 255, 0.08);
+    --sg-glass-fill-strong: rgba(255, 255, 255, 0.14);
+    --sg-glass-border: rgba(255, 255, 255, 0.12);
+    --sg-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    --sg-flame-orange: #{$sg-flame-orange};
+
+    font-family: var(--sg-font-family);
+    min-height: 100vh;
+    background: $sg-bg-ambient !important;
+    background-color: $sg-bg-deep !important;
+    color: var(--sg-text-on-dark);
+
+    #wrapwrap {
+        background: transparent;
+        min-height: 100vh;
+    }
+
+    main {
+        background: transparent;
+    }
+}
+
+.sg-login-frame {
+    width: 100%;
+}
+
+.sg-login-glass-panel {
+    @include sg-glass-surface($elevated: true, $on-dark: true);
+    padding: 0;
+}
+
+.sg-login-logo {
+    max-height: 120px;
+    max-width: 100%;
+    width: auto;
+    height: auto;
+}
+
+.sg-login-page .form-label,
+.sg-login-page .col-form-label {
+    color: var(--sg-text-on-dark);
+    font-weight: 500;
+    font-size: 0.875rem;
+}
+
+.sg-login-page .form-control {
+    font-family: var(--sg-font-family);
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid var(--sg-glass-border);
+    border-radius: $sg-radius-card;
+    color: var(--sg-text-on-dark);
+    min-height: 44px;
+    padding: 0.625rem 0.875rem;
+
+    &::placeholder {
+        color: var(--sg-text-muted-dark);
+    }
+
+    &:focus {
+        background: rgba(255, 255, 255, 0.1);
+        border-color: var(--sg-flame-orange);
+        box-shadow: 0 0 0 3px rgba(245, 124, 0, 0.25);
+        color: var(--sg-text-on-dark);
+    }
+}
+
+.sg-login-page .input-group {
+    .form-control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .o_show_password,
+    .sg-login-btn-secondary {
+        background: rgba(255, 255, 255, 0.06);
+        border-color: var(--sg-glass-border);
+        color: var(--sg-text-muted-dark);
+        min-height: 44px;
+
+        &:hover,
+        &:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--sg-flame-orange);
+            color: var(--sg-text-on-dark);
+        }
+    }
+}
+
+.sg-login-page .oe_login_buttons {
+    .sg-login-submit,
+    .btn-primary {
+        @include sg-flame-cta;
+        border-radius: $sg-radius-pill;
+        min-height: 48px;
+        font-size: 1rem;
+        padding: 0.75rem 1.5rem;
+        width: 100%;
+    }
+}
+
+.sg-login-page .alert-danger {
+    background: rgba(230, 74, 25, 0.15);
+    border: 1px solid rgba(230, 74, 25, 0.4);
+    border-radius: $sg-radius-card;
+    color: #ffb4a2;
+}
+
+.sg-login-page .alert-success {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--sg-glass-border);
+    border-radius: $sg-radius-card;
+    color: var(--sg-text-on-dark);
+}
+
+.sg-login-page .sg-login-superuser,
+.sg-login-page .btn-link {
+    color: var(--sg-text-muted-dark) !important;
+
+    &:hover {
+        color: var(--sg-text-on-dark) !important;
+    }
+}
+
+.sg-login-footer {
+    border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-login-db-link {
+    color: var(--sg-text-muted-dark);
+    text-decoration: none;
+    font-size: 0.8125rem;
+
+    &:hover {
+        color: var(--sg-text-on-dark);
+        text-decoration: underline;
+    }
+}
+
+// Entrada suave de la card
+.sg-view-enter {
+    animation: sg-login-enter 480ms ease-out both;
+}
+
+@keyframes sg-login-enter {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sg-login-page .sg-view-enter {
+        animation: none;
+    }
+
+    .sg-login-page .oe_login_buttons .btn-primary:active {
+        transform: none;
+    }
+}

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgAppHub">
+        <SgLauncherShell showTitle="false" showSubtitle="false" showHome="false" showBack="false" isHub="true">
+            <SgHubSectionBody
+                cards="state.cards"
+                groups="state.groups"
+                loading="state.loading"
+                onCardClick.bind="onCardClick"
+            />
+        </SgLauncherShell>
+    </t>
+
+</templates>
+

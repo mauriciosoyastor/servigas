@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgRailNav">
+        <aside
+            t-attf-class="sg-rail {{ rail.isExpanded ? 'sg-rail--expanded' : 'sg-rail--collapsed' }}"
+            aria-label="Navegación Servigas"
+            t-on-mouseenter="onRailMouseEnter"
+            t-on-mouseleave="onRailMouseLeave"
+        >
+            <div class="sg-rail__top">
+                <button
+                    type="button"
+                    class="sg-rail__home"
+                    title="Inicio"
+                    aria-label="Inicio"
+                    t-on-click="onHomeClick"
+                >
+                    <img
+                        src="/servigas_core/static/src/img/servigas_logo.png"
+                        alt="Servigas"
+                        class="sg-rail__logo"
+                    />
+                </button>
+            </div>
+
+            <nav class="sg-rail__apps" aria-label="Aplicaciones">
+                <t t-if="state.showBackToHub">
+                    <button
+                        type="button"
+                        class="sg-rail__back"
+                        title="Volver al hub"
+                        aria-label="Volver al hub"
+                        t-on-click="onBackToHubClick"
+                    >
+                        <span class="sg-rail__app-icon">
+                            <i class="fa fa-arrow-left" aria-hidden="true"/>
+                        </span>
+                        <span t-if="rail.isExpanded" class="sg-rail__app-label">Volver al hub</span>
+                    </button>
+                </t>
+
+                <t t-if="state.loading">
+                    <div class="sg-rail__loading">…</div>
+                </t>
+                <t t-else="" t-foreach="state.tiles" t-as="tile" t-key="tile.id">
+                    <button
+                        type="button"
+                        t-attf-class="sg-rail__app {{ isTileActive(tile) ? 'sg-rail__app--active' : '' }}"
+                        t-att-title="tile.label"
+                        t-att-aria-label="tile.label"
+                        t-on-click="() => this.onTileClick(tile)"
+                    >
+                        <span class="sg-rail__app-icon">
+                            <i t-attf-class="fa {{ tile.icon }}" aria-hidden="true"/>
+                        </span>
+                        <span t-if="rail.isExpanded" class="sg-rail__app-label" t-esc="tile.label"/>
+                    </button>
+                </t>
+            </nav>
+
+            <t t-if="showHubSections">
+                <nav class="sg-rail__sections" aria-label="Secciones del hub">
+                    <t t-if="rail.isExpanded">
+                        <span class="sg-rail__sections-label">Sección</span>
+                    </t>
+                    <t t-foreach="hubSections" t-as="section" t-key="section.code">
+                        <button
+                            type="button"
+                            t-attf-class="sg-rail__section {{ isSectionActive(section) ? 'sg-rail__section--active' : '' }}"
+                            t-att-title="section.name"
+                            t-att-aria-label="section.name"
+                            t-on-click="() => this.onSectionClick(section.code)"
+                        >
+                            <span class="sg-rail__section-icon">
+                                <i t-attf-class="fa {{ section.icon }}" aria-hidden="true"/>
+                            </span>
+                            <span t-if="rail.isExpanded" class="sg-rail__section-label" t-esc="section.name"/>
+                        </button>
+                    </t>
+                </nav>
+            </t>
+
+            <div class="sg-rail__footer">
+                <button
+                    type="button"
+                    class="sg-rail__toggle"
+                    t-att-title="railToggleTitle"
+                    t-att-aria-label="railToggleTitle"
+                    t-on-click="onToggleClick"
+                >
+                    <i t-attf-class="fa {{ rail.isExpanded ? 'fa-angle-left' : 'fa-angle-right' }}" aria-hidden="true"/>
+                    <span t-if="rail.isExpanded" class="sg-rail__toggle-label">Rail</span>
+                </button>
+                <div class="sg-rail__user">
+                    <UserMenu/>
+                </div>
+            </div>
+        </aside>
+    </t>
+
+</templates>

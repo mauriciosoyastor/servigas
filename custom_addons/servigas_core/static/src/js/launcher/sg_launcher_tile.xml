@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgLauncherTile">
+        <div
+            t-attf-class="sg-launcher-tile sg-launcher-tile--{{ props.tile.accent_key or 'flame-orange' }} sg-stagger-item"
+            t-on-click="() => props.onClick(props.tile)"
+            role="button"
+            tabindex="0"
+        >
+            <div class="sg-launcher-tile__body">
+                <div class="sg-launcher-tile__icon">
+                    <i t-attf-class="fa {{ props.tile.icon }}" aria-hidden="true"/>
+                </div>
+                <h3 class="sg-launcher-tile__label" t-esc="props.tile.label"/>
+                <p t-if="props.tile.hint" class="sg-launcher-tile__hint" t-esc="props.tile.hint"/>
+            </div>
+            <div class="sg-launcher-tile__accent" aria-hidden="true">
+                <span
+                    t-attf-class="sg-launcher-tile__metric {{ props.loading ? 'sg-launcher-tile__metric--loading' : '' }}"
+                    t-esc="props.tile.value"
+                />
+            </div>
+        </div>
+    </t>
+
+</templates>

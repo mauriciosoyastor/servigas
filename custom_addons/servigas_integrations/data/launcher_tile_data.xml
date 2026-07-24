@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="launcher_tile_integrations" model="sg.app.tile">
+            <field name="label">Integraciones</field>
+            <field name="hint">Factura Web y portales de proveedores</field>
+            <field name="icon">fa-plug</field>
+            <field name="sequence">45</field>
+            <field name="accent_key">bg-charcoal</field>
+            <field name="target_type">action</field>
+            <field name="module_required">servigas_integrations</field>
+            <field name="action_id" ref="action_servigas_integrations_dashboard"/>
+            <field name="metric_model">servigas.integration</field>
+            <field name="metric_domain">[('status', '=', 'active')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+    </data>
+
+    <data>
+        <record id="launcher_tile_integrations" model="sg.app.tile">
+            <field name="accent_key">bg-charcoal</field>
+        </record>
+    </data>
+</odoo>
