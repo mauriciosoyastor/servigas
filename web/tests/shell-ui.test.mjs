@@ -345,6 +345,32 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Nueva factura/);
   });
 
+  it("wires Factura Web pending export, POS→FC and vendor NC UI", async () => {
+    const listPage = await source("pages/lists/[...slug].astro");
+    const fwExport = await source("pages/api/accounting/factura-web-export.ts");
+    const markCtrl = await source("components/RecordMarkFwLoadedControl.astro");
+    const invoiceDetail = await source(
+      "pages/lists/accounting/customer-invoices/[id].astro"
+    );
+    const posDetail = await source("pages/lists/sales/ventas-caja/[id].astro");
+    const vendorNcNew = await source(
+      "pages/lists/accounting/vendor-refunds/new.astro"
+    );
+    const vendorNcDetail = await source(
+      "pages/lists/accounting/vendor-refunds/[id].astro"
+    );
+    assert.match(listPage, /factura-web-export/);
+    assert.match(listPage, /Nueva NC proveedor/);
+    assert.match(fwExport, /exportFwPendingCsv/);
+    assert.match(markCtrl, /mark_fw_loaded/);
+    assert.match(invoiceDetail, /RecordMarkFwLoadedControl/);
+    assert.match(posDetail, /RecordCreateInvoiceControl/);
+    assert.match(posDetail, /isPosOrderReadyToInvoice/);
+    assert.match(vendorNcNew, /vendor-refunds/);
+    assert.match(vendorNcNew, /purchase\/vendors/);
+    assert.match(vendorNcDetail, /RecordConfirmControl/);
+  });
+
   it("wires NC/FP create-publish and register payment UI", async () => {
     const creditNew = await source(
       "pages/lists/accounting/credit-notes/new.astro"

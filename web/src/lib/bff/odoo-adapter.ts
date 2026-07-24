@@ -54,6 +54,10 @@ import {
   isOrderReadyToInvoice,
 } from "../shell/order-invoice.ts";
 import {
+  canCreateInvoiceFromPos,
+  isPosOrderReadyToInvoice,
+} from "../shell/pos-invoice.ts";
+import {
   filterOrderCreateValues,
   getOrderCreateDef,
 } from "../shell/order-creates.ts";
@@ -62,6 +66,12 @@ import {
   getPaymentRegisterDef,
   isPaymentRegisterableState,
 } from "../shell/payment-registers.ts";
+import {
+  buildFwPendingCsv,
+  canMarkFwLoaded,
+  filterMarkFwLoadedValues,
+  isFwMarkableState,
+} from "../shell/fw-bridge.ts";
 import {
   canArchiveRecord,
   customerInvoiceDestError,
@@ -515,11 +525,29 @@ export class OdooAdapter implements BackendClient {
       if (!(cause instanceof BffError) || cause.code === "unauthorized") {
         throw cause;
       }
-      fields = fields.filter((field) => field !== "qty_available");
+      // Campos opcionales / aún no migrados en la BD.
+      fields = fields.filter(
+        (field) =>
+          field !== "qty_available" &&
+          field !== "sg_fw_loaded" &&
+          field !== "sg_fw_number" &&
+          field !== "sg_fw_loaded_at"
+      );
+      // Dominio con sg_fw_loaded falla si el campo no existe: degradar a FC posted.
+      let retryDomain = domain;
+      if (
+        def.key === "accounting/factura-web-pending" &&
+        JSON.stringify(domain).includes("sg_fw_loaded")
+      ) {
+        retryDomain = [
+          ["move_type", "=", "out_invoice"],
+          ["state", "=", "posted"],
+        ];
+      }
       rawRows = await this.#searchRead(
         odooSessionId,
         def.model,
-        domain,
+        retryDomain,
         fields,
         def.limit,
         offset,
@@ -670,6 +698,9 @@ export class OdooAdapter implements BackendClient {
       amount_residual: "Saldo",
       amount_total: "Total",
       payment_state: "Pago",
+      sg_fw_loaded: "Factura Web",
+      sg_fw_number: "N° Factura Web",
+      sg_fw_loaded_at: "Cargada el",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;
@@ -1550,6 +1581,274 @@ export class OdooAdapter implements BackendClient {
       (list && buildDetailPath(list, invoiceId)) ||
       `/lists/accounting/customer-invoices/${invoiceId}`;
     return { ok: true, id: invoiceId, detailPath };
+  }
+
+  async createInvoiceFromPos(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; id: number; detailPath: string }> {
+    if (!canCreateInvoiceFromPos(listKey)) {
+      throw new BffError("not_found", 404, "Facturación no permitida");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+
+    let order: Record<string, unknown> | undefined;
+    try {
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "pos.order",
+        "read",
+        [
+          [id],
+          ["name", "partner_id", "state", "amount_total", "account_move", "date_order"],
+        ]
+      );
+      order = row;
+    } catch (cause) {
+      if (cause instanceof BffError && cause.code === "unauthorized") {
+        throw cause;
+      }
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "pos.order",
+        "read",
+        [[id], ["name", "partner_id", "state", "amount_total", "date_order"]]
+      );
+      order = row;
+    }
+
+    if (!order) {
+      throw new BffError("not_found", 404, "Venta de caja no encontrada");
+    }
+    if (!isPosOrderReadyToInvoice(order.state as string)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Solo se puede facturar una venta de caja cobrada"
+      );
+    }
+
+    const existingMove = this.#partnerIdFromM2o(order.account_move);
+    // account_move is m2o; reuse partnerIdFromM2o helper for [id, name] tuples
+    if (existingMove > 0) {
+      const list = getRecordListDef("accounting/customer-invoices");
+      const detailPath =
+        (list && buildDetailPath(list, existingMove)) ||
+        `/lists/accounting/customer-invoices/${existingMove}`;
+      return { ok: true, id: existingMove, detailPath };
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    if (partnerId <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Asigná un cliente a la venta de caja antes de facturar"
+      );
+    }
+
+    const lines = await this.#searchRead(
+      odooSessionId,
+      "pos.order.line",
+      [["order_id", "=", id]],
+      ["product_id", "qty", "price_unit", "discount"],
+      200,
+      0,
+      "id asc"
+    );
+    const invoice_line_ids: unknown[] = [];
+    for (const line of lines) {
+      const productId = this.#partnerIdFromM2o(line.product_id);
+      const qty = Number(line.qty);
+      if (productId <= 0 || !Number.isFinite(qty) || qty <= 0) continue;
+      const vals: Record<string, number> = {
+        product_id: productId,
+        quantity: qty,
+      };
+      const price = Number(line.price_unit);
+      if (Number.isFinite(price)) vals.price_unit = price;
+      const discount = Number(line.discount);
+      if (Number.isFinite(discount) && discount > 0) vals.discount = discount;
+      invoice_line_ids.push([0, 0, vals]);
+    }
+    if (!invoice_line_ids.length) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "La venta de caja no tiene líneas facturables"
+      );
+    }
+
+    const ticketName = order.name == null ? "" : String(order.name);
+    const invoiceId = await this.#callKw<number>(
+      odooSessionId,
+      "account.move",
+      "create",
+      [
+        {
+          move_type: "out_invoice",
+          partner_id: partnerId,
+          invoice_origin: ticketName || undefined,
+          ref: ticketName || undefined,
+          invoice_line_ids,
+        },
+      ]
+    );
+
+    try {
+      await this.#callKw(odooSessionId, "pos.order", "write", [
+        [id],
+        { account_move: Number(invoiceId) },
+      ]);
+    } catch {
+      // Campo account_move puede no existir / no ser writable en todas las builds.
+    }
+
+    const list = getRecordListDef("accounting/customer-invoices");
+    const detailPath =
+      (list && buildDetailPath(list, Number(invoiceId))) ||
+      `/lists/accounting/customer-invoices/${invoiceId}`;
+    return { ok: true, id: Number(invoiceId), detailPath };
+  }
+
+  async markFwLoaded(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    values: Record<string, unknown> = {}
+  ): Promise<{ ok: true; sg_fw_loaded: true; sg_fw_number: string | null }> {
+    if (!canMarkFwLoaded(listKey)) {
+      throw new BffError("not_found", 404, "Marcado Factura Web no permitido");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+    const filtered = filterMarkFwLoadedValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("validation_error", 400, "Datos de marcado inválidos");
+    }
+
+    const [move] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [[id], ["state", "move_type", "sg_fw_loaded", "name"]]
+    );
+    if (!move) {
+      throw new BffError("not_found", 404, "Factura no encontrada");
+    }
+    if (String(move.move_type || "") !== "out_invoice") {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Solo se marcan facturas de cliente"
+      );
+    }
+    if (!isFwMarkableState(move.state as string, move.sg_fw_loaded)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "La factura ya está marcada o no está publicada"
+      );
+    }
+
+    const writeVals: Record<string, unknown> = {
+      sg_fw_loaded: true,
+      sg_fw_loaded_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+    };
+    if (filtered.fwNumber) {
+      writeVals.sg_fw_number = filtered.fwNumber;
+    }
+
+    await this.#callKw(odooSessionId, "account.move", "write", [
+      [id],
+      writeVals,
+    ]);
+
+    return {
+      ok: true,
+      sg_fw_loaded: true,
+      sg_fw_number: filtered.fwNumber || null,
+    };
+  }
+
+  async exportFwPendingCsv(
+    odooSessionId: string
+  ): Promise<{ filename: string; csv: string; count: number }> {
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "account.move",
+      [
+        ["move_type", "=", "out_invoice"],
+        ["state", "=", "posted"],
+        ["sg_fw_loaded", "=", false],
+      ],
+      [
+        "name",
+        "partner_id",
+        "invoice_date",
+        "amount_total",
+        "ref",
+        "sg_fw_number",
+      ],
+      500,
+      0,
+      "invoice_date desc, id desc"
+    );
+
+    await this.#enrichRowsWithPartnerInvoiceDest(odooSessionId, rows);
+
+    const partnerIds = new Set<number>();
+    for (const row of rows) {
+      const pid = this.#partnerIdFromM2o(row.partner_id);
+      if (pid > 0) partnerIds.add(pid);
+    }
+    const vatById = new Map<number, string>();
+    const nameById = new Map<number, string>();
+    if (partnerIds.size) {
+      const partners = await this.#searchRead(
+        odooSessionId,
+        "res.partner",
+        [["id", "in", [...partnerIds]]],
+        ["id", "name", "vat"],
+        partnerIds.size,
+        0,
+        "id asc"
+      );
+      for (const partner of partners) {
+        const pid = Number(partner.id);
+        if (!Number.isFinite(pid)) continue;
+        vatById.set(pid, partner.vat == null ? "" : String(partner.vat));
+        nameById.set(pid, partner.name == null ? "" : String(partner.name));
+      }
+    }
+
+    const exportRows = rows.map((row) => {
+      const pid = this.#partnerIdFromM2o(row.partner_id);
+      const dest = row.sg_invoice_dest;
+      return {
+        invoice_date: row.invoice_date,
+        name: row.name,
+        partner_name: nameById.get(pid) || this.#cellValue(row.partner_id),
+        vat: vatById.get(pid) || "",
+        sg_invoice_dest: dest == null ? "cf" : String(dest),
+        sg_doc_type_short: suggestedDocTypeShort(dest),
+        amount_total: row.amount_total,
+        sg_fw_number: row.sg_fw_number,
+        ref: row.ref,
+      };
+    });
+
+    const today = new Date();
+    const ymd = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, "0")}${String(today.getDate()).padStart(2, "0")}`;
+    return {
+      filename: `factura-web-pendientes-${ymd}.csv`,
+      csv: buildFwPendingCsv(exportRows),
+      count: exportRows.length,
+    };
   }
 
   #idsFromM2m(value: unknown): number[] {

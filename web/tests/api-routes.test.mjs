@@ -339,6 +339,96 @@ describe("BFF API routes", () => {
     sessionStore.destroy(bffSid);
   });
 
+  it("creates FC from POS via create_invoice action", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      createInvoiceFromPos: async (sessionId, listKey, id) => {
+        called = { sessionId, listKey, id };
+        return {
+          ok: true,
+          id: 88,
+          detailPath: "/lists/accounting/customer-invoices/88",
+        };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: ["sales", "ventas-caja"] },
+        request: new Request("http://localhost/api/records/sales/ventas-caja", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action: "create_invoice", id: 12 }),
+        }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        id: 88,
+        detailPath: "/lists/accounting/customer-invoices/88",
+      });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "sales/ventas-caja",
+        id: 12,
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("marks FC as loaded in Factura Web", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      markFwLoaded: async () => ({
+        ok: true,
+        sg_fw_loaded: true,
+        sg_fw_number: "X",
+      }),
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: "accounting/customer-invoices" },
+        request: new Request(
+          "http://localhost/api/records/accounting/customer-invoices",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "mark_fw_loaded",
+              id: 55,
+              values: { fwNumber: "X" },
+            }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        sg_fw_loaded: true,
+        sg_fw_number: "X",
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
   it("registers a payment on an allowlisted invoice list", async () => {
     const cookies = new FakeCookies();
     const bffSid = sessionStore.create("odoo", {

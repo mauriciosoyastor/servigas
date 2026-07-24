@@ -1,0 +1,147 @@
+---
+interface Props {
+	listKey: string;
+	recordId: number;
+	apiPath: string;
+	label?: string;
+}
+
+const {
+	listKey,
+	recordId,
+	apiPath,
+	label = 'Marcar cargada en Factura Web',
+} = Astro.props;
+---
+
+<section
+	class="sg-record-fw"
+	data-record-mark-fw
+	data-list-key={listKey}
+>
+	<label class="sg-record-fw-number">
+		<span>N° Factura Web (opcional)</span>
+		<input
+			class="sg-focus-ring"
+			type="text"
+			data-fw-number
+			placeholder="Ej: 0001-00001234"
+			autocomplete="off"
+		/>
+	</label>
+	<button
+		class="sg-focus-ring"
+		type="button"
+		data-fw-btn
+		data-id={recordId}
+		data-api={apiPath}
+	>
+		{label}
+	</button>
+	<span class="sg-record-fw-status" data-fw-status hidden></span>
+</section>
+
+<script>
+	const root = document.querySelector('[data-record-mark-fw]');
+	const btn = root?.querySelector('[data-fw-btn]');
+	const numberInput = root?.querySelector('[data-fw-number]');
+	const status = root?.querySelector('[data-fw-status]');
+	if (
+		btn instanceof HTMLButtonElement &&
+		numberInput instanceof HTMLInputElement &&
+		status instanceof HTMLElement
+	) {
+		btn.addEventListener('click', async () => {
+			const fwNumber = numberInput.value.trim();
+			if (
+				!window.confirm(
+					fwNumber
+						? `¿Marcar esta FC como cargada en Factura Web (${fwNumber})?`
+						: '¿Marcar esta FC como cargada en Factura Web?'
+				)
+			) {
+				return;
+			}
+			status.hidden = false;
+			status.textContent = 'Marcando…';
+			status.dataset.state = 'pending';
+			btn.disabled = true;
+			try {
+				const values: Record<string, unknown> = {};
+				if (fwNumber) values.fwNumber = fwNumber;
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'mark_fw_loaded',
+						id: Number(btn.dataset.id),
+						values,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(
+						payload?.error?.message || 'No se pudo marcar la factura'
+					);
+				}
+				status.textContent = 'Marcada como cargada';
+				status.dataset.state = 'ok';
+				window.setTimeout(() => window.location.reload(), 450);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo marcar';
+				status.dataset.state = 'error';
+				btn.disabled = false;
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-record-fw {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 1rem;
+		max-width: 22rem;
+	}
+	.sg-record-fw-number {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-fw-number input {
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		border-radius: 0.65rem;
+		padding: 0.55rem 0.75rem;
+		background: rgba(0, 0, 0, 0.25);
+		color: var(--sg-text-dark, #f4f1ea);
+		font-size: 0.95rem;
+	}
+	.sg-record-fw button {
+		justify-self: start;
+		border: 1px solid rgba(155, 231, 176, 0.5);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: #9be7b0;
+		background: rgba(20, 60, 35, 0.4);
+		font-size: 0.82rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-record-fw button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.sg-record-fw-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-fw-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-record-fw-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

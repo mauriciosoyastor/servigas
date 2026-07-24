@@ -45,6 +45,10 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       method: "action_post",
       confirmableStates: ["draft"],
     },
+    "accounting/vendor-refunds": {
+      method: "action_post",
+      confirmableStates: ["draft"],
+    },
     "accounting/drafts": {
       method: "action_post",
       confirmableStates: ["draft"],
