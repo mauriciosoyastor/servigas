@@ -1,6 +1,7 @@
 ---
 import RecordConfirmControl from '../../../../components/RecordConfirmControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordInvoicePdfControl from '../../../../components/RecordInvoicePdfControl.astro';
 import RecordRegisterPaymentControl from '../../../../components/RecordRegisterPaymentControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
@@ -42,6 +43,14 @@ const showPay = isPaymentRegisterableState(state, paymentState);
 		fallbackListPath="/lists/accounting/vendor-bills"
 		recordId={id}
 	>
+		{detail && !error ? (
+			<RecordInvoicePdfControl
+				slot="secondary"
+				listKey="accounting/vendor-bills"
+				recordId={id}
+				title={detail.title}
+			/>
+		) : null}
 		{detail && !error && showPublish ? (
 			<RecordConfirmControl
 				slot="secondary"
