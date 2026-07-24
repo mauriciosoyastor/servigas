@@ -631,7 +631,7 @@ describe("POST /api/auth/change-password", () => {
 });
 
 describe("POST /api/auth/change-login", () => {
-  it("updates login then destroys BFF session", async () => {
+  it("updates login and keeps BFF session alive", async () => {
     const cookies = new FakeCookies();
     const bffSid = sessionStore.create("odoo-sid", {
       uid: 2,
@@ -641,6 +641,22 @@ describe("POST /api/auth/change-login", () => {
     cookies.values.set(BFF_COOKIE, bffSid);
     const calls = [];
     __setBackendForTests({
+      login: async (login, password) => {
+        calls.push(["login", login, password]);
+        if (login === "admin" && password === "secret") {
+          return {
+            sessionId: "probe-sid",
+            session: { uid: 2, name: "Admin", login: "admin" },
+          };
+        }
+        if (login === "nuevo" && password === "secret") {
+          return {
+            sessionId: "fresh-sid",
+            session: { uid: 2, name: "Admin", login: "nuevo" },
+          };
+        }
+        throw new BffError("bad_credentials", 401, "bad");
+      },
       updateLogin: async (odooSessionId, uid, login) => {
         calls.push(["updateLogin", odooSessionId, uid, login]);
         return { login };
@@ -655,22 +671,70 @@ describe("POST /api/auth/change-login", () => {
         request: new Request("http://localhost/api/auth/change-login", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ login: "nuevo" }),
+          body: JSON.stringify({
+            login: "nuevo",
+            currentPassword: "secret",
+          }),
         }),
       });
       assert.equal(response.status, 200);
       assert.deepEqual(await response.json(), {
         ok: true,
-        login: "nuevo",
+        session: { uid: 2, name: "Admin", login: "nuevo" },
       });
       assert.deepEqual(calls, [
-        ["updateLogin", "odoo-sid", 2, "nuevo"],
+        ["login", "admin", "secret"],
+        ["updateLogin", "probe-sid", 2, "nuevo"],
+        ["login", "nuevo", "secret"],
         ["logout", "odoo-sid"],
+        ["logout", "probe-sid"],
       ]);
-      assert.equal(sessionStore.get(bffSid), undefined);
-      assert.ok(cookies.deleteCalls.some((c) => c.name === BFF_COOKIE));
+      const entry = sessionStore.get(bffSid);
+      assert.equal(entry?.odooSessionId, "fresh-sid");
+      assert.equal(entry?.session.login, "nuevo");
+      assert.equal(cookies.deleteCalls.length, 0);
     } finally {
       __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("rejects wrong password before changing login", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let updated = false;
+    __setBackendForTests({
+      login: async () => {
+        throw new BffError("bad_credentials", 401, "bad");
+      },
+      updateLogin: async () => {
+        updated = true;
+        return { login: "nuevo" };
+      },
+    });
+    try {
+      const response = await postChangeLogin({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            login: "nuevo",
+            currentPassword: "bad",
+          }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      assert.equal(updated, false);
+      assert.equal(sessionStore.get(bffSid)?.session.login, "admin");
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
     }
   });
 
@@ -688,7 +752,10 @@ describe("POST /api/auth/change-login", () => {
         request: new Request("http://localhost/api/auth/change-login", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ login: "admin" }),
+          body: JSON.stringify({
+            login: "admin",
+            currentPassword: "secret",
+          }),
         }),
       });
       assert.equal(response.status, 400);
