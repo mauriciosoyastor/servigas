@@ -68,6 +68,7 @@ export type RecordListKey =
   | "accounting/payment-terms"
   | "accounting/move-lines"
   | "accounting/factura-web"
+  | "accounting/factura-web-pending"
   | "accounting/invoice-analysis"
   | "integrations/all";
 
@@ -586,7 +587,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "sales/ventas-caja",
     path: "/lists/sales/ventas-caja",
     title: "Ventas de caja",
-    hint: "Ventas registradas en caja",
+    hint: "Ventas registradas en caja — facturá desde la ficha",
     model: "pos.order",
     domain: [],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -1312,8 +1313,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "amount_residual",
       "payment_state",
       "state",
+      "sg_fw_loaded",
+      "sg_fw_number",
     ],
-    columns: moveCols(true, { due: true, residual: true }),
+    columns: [
+      ...moveCols(true, { due: true, residual: true }),
+      { key: "sg_fw_loaded", label: "Factura Web" },
+    ],
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1383,10 +1389,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "partner_id",
       "invoice_date",
       "amount_total",
+      "amount_residual",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(false, { residual: true }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1535,6 +1542,46 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hubBack: "/hubs/accounting",
     railApp: "accounting",
     searchFields: ["name"],
+  },
+  "accounting/factura-web-pending": {
+    key: "accounting/factura-web-pending",
+    path: "/lists/accounting/factura-web-pending",
+    title: "Pendientes Factura Web",
+    hint: "FC publicadas aún no cargadas en Factura Web",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "out_invoice"],
+      ["state", "=", "posted"],
+      ["sg_fw_loaded", "=", false],
+    ],
+    fields: [
+      "name",
+      "partner_id",
+      "sg_invoice_dest",
+      "sg_doc_type_short",
+      "invoice_date",
+      "amount_total",
+      "payment_state",
+      "state",
+      "sg_fw_loaded",
+      "sg_fw_number",
+      "ref",
+    ],
+    columns: [
+      { key: "name", label: "Número" },
+      { key: "partner_id", label: "Cliente" },
+      { key: "sg_invoice_dest", label: "Destino fiscal" },
+      { key: "sg_doc_type_short", label: "Tipo sug." },
+      { key: "invoice_date", label: "Fecha" },
+      { key: "amount_total", label: "Total" },
+      { key: "payment_state", label: "Pago" },
+    ],
+    limit: 100,
+    order: "invoice_date desc, id desc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/customer-invoices/:id",
   },
   "accounting/invoice-analysis": {
     key: "accounting/invoice-analysis",
@@ -1873,6 +1920,11 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "account.move",
+    patterns: [/pendientes factura web/i, /factura web pendientes/i],
+    path: "/lists/accounting/factura-web-pending",
+  },
+  {
+    model: "account.move",
     patterns: [/vencidas por pagar/i],
     path: "/lists/accounting/payable-overdue",
   },
@@ -2180,6 +2232,14 @@ const ROUTE_RULES: RouteRule[] = [
   {
     model: "uom.uom",
     path: "/lists/purchase/uom",
+  },
+  {
+    model: "account.move",
+    path: "/lists/accounting/factura-web-pending",
+    match: (d) =>
+      domainHas(d, "out_invoice") &&
+      domainHas(d, "sg_fw_loaded") &&
+      (domainHas(d, "False") || domainHas(d, "false")),
   },
   {
     model: "account.move",

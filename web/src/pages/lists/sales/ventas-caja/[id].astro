@@ -1,7 +1,9 @@
 ---
+import RecordCreateInvoiceControl from '../../../../components/RecordCreateInvoiceControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+import { isPosOrderReadyToInvoice } from '../../../../lib/shell/pos-invoice.ts';
 
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
@@ -15,6 +17,17 @@ if (loaded.kind === 'redirect') {
 }
 if (loaded.status) Astro.response.status = loaded.status;
 const { userName, detail, error } = loaded;
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined) return '';
+	return String(hit.value);
+}
+
+const state = fieldValue('state');
+const partner = fieldValue('partner_id');
+const showInvoice =
+	isPosOrderReadyToInvoice(state) && Boolean(partner && partner !== 'false');
 ---
 
 <ShellLayout title={`${detail?.title || 'Venta de caja'} | Servigas`} active="sales" userName={userName}>
@@ -24,5 +37,32 @@ const { userName, detail, error } = loaded;
 		eyebrow="Ficha de venta de caja"
 		fallbackTitle="Venta de caja"
 		fallbackListPath="/lists/sales/ventas-caja"
-	/>
+		recordId={id}
+	>
+		{detail && !error && showInvoice ? (
+			<RecordCreateInvoiceControl
+				slot="secondary"
+				listKey="sales/ventas-caja"
+				recordId={id}
+				apiPath="/api/records/sales/ventas-caja"
+				label="Crear FC"
+				confirmMessage="¿Crear factura de cliente desde esta venta de caja? Se hereda el destino CF/CUIT del cliente."
+			/>
+		) : null}
+		{detail && !error && isPosOrderReadyToInvoice(state) && !partner ? (
+			<p slot="secondary" class="sg-pos-invoice-hint">
+				Asigná un cliente a esta venta de caja para poder facturar (destino CF/CUIT).
+			</p>
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>
+
+<style>
+	.sg-pos-invoice-hint {
+		margin: 1rem 0 0;
+		font-size: 0.82rem;
+		color: var(--sg-text-muted-dark);
+		max-width: 28rem;
+		line-height: 1.4;
+	}
+</style>

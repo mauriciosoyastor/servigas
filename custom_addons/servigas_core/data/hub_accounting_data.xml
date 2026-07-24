@@ -101,6 +101,22 @@
             <field name="metric_domain">[('state', '=', 'posted')]</field>
             <field name="metric_aggregate">count</field>
         </record>
+        <record id="hub_card_acc_summary_fw_pending" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">45</field>
+            <field name="label">Pendientes Factura Web</field>
+            <field name="hint">FC publicadas sin cargar en Factura Web</field>
+            <field name="icon">fa-external-link</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Exportar / marcar →</field>
+            <field name="action_id" ref="account.action_move_out_invoice"/>
+            <field name="domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('sg_fw_loaded', '=', False)]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('sg_fw_loaded', '=', False)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
         <record id="hub_card_acc_summary_invoiced_today" model="sg.hub.card">
             <field name="app">accounting</field>
             <field name="section">summary</field>

@@ -10,7 +10,11 @@ import {
 } from "./order-creates.ts";
 import { resolveRecordListKey } from "./record-lists.ts";
 
-export type InvoiceMoveType = "out_invoice" | "out_refund" | "in_invoice";
+export type InvoiceMoveType =
+  | "out_invoice"
+  | "out_refund"
+  | "in_invoice"
+  | "in_refund";
 
 export type InvoiceCreateDef = {
   listKey: string;
@@ -33,6 +37,11 @@ const INVOICE_CREATES: Record<string, InvoiceCreateDef> = {
     listKey: "accounting/vendor-bills",
     model: "account.move",
     moveType: "in_invoice",
+  },
+  "accounting/vendor-refunds": {
+    listKey: "accounting/vendor-refunds",
+    model: "account.move",
+    moveType: "in_refund",
   },
 };
 

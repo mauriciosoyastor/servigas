@@ -8,7 +8,7 @@ proveedores) y define la pantalla de inicio al ingresar a Odoo.
     "author": "Servigas",
     "website": "https://github.com/mauriciosoyastor/servigas",
     "category": "Servigas",
-    "version": "19.0.1.0.1",
+    "version": "19.0.1.0.2",
     "license": "LGPL-3",
     "depends": ["base", "web", "mail", "servigas_core"],
     "data": [

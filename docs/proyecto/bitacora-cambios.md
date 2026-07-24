@@ -31,6 +31,21 @@
 
 ---
 
+### 2026-07-24 — Factura Web cola + POS→FC + NC proveedor
+
+**Área:** contabilidad | POS | integraciones | web | BFF  
+**Motivo:** puente fiscal operativo, facturar venta de caja, NC proveedor writable.  
+**Archivos:**  
+- `servigas_core` `account.move` (`sg_fw_loaded*`) + hub card pendientes FW  
+- `web/src/lib/shell/{fw-bridge,pos-invoice}.ts` + listas/API/UI  
+- Spec: `docs/superpowers/specs/2026-07-24-fw-pos-nc-prov-design.md`  
+**Cambios:**  
+- Lista pendientes FW + export CSV + marcar cargada (n° opcional)  
+- Crear FC desde venta de caja cobrada con cliente  
+- NC proveedor create/publish  
+**Verificación:** `cd web && npm test`; `-u servigas_core,servigas_integrations`  
+**Automatización:** patrón mark_* + export CSV reutilizable para otros puentes.
+
 ### 2026-07-24 — Contabilidad ops: pagos, NC, FP, vencimientos
 
 **Área:** contabilidad | web | BFF | hubs  

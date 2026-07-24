@@ -63,6 +63,18 @@ describe("record-actions allowlist", () => {
     );
   });
 
+  it("allows publishing draft vendor credit notes", () => {
+    assert.equal(canConfirmRecord("accounting/vendor-refunds"), true);
+    assert.equal(
+      getRecordActionDef("accounting/vendor-refunds")?.method,
+      "action_post"
+    );
+    assert.equal(
+      isConfirmableState("accounting/vendor-refunds", "draft"),
+      true
+    );
+  });
+
   it("gates confirm by state", () => {
     assert.equal(isConfirmableState("sales/quotations", "draft"), true);
     assert.equal(isConfirmableState("sales/quotations", "sent"), true);
