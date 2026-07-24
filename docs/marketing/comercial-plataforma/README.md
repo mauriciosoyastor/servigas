@@ -8,5 +8,8 @@ Video 35s · 16:9 · 1080p. Vende el producto (plataforma), no marca retail.
 | `02-shot-list-ui.md` | Grabación de pantallas reales |
 | `03-prompts-veo.md` | Prompts Veo 3.1 (escenas 1, 2, 4) |
 | `04-montaje-checklist.md` | Ensamble, gráfica, QA export |
+| `export/` | Prototipo MP4 brandless (stills + UI HTML + VO) |
 
 Spec: `docs/superpowers/specs/2026-07-24-comercial-plataforma-prompts-design.md`
+
+Prototipo listo: `export/comercial-plataforma-35s.mp4` (sin marca Servigas).

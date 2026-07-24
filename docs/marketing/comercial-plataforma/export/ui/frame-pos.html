@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Mostrador</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1920px; height: 1080px; overflow: hidden;
+      font-family: Montserrat, sans-serif;
+      background: #1A1A1A; color: #fff;
+      display: grid; grid-template-columns: 88px 1fr 520px;
+    }
+    .rail {
+      background: rgba(255,255,255,0.04);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 28px 0; gap: 18px;
+    }
+    .dot {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .dot.active {
+      background: linear-gradient(135deg, #FFD600, #F57C00, #E64A19);
+    }
+    .center { padding: 40px 48px; }
+    .search {
+      height: 64px; border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      border: 1px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; padding: 0 24px;
+      color: rgba(255,255,255,0.55); font-size: 20px; margin-bottom: 28px;
+    }
+    .products { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .card {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 14px; padding: 20px; min-height: 150px;
+    }
+    .card.sel {
+      border-color: rgba(245,124,0,0.55);
+      box-shadow: 0 0 0 1px rgba(245,124,0,0.2);
+    }
+    .card h3 { font-size: 18px; margin-bottom: 8px; }
+    .card p { color: rgba(255,255,255,0.55); font-size: 15px; }
+    .price { margin-top: 18px; font-weight: 700; color: #FFB300; }
+    .ticket {
+      background: #F7F5F2; color: #1A1A1A;
+      padding: 36px 32px; display: flex; flex-direction: column;
+    }
+    .ticket h2 { font-size: 28px; margin-bottom: 24px; }
+    .line {
+      display: flex; justify-content: space-between;
+      padding: 14px 0; border-bottom: 1px solid rgba(26,26,26,0.1);
+      font-size: 17px;
+    }
+    .total {
+      margin-top: auto; padding-top: 24px;
+      display: flex; justify-content: space-between;
+      font-size: 28px; font-weight: 700;
+    }
+    .cobrar {
+      margin-top: 24px; height: 72px; border: 0; border-radius: 14px;
+      background: linear-gradient(135deg, #FFD600, #F57C00, #E64A19);
+      color: #1A1A1A; font-size: 24px; font-weight: 700;
+      font-family: inherit;
+      box-shadow: 0 12px 32px rgba(245,124,0,0.35);
+    }
+  </style>
+</head>
+<body>
+  <aside class="rail">
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot active"></div>
+    <div class="dot"></div>
+  </aside>
+  <section class="center">
+    <div class="search">Buscar producto o código…</div>
+    <div class="products">
+      <div class="card sel">
+        <h3>Termostato T-120</h3>
+        <p>Calefacción · Stock 24</p>
+        <div class="price">$ 18.500</div>
+      </div>
+      <div class="card">
+        <h3>Junta silicona</h3>
+        <p>Repuestos · Stock 110</p>
+        <div class="price">$ 2.400</div>
+      </div>
+      <div class="card">
+        <h3>Válvula gas 1/2</h3>
+        <p>Cocinas · Stock 37</p>
+        <div class="price">$ 9.800</div>
+      </div>
+      <div class="card">
+        <h3>Electrodo ignición</h3>
+        <p>Calefactores · Stock 15</p>
+        <div class="price">$ 6.200</div>
+      </div>
+      <div class="card">
+        <h3>Perilla control</h3>
+        <p>Anafes · Stock 62</p>
+        <div class="price">$ 1.950</div>
+      </div>
+      <div class="card">
+        <h3>Sensor NTC</h3>
+        <p>Termotanques · Stock 41</p>
+        <div class="price">$ 4.700</div>
+      </div>
+    </div>
+  </section>
+  <aside class="ticket">
+    <h2>Ticket</h2>
+    <div class="line"><span>Termostato T-120 ×1</span><span>$ 18.500</span></div>
+    <div class="line"><span>Junta silicona ×2</span><span>$ 4.800</span></div>
+    <div class="line"><span>Válvula gas 1/2 ×1</span><span>$ 9.800</span></div>
+    <div class="total"><span>Total</span><span>$ 33.100</span></div>
+    <button class="cobrar">Cobrar</button>
+  </aside>
+</body>
+</html>
