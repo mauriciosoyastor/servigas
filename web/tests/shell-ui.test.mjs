@@ -195,11 +195,15 @@ describe("shell UI contracts", () => {
     assert.match(control, /data-invoice-pdf/);
     assert.match(control, /Ver PDF/);
     assert.match(control, /Descargar/);
-    assert.match(control, /iframe/);
+    assert.match(control, /embed|iframe/);
+    assert.match(control, /application\/pdf/);
     assert.match(control, /createObjectURL/);
+    assert.match(control, /Abrir en pestaña/);
     assert.match(control, /role=["']dialog["']/);
     for (const page of pages) {
       assert.match(page, /RecordInvoicePdfControl/);
+      assert.match(page, /slot=["']secondary["']/);
+      assert.match(page, /sg-ficha-secondary-actions/);
     }
     const api = await source("pages/api/reports/invoice/[...slug].ts");
     assert.match(api, /fetchInvoicePdf/);

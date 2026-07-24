@@ -38,25 +38,25 @@ const showPublish = isConfirmableState('accounting/credit-notes', state);
 		fallbackListPath="/lists/accounting/credit-notes"
 		recordId={id}
 	>
-		{detail && !error ? (
-			<RecordInvoicePdfControl
-				slot="secondary"
-				listKey="accounting/credit-notes"
-				recordId={id}
-				title={detail.title}
-			/>
-		) : null}
-		{detail && !error && showPublish ? (
-			<RecordConfirmControl
-				slot="secondary"
-				listKey="accounting/credit-notes"
-				recordId={id}
-				apiPath="/api/records/accounting/credit-notes"
-				label="Publicar"
-				confirmMessage="¿Publicar esta nota de crédito?"
-				pendingLabel="Publicando…"
-				okLabel="Publicada"
-			/>
-		) : null}
+		<div slot="secondary" class="sg-ficha-secondary-actions">
+			{detail && !error ? (
+				<RecordInvoicePdfControl
+					listKey="accounting/credit-notes"
+					recordId={id}
+					title={detail.title}
+				/>
+			) : null}
+			{detail && !error && showPublish ? (
+				<RecordConfirmControl
+					listKey="accounting/credit-notes"
+					recordId={id}
+					apiPath="/api/records/accounting/credit-notes"
+					label="Publicar"
+					confirmMessage="¿Publicar esta nota de crédito?"
+					pendingLabel="Publicando…"
+					okLabel="Publicada"
+				/>
+			) : null}
+		</div>
 	</RecordDetailBody>
 </ShellLayout>

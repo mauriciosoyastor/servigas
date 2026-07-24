@@ -2630,9 +2630,17 @@ export class OdooAdapter implements BackendClient {
         }
       );
       if (!response.ok) {
+        // Odoo returns 422 when wkhtmltopdf is missing (get_wkhtmltopdf_state=install).
+        if (response.status === 422) {
+          throw new BffError(
+            "odoo_unavailable",
+            503,
+            "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor"
+          );
+        }
         throw new BffError(
-          "not_found",
-          404,
+          "odoo_unavailable",
+          503,
           "No se pudo generar el PDF del comprobante"
         );
       }

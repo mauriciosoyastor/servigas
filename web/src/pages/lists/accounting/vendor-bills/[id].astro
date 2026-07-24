@@ -43,36 +43,35 @@ const showPay = isPaymentRegisterableState(state, paymentState);
 		fallbackListPath="/lists/accounting/vendor-bills"
 		recordId={id}
 	>
-		{detail && !error ? (
-			<RecordInvoicePdfControl
-				slot="secondary"
-				listKey="accounting/vendor-bills"
-				recordId={id}
-				title={detail.title}
-			/>
-		) : null}
-		{detail && !error && showPublish ? (
-			<RecordConfirmControl
-				slot="secondary"
-				listKey="accounting/vendor-bills"
-				recordId={id}
-				apiPath="/api/records/accounting/vendor-bills"
-				label="Publicar"
-				confirmMessage="¿Publicar esta factura de proveedor?"
-				pendingLabel="Publicando…"
-				okLabel="Publicada"
-			/>
-		) : null}
-		{detail && !error && showPay ? (
-			<RecordRegisterPaymentControl
-				slot="secondary"
-				listKey="accounting/vendor-bills"
-				recordId={id}
-				apiPath="/api/records/accounting/vendor-bills"
-				defaultAmount={residual}
-				label="Registrar pago"
-				directionLabel="pago a proveedor"
-			/>
-		) : null}
+		<div slot="secondary" class="sg-ficha-secondary-actions">
+			{detail && !error ? (
+				<RecordInvoicePdfControl
+					listKey="accounting/vendor-bills"
+					recordId={id}
+					title={detail.title}
+				/>
+			) : null}
+			{detail && !error && showPublish ? (
+				<RecordConfirmControl
+					listKey="accounting/vendor-bills"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-bills"
+					label="Publicar"
+					confirmMessage="¿Publicar esta factura de proveedor?"
+					pendingLabel="Publicando…"
+					okLabel="Publicada"
+				/>
+			) : null}
+			{detail && !error && showPay ? (
+				<RecordRegisterPaymentControl
+					listKey="accounting/vendor-bills"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-bills"
+					defaultAmount={residual}
+					label="Registrar pago"
+					directionLabel="pago a proveedor"
+				/>
+			) : null}
+		</div>
 	</RecordDetailBody>
 </ShellLayout>

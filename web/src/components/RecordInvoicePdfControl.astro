@@ -11,63 +11,81 @@ const { listKey, recordId, title = '' } = Astro.props;
 const pdfPath = invoicePdfPath(listKey, recordId);
 ---
 
-{
-	pdfPath ? (
-		<section class="sg-invoice-pdf" data-invoice-pdf data-list-key={listKey}>
-			<button
-				class="sg-focus-ring"
-				type="button"
-				data-invoice-pdf-open
-				data-pdf-url={pdfPath}
-				data-pdf-title={title || 'Comprobante'}
-			>
-				Ver PDF
-			</button>
-			<a
-				class="sg-invoice-pdf-download sg-focus-ring"
-				href={`${pdfPath}?download=1`}
-				download
-				data-invoice-pdf-download
-			>
-				Descargar
-			</a>
+{/* Single root element required for Astro named-slot projection. */}
+<section
+	class="sg-invoice-pdf"
+	data-invoice-pdf={pdfPath ? true : undefined}
+	data-list-key={listKey}
+	hidden={!pdfPath}
+>
+	{
+		pdfPath ? (
+			<>
+				<button
+					class="sg-focus-ring"
+					type="button"
+					data-invoice-pdf-open
+					data-pdf-url={pdfPath}
+					data-pdf-title={title || 'Comprobante'}
+				>
+					Ver PDF
+				</button>
+				<a
+					class="sg-invoice-pdf-download sg-focus-ring"
+					href={`${pdfPath}?download=1`}
+					download
+					data-invoice-pdf-download
+				>
+					Descargar
+				</a>
 
-			<div
-				class="sg-invoice-pdf-modal"
-				data-invoice-pdf-modal
-				role="dialog"
-				aria-modal="true"
-				aria-labelledby="sg-invoice-pdf-title"
-				hidden
-			>
-				<div class="sg-invoice-pdf-dialog sg-glass">
-					<header class="sg-invoice-pdf-header">
-						<strong id="sg-invoice-pdf-title">Factura PDF</strong>
-						<div class="sg-invoice-pdf-header-actions">
-							<a
-								class="sg-focus-ring"
-								href={`${pdfPath}?download=1`}
-								download
-								data-invoice-pdf-modal-download
-							>
-								Descargar
-							</a>
-							<button type="button" class="sg-focus-ring" data-invoice-pdf-close>
-								Cerrar
-							</button>
-						</div>
-					</header>
-					<p class="sg-invoice-pdf-status" data-invoice-pdf-status hidden></p>
-					<iframe
-						class="sg-invoice-pdf-frame"
-						data-invoice-pdf-frame
-						title="Vista previa del PDF"
-					></iframe>
+				<div
+					class="sg-invoice-pdf-modal"
+					data-invoice-pdf-modal
+					role="dialog"
+					aria-modal="true"
+					aria-labelledby="sg-invoice-pdf-title"
+					hidden
+				>
+					<div class="sg-invoice-pdf-dialog sg-glass">
+						<header class="sg-invoice-pdf-header">
+							<strong id="sg-invoice-pdf-title">Factura PDF</strong>
+							<div class="sg-invoice-pdf-header-actions">
+								<a
+									class="sg-focus-ring"
+									href="#"
+									target="_blank"
+									rel="noopener"
+									data-invoice-pdf-open-tab
+								>
+									Abrir en pestaña
+								</a>
+								<a
+									class="sg-focus-ring"
+									href={`${pdfPath}?download=1`}
+									download
+									data-invoice-pdf-modal-download
+								>
+									Descargar
+								</a>
+								<button type="button" class="sg-focus-ring" data-invoice-pdf-close>
+									Cerrar
+								</button>
+							</div>
+						</header>
+						<p class="sg-invoice-pdf-status" data-invoice-pdf-status hidden></p>
+						<embed
+							class="sg-invoice-pdf-frame"
+							data-invoice-pdf-frame
+							type="application/pdf"
+							title="Vista previa del PDF"
+						/>
+					</div>
 				</div>
-			</div>
-		</section>
-	) : null
-}
+			</>
+		) : null
+	}
+</section>
 
 <script>
 	function initInvoicePdfControls() {
@@ -80,12 +98,13 @@ const pdfPath = invoicePdfPath(listKey, recordId);
 			const frame = root.querySelector('[data-invoice-pdf-frame]');
 			const status = root.querySelector('[data-invoice-pdf-status]');
 			const closeBtn = root.querySelector('[data-invoice-pdf-close]');
+			const openTab = root.querySelector('[data-invoice-pdf-open-tab]');
 			const titleEl = root.querySelector('#sg-invoice-pdf-title');
 
 			if (
 				!(openBtn instanceof HTMLButtonElement) ||
 				!(modal instanceof HTMLElement) ||
-				!(frame instanceof HTMLIFrameElement) ||
+				!(frame instanceof HTMLElement) ||
 				!(status instanceof HTMLElement) ||
 				!(closeBtn instanceof HTMLButtonElement)
 			) {
@@ -114,10 +133,17 @@ const pdfPath = invoicePdfPath(listKey, recordId);
 				}
 			}
 
+			function setFrameSrc(url) {
+				frame.setAttribute('src', url);
+			}
+
 			function closeModal() {
 				modal.hidden = true;
 				frame.removeAttribute('src');
 				revokeObjectUrl();
+				if (openTab instanceof HTMLAnchorElement) {
+					openTab.href = '#';
+				}
 				setStatus('');
 			}
 
@@ -139,12 +165,27 @@ const pdfPath = invoicePdfPath(listKey, recordId);
 							payload?.error?.message || 'No se pudo cargar el PDF'
 						);
 					}
-					const blob = await response.blob();
-					if (!blob.type.includes('pdf') && blob.size < 8) {
+					const buffer = await response.arrayBuffer();
+					if (buffer.byteLength < 5) {
 						throw new Error('Odoo no devolvió un PDF válido');
 					}
-					objectUrl = URL.createObjectURL(blob);
-					frame.src = objectUrl;
+					const head = new Uint8Array(buffer.slice(0, 5));
+					const isPdf =
+						head[0] === 0x25 &&
+						head[1] === 0x50 &&
+						head[2] === 0x44 &&
+						head[3] === 0x46 &&
+						head[4] === 0x2d;
+					if (!isPdf) {
+						throw new Error('Odoo no devolvió un PDF válido');
+					}
+					// Force MIME so Chrome/Edge embed the viewer instead of a blank frame.
+					const pdfBlob = new Blob([buffer], { type: 'application/pdf' });
+					objectUrl = URL.createObjectURL(pdfBlob);
+					setFrameSrc(`${objectUrl}#view=FitH`);
+					if (openTab instanceof HTMLAnchorElement) {
+						openTab.href = objectUrl;
+					}
 					setStatus('');
 				} catch (error) {
 					setStatus(

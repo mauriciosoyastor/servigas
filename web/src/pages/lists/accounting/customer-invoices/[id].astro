@@ -47,45 +47,43 @@ const showMarkFw = isFwMarkableState(state, fwLoaded);
 		fallbackListPath="/lists/accounting/customer-invoices"
 		recordId={id}
 	>
-		{detail && !error ? (
-			<RecordInvoicePdfControl
-				slot="secondary"
-				listKey="accounting/customer-invoices"
-				recordId={id}
-				title={detail.title}
-			/>
-		) : null}
-		{detail && !error && showPublish ? (
-			<RecordConfirmControl
-				slot="secondary"
-				listKey="accounting/customer-invoices"
-				recordId={id}
-				apiPath="/api/records/accounting/customer-invoices"
-				label="Publicar"
-				confirmMessage="¿Publicar esta factura de cliente?"
-				pendingLabel="Publicando…"
-				okLabel="Publicada"
-			/>
-		) : null}
-		{detail && !error && showPay ? (
-			<RecordRegisterPaymentControl
-				slot="secondary"
-				listKey="accounting/customer-invoices"
-				recordId={id}
-				apiPath="/api/records/accounting/customer-invoices"
-				defaultAmount={residual}
-				label="Registrar cobro"
-				directionLabel="cobro"
-				defaultPaymentMethod="cash"
-			/>
-		) : null}
-		{detail && !error && showMarkFw ? (
-			<RecordMarkFwLoadedControl
-				slot="secondary"
-				listKey="accounting/customer-invoices"
-				recordId={id}
-				apiPath="/api/records/accounting/customer-invoices"
-			/>
-		) : null}
+		<div slot="secondary" class="sg-ficha-secondary-actions">
+			{detail && !error ? (
+				<RecordInvoicePdfControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					title={detail.title}
+				/>
+			) : null}
+			{detail && !error && showPublish ? (
+				<RecordConfirmControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					apiPath="/api/records/accounting/customer-invoices"
+					label="Publicar"
+					confirmMessage="¿Publicar esta factura de cliente?"
+					pendingLabel="Publicando…"
+					okLabel="Publicada"
+				/>
+			) : null}
+			{detail && !error && showPay ? (
+				<RecordRegisterPaymentControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					apiPath="/api/records/accounting/customer-invoices"
+					defaultAmount={residual}
+					label="Registrar cobro"
+					directionLabel="cobro"
+					defaultPaymentMethod="cash"
+				/>
+			) : null}
+			{detail && !error && showMarkFw ? (
+				<RecordMarkFwLoadedControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					apiPath="/api/records/accounting/customer-invoices"
+				/>
+			) : null}
+		</div>
 	</RecordDetailBody>
 </ShellLayout>
