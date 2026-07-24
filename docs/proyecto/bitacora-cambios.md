@@ -4,7 +4,7 @@
 >
 > **Mantenerlo:** al cerrar cada sesión de trabajo significativa, agregar una entrada con la plantilla de abajo. Los agentes de Cursor deben leer este archivo antes de tocar tema/UI y actualizarlo al terminar.
 
-**Relacionado:** [CONTEXT.md](../../CONTEXT.md) · [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [servigas-brand.md](../design/servigas-brand.md)
+**Relacionado:** [CONTEXT.md](../../CONTEXT.md) · [liquid-glass-odoo.md](../design/liquid-glass-odoo.md) · [owl-liquid-glass-boundaries.md](../design/owl-liquid-glass-boundaries.md) · [servigas-brand.md](../design/servigas-brand.md)
 
 ---
 
@@ -139,6 +139,27 @@
 
 **Verificación:** leer ADR 0016 + sección shell en `CONTEXT.md`.  
 **Automatización:** checklist go/no-go → issues/smoke CI cuando haya session store durable.
+
+---
+
+### 2026-07-04 — Guardrails OWL + Liquid Glass v2
+
+**Área:** docs  
+**Motivo:** documentar límites técnicos de OWL/Odoo para que agentes y humanos avisen cuando una propuesta de UI no es viable, y guiar el diseño moderno máximo sin romper funcionalidad.
+
+**Archivos:**
+- `docs/design/owl-liquid-glass-boundaries.md` *(nuevo)*
+- `CONTEXT.md`
+- `docs/proyecto/bitacora-cambios.md` *(este archivo)*
+
+**Cambios:**
+- Doc guardrails: stack OWL, capas S/O/X, tabla propuestas inviables (§5.1), árbol de decisión, invariantes LG v2, protocolo agentes, alcance N1–N5.
+- `CONTEXT.md`: enlace al doc + regla #2 para agentes (avisar antes de implementar propuestas fuera de alcance).
+- Bitácora: enlace cruzado al nuevo doc.
+
+**Verificación:** agente lee `owl-liquid-glass-boundaries.md` antes de proponer cambios UI; propuesta tipo «glass en cada fila de lista» debe generar aviso §10.
+
+**Automatización:** skill Cursor local `servigas-owl-ui-guardrails` (backlog) que referencie este doc + `liquid-glass-v2-routes`.
 
 ---
 
