@@ -1642,3 +1642,173 @@ describe("OdooAdapter record notes", () => {
     );
   });
 });
+
+describe("OdooAdapter.changePassword", () => {
+  it("calls res.users.change_password with current and new password", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({ result: true }, { status: 200 })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.changePassword("sid-1", "old-secret", "new-secret");
+
+    const [url, init] = fetchImpl.mock.calls[0].arguments;
+    assert.equal(String(url), "http://odoo.test/web/dataset/call_kw");
+    assert.match(String(init.headers.cookie), /session_id=sid-1/);
+    assert.deepEqual(JSON.parse(String(init.body)), {
+      jsonrpc: "2.0",
+      params: {
+        model: "res.users",
+        method: "change_password",
+        args: ["old-secret", "new-secret"],
+        kwargs: {},
+      },
+    });
+  });
+
+  it("maps Invalid session to unauthorized, not validation_error", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            code: 100,
+            data: {
+              name: "odoo.http.SessionExpiredException",
+              message: "Invalid session",
+            },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "old", "new-secret"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "unauthorized" &&
+        err.status === 401
+    );
+  });
+
+  it("maps bare Access Denied to validation_error (wrong current password)", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            data: {
+              name: "odoo.exceptions.AccessDenied",
+              message: "Access Denied",
+              debug: "unrelated trace mentions session expired",
+            },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "bad", "new-secret"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "validation_error" &&
+        err.status === 400 &&
+        /actual/i.test(err.message)
+    );
+  });
+
+  it("maps Odoo UserError to validation_error without treating it as unauthorized", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            data: {
+              message: "Incorrect current password",
+              name: "odoo.exceptions.UserError",
+            },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "bad", "new-secret"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "validation_error" &&
+        err.status === 400 &&
+        err.message === "Incorrect current password"
+    );
+  });
+
+  it("maps empty passwords to validation_error before calling Odoo", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: true }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "", "x"),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "x", ""),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+});
+
+describe("OdooAdapter.updateLogin", () => {
+  it("writes res.users login for the given uid", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({ result: true }, { status: 200 })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const out = await adapter.updateLogin("sid-1", 2, "nuevo");
+    assert.deepEqual(out, { login: "nuevo" });
+
+    const [url, init] = fetchImpl.mock.calls[0].arguments;
+    assert.equal(String(url), "http://odoo.test/web/dataset/call_kw");
+    assert.deepEqual(JSON.parse(String(init.body)), {
+      jsonrpc: "2.0",
+      params: {
+        model: "res.users",
+        method: "write",
+        args: [[2], { login: "nuevo" }],
+        kwargs: {},
+      },
+    });
+  });
+
+  it("rejects empty or invalid login before calling Odoo", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: true }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.updateLogin("sid-1", 2, " "),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    await assert.rejects(
+      () => adapter.updateLogin("sid-1", 2, "bad login"),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+});

@@ -67,6 +67,10 @@ describe("shell UI contracts", () => {
     assert.match(login, /servigas-mark\.png/);
     assert.match(login, /sg-login-brand-name/);
     assert.match(login, />Servigas</);
+    assert.match(login, /changed/);
+    assert.match(login, /Contraseña actualizada/);
+    assert.match(login, /loginChanged/);
+    assert.match(login, /Usuario actualizado/);
   });
 
   it("protects and renders the launcher using tile navigation", async () => {
@@ -192,7 +196,23 @@ describe("shell UI contracts", () => {
     assert.match(apps, /Aplicaciones/);
     assert.match(apps, /href=\"\/\"/);
     assert.match(settings, /Ajustes/);
+    assert.match(settings, /Tu cuenta/);
+    assert.match(settings, /Cambiar contraseña/);
+    assert.match(settings, /\/api\/auth\/change-password/);
+    assert.match(settings, /\/api\/auth\/change-login/);
+    assert.match(settings, /data-login-edit/);
+    assert.match(settings, /PasswordField|data-password-toggle/);
+    assert.match(settings, /login\?loginChanged=1/);
+    assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
+    assert.doesNotMatch(settings, /todavía no está disponible/);
+  });
+
+  it("provides password visibility toggle field", async () => {
+    const field = await source("components/PasswordField.astro");
+    assert.match(field, /data-password-toggle/);
+    assert.match(field, /type=\"password\"/);
+    assert.match(field, /Mostrar contraseña/);
   });
 
   it("renders credit-note and variant detail pages", async () => {

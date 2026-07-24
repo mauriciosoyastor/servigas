@@ -22,6 +22,7 @@ export type SessionEntry = {
 export type SessionStore = {
   create(odooSessionId: string, session: SessionInfo): string;
   get(bffSid: string): SessionEntry | undefined;
+  updateSession(bffSid: string, session: SessionInfo): boolean;
   destroy(bffSid: string): void;
 };
 
@@ -66,6 +67,17 @@ export class MemorySessionStore implements SessionStore {
       return undefined;
     }
     return entry;
+  }
+
+  updateSession(bffSid: string, session: SessionInfo): boolean {
+    const entry = this.get(bffSid);
+    if (!entry) return false;
+    this.#map.set(bffSid, {
+      ...entry,
+      session,
+      expiresAt: Date.now() + this.#ttlSeconds * 1000,
+    });
+    return true;
   }
 
   destroy(bffSid: string): void {
@@ -121,6 +133,17 @@ export class FileSessionStore implements SessionStore {
       this.destroy(bffSid);
       return undefined;
     }
+  }
+
+  updateSession(bffSid: string, session: SessionInfo): boolean {
+    const entry = this.get(bffSid);
+    if (!entry) return false;
+    this.#write(bffSid, {
+      ...entry,
+      session,
+      expiresAt: Date.now() + this.#ttlSeconds * 1000,
+    });
+    return true;
   }
 
   destroy(bffSid: string): void {
@@ -182,6 +205,9 @@ export const sessionStore: SessionStore = {
   },
   get(bffSid) {
     return getSessionStore().get(bffSid);
+  },
+  updateSession(bffSid, session) {
+    return getSessionStore().updateSession(bffSid, session);
   },
   destroy(bffSid) {
     getSessionStore().destroy(bffSid);

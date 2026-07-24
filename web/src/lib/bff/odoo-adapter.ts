@@ -261,6 +261,166 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async changePassword(
+    odooSessionId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const current = String(currentPassword || "");
+    const next = String(newPassword || "");
+    if (!current || !next) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Completá la contraseña actual y la nueva"
+      );
+    }
+    if (current === next) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "La nueva contraseña debe ser distinta a la actual"
+      );
+    }
+
+    // Dedicated call: do NOT use #callKw — its Access Denied → unauthorized
+    // mapping would wipe the BFF session on a wrong current password.
+    let response: Response;
+    try {
+      response = await this.#post(
+        "/web/dataset/call_kw",
+        {
+          jsonrpc: "2.0",
+          params: {
+            model: "res.users",
+            method: "change_password",
+            args: [current, next],
+            kwargs: {},
+          },
+        },
+        odooSessionId
+      );
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+
+    const payload = (await response.json()) as JsonRpcResponse<unknown>;
+    if (payload.error !== undefined) {
+      const errObj = payload.error as {
+        code?: number;
+        data?: { name?: string; message?: string };
+      } | undefined;
+      const dataName = String(errObj?.data?.name || "");
+      const dataMessage = String(errObj?.data?.message || "");
+
+      if (
+        dataName === "odoo.http.SessionExpiredException" ||
+        /session expired/i.test(dataMessage)
+      ) {
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
+      }
+      if (dataName === "odoo.exceptions.AccessDenied") {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      }
+      if (dataName === "odoo.exceptions.UserError") {
+        throw new BffError(
+          "validation_error",
+          400,
+          dataMessage.trim() || "No se pudo cambiar la contraseña"
+        );
+      }
+
+      const errorText = this.#describeRpcError(payload.error);
+      if (/session expired|invalid session/i.test(errorText)) {
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
+      }
+      if (
+        /access denied|incorrect current password|wrong current password/i.test(
+          errorText
+        )
+      ) {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      }
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+      );
+    }
+
+    if (payload.result === undefined) {
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        "Odoo devolvió una respuesta JSON-RPC sin resultado"
+      );
+    }
+  }
+
+  async updateLogin(
+    odooSessionId: string,
+    uid: number,
+    login: string
+  ): Promise<{ login: string }> {
+    const next = String(login || "").trim();
+    if (!next) {
+      throw new BffError("validation_error", 400, "El usuario no puede estar vacío");
+    }
+    if (!Number.isFinite(uid) || uid <= 0) {
+      throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+    }
+    if (!/^[a-zA-Z0-9._@+-]{2,64}$/.test(next)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Usá un usuario de 2 a 64 caracteres (letras, números o . _ @ + -)"
+      );
+    }
+
+    try {
+      await this.#callKw(odooSessionId, "res.users", "write", [
+        [uid],
+        { login: next },
+      ]);
+    } catch (cause) {
+      if (cause instanceof BffError) {
+        if (cause.code === "unauthorized") throw cause;
+        const detail = cause.message || "";
+        if (/(already|existe|unique|duplic|taken)/i.test(detail)) {
+          throw new BffError(
+            "validation_error",
+            400,
+            "Ese usuario ya está en uso"
+          );
+        }
+        throw new BffError(
+          "validation_error",
+          400,
+          "No se pudo actualizar el usuario"
+        );
+      }
+      throw cause;
+    }
+
+    return { login: next };
+  }
+
   getLauncher(odooSessionId: string): Promise<LauncherPayload> {
     return this.#callKw(
       odooSessionId,
