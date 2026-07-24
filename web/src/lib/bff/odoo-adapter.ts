@@ -40,6 +40,11 @@ import {
   isConfirmableState,
 } from "../shell/record-actions.ts";
 import {
+  filterInvoiceCreateValues,
+  getInvoiceCreateDef,
+} from "../shell/invoice-creates.ts";
+import { publishInvoiceDestError } from "../shell/invoice-dest.ts";
+import {
   filterOrderCreateValues,
   getOrderCreateDef,
 } from "../shell/order-creates.ts";
@@ -50,6 +55,8 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
+
+const DERIVED_LIST_FIELDS = new Set(["sg_invoice_dest"]);
 import {
   isAllowedNoteModel,
   normalizeNoteBody,
@@ -299,7 +306,8 @@ export class OdooAdapter implements BackendClient {
     const domain = buildSearchDomain(def, q);
     const offset = (page - 1) * def.limit;
 
-    let fields = [...def.fields];
+    const displayFields = [...def.fields];
+    let fields = displayFields.filter((field) => !DERIVED_LIST_FIELDS.has(field));
     let rawRows: Record<string, unknown>[];
 
     try {
@@ -328,6 +336,13 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
+    if (
+      def.model === "account.move" &&
+      displayFields.includes("sg_invoice_dest")
+    ) {
+      await this.#enrichRowsWithPartnerInvoiceDest(odooSessionId, rawRows);
+    }
+
     const total = await this.#callKw<number>(
       odooSessionId,
       def.model,
@@ -339,6 +354,7 @@ export class OdooAdapter implements BackendClient {
       (column) =>
         column.kind === "image" ||
         fields.includes(column.key) ||
+        DERIVED_LIST_FIELDS.has(column.key) ||
         column.key === "image_url"
     );
 
@@ -388,7 +404,8 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Registro no encontrado");
     }
 
-    let fields = [...def.fields];
+    const displayFields = [...def.fields];
+    let fields = displayFields.filter((field) => !DERIVED_LIST_FIELDS.has(field));
     let rows: Record<string, unknown>[];
     try {
       rows = await this.#callKw<Record<string, unknown>[]>(
@@ -415,6 +432,13 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Registro no encontrado");
     }
 
+    if (
+      def.model === "account.move" &&
+      displayFields.includes("sg_invoice_dest")
+    ) {
+      await this.#enrichRowsWithPartnerInvoiceDest(odooSessionId, [row]);
+    }
+
     const labels: Record<string, string> = {
       name: "Nombre",
       display_name: "Nombre",
@@ -427,6 +451,7 @@ export class OdooAdapter implements BackendClient {
       city: "Ciudad",
       email: "Email",
       phone: "Teléfono",
+      sg_invoice_dest: "Destino fiscal",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;
@@ -446,7 +471,7 @@ export class OdooAdapter implements BackendClient {
       imageUrl: def.imageField
         ? mediaPath(def.model, id, def.imageField)
         : null,
-      fields: fields.map((key) => ({
+      fields: displayFields.map((key) => ({
         key,
         label: labels[key] || key,
         value: this.#cellValue(row[key]),
@@ -490,6 +515,9 @@ export class OdooAdapter implements BackendClient {
     listKey: string,
     values: Record<string, unknown>
   ): Promise<{ id: number; detailPath: string }> {
+    if (getInvoiceCreateDef(listKey)) {
+      return this.#createCustomerInvoice(odooSessionId, listKey, values);
+    }
     if (getOrderCreateDef(listKey)) {
       return this.#createMinimalOrder(odooSessionId, listKey, values);
     }
@@ -702,6 +730,123 @@ export class OdooAdapter implements BackendClient {
     return out;
   }
 
+  async #createCustomerInvoice(
+    odooSessionId: string,
+    listKey: string,
+    values: Record<string, unknown>
+  ): Promise<{ id: number; detailPath: string }> {
+    const invoiceDef = getInvoiceCreateDef(listKey);
+    if (!invoiceDef) {
+      throw new BffError("not_found", 404, "Alta no permitida");
+    }
+    const filtered = filterInvoiceCreateValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("not_found", 404, "Datos de alta inválidos");
+    }
+
+    const invoice_line_ids = filtered.lines.map((line) => {
+      const vals: Record<string, number> = {
+        product_id: line.productId,
+        quantity: line.qty,
+      };
+      if (line.price !== undefined) vals.price_unit = line.price;
+      if (line.discount !== undefined) vals.discount = line.discount;
+      return [0, 0, vals];
+    });
+
+    const id = await this.#callKw<number>(
+      odooSessionId,
+      invoiceDef.model,
+      "create",
+      [
+        {
+          move_type: invoiceDef.moveType,
+          partner_id: filtered.partnerId,
+          invoice_line_ids,
+        },
+      ]
+    );
+
+    const list = getRecordListDef(listKey);
+    const detailPath =
+      (list && buildDetailPath(list, Number(id))) ||
+      `/lists/${listKey}/${id}`;
+    return { id: Number(id), detailPath };
+  }
+
+  async #enrichRowsWithPartnerInvoiceDest(
+    odooSessionId: string,
+    rows: Record<string, unknown>[]
+  ): Promise<void> {
+    const partnerIds = new Set<number>();
+    for (const row of rows) {
+      const pid = this.#partnerIdFromM2o(row.partner_id);
+      if (pid > 0) partnerIds.add(pid);
+    }
+    if (!partnerIds.size) {
+      for (const row of rows) row.sg_invoice_dest = "cf";
+      return;
+    }
+
+    const partners = await this.#searchRead(
+      odooSessionId,
+      "res.partner",
+      [["id", "in", [...partnerIds]]],
+      ["id", "sg_invoice_dest"],
+      partnerIds.size,
+      0,
+      "id asc"
+    );
+    const destById = new Map<number, string>();
+    for (const partner of partners) {
+      const id = Number(partner.id);
+      if (!Number.isFinite(id)) continue;
+      destById.set(
+        id,
+        partner.sg_invoice_dest == null
+          ? "cf"
+          : String(partner.sg_invoice_dest)
+      );
+    }
+    for (const row of rows) {
+      const pid = this.#partnerIdFromM2o(row.partner_id);
+      row.sg_invoice_dest = destById.get(pid) || "cf";
+    }
+  }
+
+  async #assertPartnerOkToPublishInvoice(
+    odooSessionId: string,
+    move: Record<string, unknown> | undefined
+  ): Promise<void> {
+    const partnerId = this.#partnerIdFromM2o(move?.partner_id);
+    if (partnerId <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "La factura no tiene cliente"
+      );
+    }
+    const [partner] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "res.partner",
+      "read",
+      [[partnerId], ["sg_invoice_dest", "vat", "street", "city"]]
+    );
+    const fiscalError = publishInvoiceDestError(partner);
+    if (fiscalError) {
+      throw new BffError("validation_error", 400, fiscalError);
+    }
+  }
+
+  #partnerIdFromM2o(value: unknown): number {
+    if (Array.isArray(value) && value.length) {
+      const id = Number(value[0]);
+      return Number.isFinite(id) && id > 0 ? id : 0;
+    }
+    const id = Number(value);
+    return Number.isFinite(id) && id > 0 ? id : 0;
+  }
+
   async #createMinimalOrder(
     odooSessionId: string,
     listKey: string,
@@ -881,11 +1026,15 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Registro no encontrado");
     }
 
+    const readFields =
+      actionDef.model === "account.move"
+        ? ["state", "name", "partner_id", "move_type"]
+        : ["state", "name"];
     const [row] = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       actionDef.model,
       "read",
-      [[id], ["state", "name"]]
+      [[id], readFields]
     );
     const state = row?.state == null ? null : String(row.state);
     if (!isConfirmableState(listKey, state)) {
@@ -898,6 +1047,16 @@ export class OdooAdapter implements BackendClient {
 
     if (actionDef.model === "stock.picking") {
       return this.#validateStockPicking(odooSessionId, id, state);
+    }
+
+    if (
+      actionDef.model === "account.move" &&
+      actionDef.method === "action_post"
+    ) {
+      const moveType = row?.move_type == null ? null : String(row.move_type);
+      if (moveType === "out_invoice" || moveType === "out_refund") {
+        await this.#assertPartnerOkToPublishInvoice(odooSessionId, row);
+      }
     }
 
     await this.#callKw(odooSessionId, actionDef.model, actionDef.method, [

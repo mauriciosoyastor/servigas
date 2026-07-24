@@ -33,6 +33,14 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       method: "button_validate",
       confirmableStates: ["confirmed", "waiting", "assigned"],
     },
+    "accounting/customer-invoices": {
+      method: "action_post",
+      confirmableStates: ["draft"],
+    },
+    "accounting/drafts": {
+      method: "action_post",
+      confirmableStates: ["draft"],
+    },
   };
 
 function canonicalActionKey(listKey: string): string {

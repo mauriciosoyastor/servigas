@@ -4,6 +4,9 @@ interface Props {
 	recordId: number;
 	apiPath: string;
 	label?: string;
+	confirmMessage?: string;
+	pendingLabel?: string;
+	okLabel?: string;
 }
 
 const {
@@ -11,6 +14,9 @@ const {
 	recordId,
 	apiPath,
 	label = 'Confirmar',
+	confirmMessage = '¿Confirmás este documento?',
+	pendingLabel = 'Confirmando…',
+	okLabel = 'Confirmado',
 } = Astro.props;
 ---
 
@@ -21,6 +27,9 @@ const {
 		data-record-confirm-btn
 		data-id={recordId}
 		data-api={apiPath}
+		data-confirm-message={confirmMessage}
+		data-pending-label={pendingLabel}
+		data-ok-label={okLabel}
 	>
 		{label}
 	</button>
@@ -33,9 +42,11 @@ const {
 	const status = root?.querySelector('[data-record-confirm-status]');
 	if (btn instanceof HTMLButtonElement && status instanceof HTMLElement) {
 		btn.addEventListener('click', async () => {
-			if (!window.confirm('¿Confirmás este documento?')) return;
+			const confirmMessage =
+				btn.dataset.confirmMessage || '¿Confirmás este documento?';
+			if (!window.confirm(confirmMessage)) return;
 			status.hidden = false;
-			status.textContent = 'Confirmando…';
+			status.textContent = btn.dataset.pendingLabel || 'Confirmando…';
 			status.dataset.state = 'pending';
 			btn.disabled = true;
 			try {
@@ -52,7 +63,8 @@ const {
 				if (!response.ok) {
 					throw new Error(payload?.error?.message || 'No se pudo confirmar');
 				}
-				status.textContent = `Confirmado (${payload.state || 'ok'})`;
+				const ok = btn.dataset.okLabel || 'Confirmado';
+				status.textContent = `${ok} (${payload.state || 'ok'})`;
 				status.dataset.state = 'ok';
 				window.setTimeout(() => window.location.reload(), 450);
 			} catch (error) {

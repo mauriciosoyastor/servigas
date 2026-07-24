@@ -3,6 +3,7 @@
  */
 
 import { getRecordListDef } from "./record-lists.ts";
+import { canCreateInvoice } from "./invoice-creates.ts";
 import { canCreateOrder } from "./order-creates.ts";
 import {
   INVOICE_DEST_CF,
@@ -80,7 +81,11 @@ export function getRecordWriteDef(listKey: string): RecordWriteDef | null {
 
 export function canCreateRecord(listKey: string): boolean {
   const def = getRecordWriteDef(listKey);
-  return Boolean(def?.createFields.length) || canCreateOrder(listKey);
+  return (
+    Boolean(def?.createFields.length) ||
+    canCreateOrder(listKey) ||
+    canCreateInvoice(listKey)
+  );
 }
 
 export function canArchiveRecord(listKey: string): boolean {

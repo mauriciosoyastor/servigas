@@ -39,7 +39,9 @@ const createLabel =
 					? 'Nueva cotización'
 					: listKey === 'purchase/solicitudes'
 						? 'Nuevo pedido a proveedor'
-						: 'Nuevo';
+						: listKey === 'accounting/customer-invoices'
+							? 'Nueva factura'
+							: 'Nuevo';
 
 let userName = '';
 let listError = '';

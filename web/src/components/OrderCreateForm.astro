@@ -9,6 +9,7 @@ interface Props {
 	partnerLabel?: string;
 	partnerPlaceholder?: string;
 	productPlaceholder?: string;
+	submitLabel?: string;
 }
 
 const {
@@ -21,6 +22,7 @@ const {
 	partnerLabel = 'Cliente',
 	partnerPlaceholder = 'Buscar cliente…',
 	productPlaceholder = 'Buscar producto por nombre o código…',
+	submitLabel = 'Crear borrador',
 } = Astro.props;
 ---
 
@@ -46,6 +48,7 @@ const {
 			</label>
 			<input type="hidden" name="partnerId" value="" required data-picker-id />
 			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+			<p class="sg-order-picker-warn" data-partner-fiscal-warn hidden></p>
 			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
 		</div>
 
@@ -94,7 +97,7 @@ const {
 		</div>
 
 		<div class="sg-order-create-actions">
-			<button class="sg-focus-ring" type="submit">Crear borrador</button>
+			<button class="sg-focus-ring" type="submit">{submitLabel}</button>
 			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
 			<span class="sg-order-create-status" data-order-create-status hidden></span>
 		</div>
@@ -125,9 +128,34 @@ const {
 	}
 
 	function labelPartner(row) {
-		const name = row?.name;
-		if (typeof name === 'string' && name.trim()) return name.trim();
-		return String(row?.id ?? '');
+		const name =
+			typeof row?.name === 'string' && row.name.trim()
+				? row.name.trim()
+				: String(row?.id ?? '');
+		const dest = String(row?.sg_invoice_dest || '').toLowerCase();
+		if (dest === 'cuit') return `${name} · CUIT`;
+		if (dest === 'cf') return `${name} · CF`;
+		return name;
+	}
+
+	function setPartnerFiscalWarn(row) {
+		const warn = root?.querySelector('[data-partner-fiscal-warn]');
+		if (!(warn instanceof HTMLElement)) return;
+		if (!row) {
+			warn.hidden = true;
+			warn.textContent = '';
+			return;
+		}
+		const dest = String(row?.sg_invoice_dest || '').toLowerCase();
+		const vat = String(row?.vat || '').trim();
+		if (dest === 'cuit' && !vat) {
+			warn.hidden = false;
+			warn.textContent =
+				'Falta CUIT; completá la ficha antes de facturar.';
+		} else {
+			warn.hidden = true;
+			warn.textContent = '';
+		}
 	}
 
 	function labelProduct(row) {
@@ -200,6 +228,7 @@ const {
 			idInput.value = '';
 			selectedEl.hidden = true;
 			selectedEl.textContent = '';
+			if (kind === 'partner') setPartnerFiscalWarn(null);
 			if (kind === 'product') {
 				draftLabel = '';
 				draftListPrice = null;
@@ -217,6 +246,7 @@ const {
 			selectedEl.textContent = `Elegido: ${label}`;
 			queryInput.value = label;
 			hideResults();
+			if (kind === 'partner') setPartnerFiscalWarn(row);
 			if (kind === 'product') {
 				draftLabel = label;
 				const price = Number(row?.list_price);
@@ -457,6 +487,12 @@ const {
 		margin: 0;
 		font-size: 0.75rem;
 		color: #9be7b0;
+	}
+	.sg-order-picker-warn {
+		margin: 0;
+		font-size: 0.72rem;
+		line-height: 1.35;
+		color: #ffb4a2;
 	}
 	.sg-order-picker-results {
 		list-style: none;

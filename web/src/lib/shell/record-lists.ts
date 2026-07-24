@@ -110,15 +110,21 @@ function orderCols(): RecordListColumnDef[] {
   ];
 }
 
-function moveCols(): RecordListColumnDef[] {
-  return [
+function moveCols(includeInvoiceDest = false): RecordListColumnDef[] {
+  const cols: RecordListColumnDef[] = [
     { key: "name", label: "Número" },
     { key: "partner_id", label: "Contacto" },
+  ];
+  if (includeInvoiceDest) {
+    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+  }
+  cols.push(
     { key: "invoice_date", label: "Fecha" },
     { key: "amount_total", label: "Total" },
     { key: "payment_state", label: "Pago" },
-    { key: "state", label: "Estado" },
-  ];
+    { key: "state", label: "Estado" }
+  );
+  return cols;
 }
 
 function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
@@ -1049,12 +1055,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(true),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1102,6 +1109,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
@@ -1109,7 +1117,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "move_type",
     ],
     columns: [
-      ...moveCols(),
+      ...moveCols(true),
       { key: "move_type", label: "Tipo" },
     ],
     limit: 50,
@@ -1129,12 +1137,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(true),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",

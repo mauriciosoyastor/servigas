@@ -157,7 +157,7 @@ Arco D secuencial:
 
 | Entrega | Spec | Estado |
 |---------|------|--------|
-| **2a** | [fc-create-publish-destino](./2026-07-24-fc-create-publish-destino-design.md) — alta manual + Publicar + badge | En diseño |
+| **2a** | [fc-create-publish-destino](./2026-07-24-fc-create-publish-destino-design.md) — alta manual + Publicar + badge | Implementada |
 | **2b** | Crear FC desde pedido a facturar | Backlog tras 2a |
 
 1. Alta/publicación de **FC** (`account.move` out_invoice) desde Astro.  

@@ -277,6 +277,22 @@ describe("shell UI contracts", () => {
     assert.match(pos, /invoiceDestBadge|CUIT/);
   });
 
+  it("wires customer invoice create and publish UI", async () => {
+    const invoiceNew = await source(
+      "pages/lists/accounting/customer-invoices/new.astro"
+    );
+    const invoiceDetail = await source(
+      "pages/lists/accounting/customer-invoices/[id].astro"
+    );
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(invoiceNew, /OrderCreateForm/);
+    assert.match(invoiceNew, /accounting\/customer-invoices/);
+    assert.match(invoiceDetail, /RecordConfirmControl/);
+    assert.match(invoiceDetail, /Publicar/);
+    assert.match(invoiceDetail, /action_post|customer-invoices/);
+    assert.match(listPage, /Nueva factura/);
+  });
+
   it("renders product create/archive and quotation confirm", async () => {
     const productNew = await source("pages/lists/inventory/products/new.astro");
     const productDetail = await source("pages/lists/inventory/products/[id].astro");

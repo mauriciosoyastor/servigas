@@ -1,7 +1,7 @@
 # Design: FC create + publicar con destino CF/CUIT (fase 2a)
 
 **Fecha:** 2026-07-24  
-**Estado:** draft (pendiente revisión humana)  
+**Estado:** approved (implementación 2a)  
 **Repo:** servigas (`web/`, helpers en `servigas_core` ya con `sg_invoice_dest`)  
 **Padre:** [cf-cuit-invoice-destination](./2026-07-24-cf-cuit-invoice-destination-design.md)  
 **Usuario día a día:** administrativo de mostrador

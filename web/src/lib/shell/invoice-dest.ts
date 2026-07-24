@@ -17,7 +17,20 @@ export const CUIT_DEST_REQUIRED_MSG =
 export const POS_CUIT_MISSING_MSG =
   "Falta CUIT; completá la ficha antes de facturar.";
 
+export const PUBLISH_CUIT_VAT_MSG =
+  "Este cliente es Con CUIT: cargá el CUIT para publicar.";
+
+export const PUBLISH_CUIT_ADDRESS_MSG =
+  "Este cliente es Con CUIT: cargá calle y ciudad para publicar.";
+
 export type InvoiceDest = typeof INVOICE_DEST_CF | typeof INVOICE_DEST_CUIT;
+
+export type PartnerFiscalFields = {
+  sg_invoice_dest?: unknown;
+  vat?: unknown;
+  street?: unknown;
+  city?: unknown;
+};
 
 export function normalizeInvoiceDest(raw: unknown): InvoiceDest {
   const value = String(raw ?? INVOICE_DEST_CF).trim().toLowerCase();
@@ -66,4 +79,24 @@ export function needsCuitWarning(dest: unknown, vat: unknown): boolean {
     normalizeInvoiceDest(dest) === INVOICE_DEST_CUIT &&
     !String(vat ?? "").trim()
   );
+}
+
+/**
+ * Validación al publicar FC: destino CUIT exige vat + street + city.
+ * CF siempre ok.
+ */
+export function publishInvoiceDestError(
+  partner: PartnerFiscalFields | null | undefined
+): string | null {
+  if (!partner) return null;
+  const dest = normalizeInvoiceDest(partner.sg_invoice_dest);
+  if (dest !== INVOICE_DEST_CUIT) return null;
+  if (!String(partner.vat ?? "").trim()) return PUBLISH_CUIT_VAT_MSG;
+  if (
+    !String(partner.street ?? "").trim() ||
+    !String(partner.city ?? "").trim()
+  ) {
+    return PUBLISH_CUIT_ADDRESS_MSG;
+  }
+  return null;
 }

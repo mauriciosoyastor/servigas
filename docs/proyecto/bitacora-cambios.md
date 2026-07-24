@@ -50,6 +50,24 @@
 
 ## Entradas
 
+### 2026-07-24 — FC create + publicar con destino (fase 2a)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** alta manual de FC y Publicar con validación CF/CUIT.  
+**Archivos:**
+- `web/src/lib/shell/invoice-creates.ts`, `invoice-dest.ts`, `record-actions.ts`
+- `web/src/lib/bff/odoo-adapter.ts` (create `account.move`, `action_post`, enrich dest)
+- `web/src/pages/lists/accounting/customer-invoices/new.astro` + fichas Publicar
+- Spec/plan 2a en `docs/superpowers/`
+
+**Cambios:**
+- Crear FC borrador multi-línea desde Astro; badge destino desde partner.
+- Publicar con `action_post`; CUIT exige vat + calle + ciudad.
+- CTA **Nueva factura** en lista FC.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** patrón invoice-creates reutilizable para 2b (desde pedido).
+
 ### 2026-07-24 — Destino fiscal CF vs CUIT (fase 1)
 
 **Área:** contabilidad | partners | POS | web | core  
