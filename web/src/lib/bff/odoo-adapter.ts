@@ -306,22 +306,51 @@ export class OdooAdapter implements BackendClient {
 
     const payload = (await response.json()) as JsonRpcResponse<unknown>;
     if (payload.error !== undefined) {
-      const errorText = this.#describeRpcError(payload.error);
-      if (/(session|authenticat|unauthoriz)/i.test(errorText)) {
+      const errObj = payload.error as {
+        code?: number;
+        data?: { name?: string; message?: string };
+      } | undefined;
+      const dataName = String(errObj?.data?.name || "");
+      const dataMessage = String(errObj?.data?.message || "");
+
+      if (
+        dataName === "odoo.http.SessionExpiredException" ||
+        /session expired/i.test(dataMessage)
+      ) {
         throw new BffError(
           "unauthorized",
           401,
           "La sesión de Odoo no es válida"
         );
       }
-      const looksLikeWrongPassword =
-        /(incorrect|wrong|actual|current|password|contraseñ)/i.test(
+      if (dataName === "odoo.exceptions.AccessDenied") {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      }
+      if (dataName === "odoo.exceptions.UserError") {
+        throw new BffError(
+          "validation_error",
+          400,
+          dataMessage.trim() || "No se pudo cambiar la contraseña"
+        );
+      }
+
+      const errorText = this.#describeRpcError(payload.error);
+      if (/session expired|invalid session/i.test(errorText)) {
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
+      }
+      if (
+        /access denied|incorrect current password|wrong current password/i.test(
           errorText
-        ) ||
-        /invalid.*(password|contraseñ)/i.test(errorText) ||
-        /(password|contraseñ).*invalid/i.test(errorText) ||
-        /access denied/i.test(errorText);
-      if (looksLikeWrongPassword) {
+        )
+      ) {
         throw new BffError(
           "validation_error",
           400,

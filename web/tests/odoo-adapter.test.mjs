@@ -1676,7 +1676,13 @@ describe("OdooAdapter.changePassword", () => {
       db: "servigas_dev",
       fetchImpl: async () =>
         Response.json({
-          error: { data: { message: "Invalid session" } },
+          error: {
+            code: 100,
+            data: {
+              name: "odoo.http.SessionExpiredException",
+              message: "Invalid session",
+            },
+          },
         }),
     });
 
@@ -1695,7 +1701,13 @@ describe("OdooAdapter.changePassword", () => {
       db: "servigas_dev",
       fetchImpl: async () =>
         Response.json({
-          error: { data: { message: "Access Denied" } },
+          error: {
+            data: {
+              name: "odoo.exceptions.AccessDenied",
+              message: "Access Denied",
+              debug: "unrelated trace mentions session expired",
+            },
+          },
         }),
     });
 
@@ -1709,14 +1721,17 @@ describe("OdooAdapter.changePassword", () => {
     );
   });
 
-  it("maps wrong current password to validation_error without treating it as unauthorized", async () => {
+  it("maps Odoo UserError to validation_error without treating it as unauthorized", async () => {
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
       db: "servigas_dev",
       fetchImpl: async () =>
         Response.json({
           error: {
-            data: { message: "Incorrect current password", name: "Access Denied" },
+            data: {
+              message: "Incorrect current password",
+              name: "odoo.exceptions.UserError",
+            },
           },
         }),
     });
@@ -1727,7 +1742,7 @@ describe("OdooAdapter.changePassword", () => {
         err instanceof BffError &&
         err.code === "validation_error" &&
         err.status === 400 &&
-        /actual/i.test(err.message)
+        err.message === "Incorrect current password"
     );
   });
 
