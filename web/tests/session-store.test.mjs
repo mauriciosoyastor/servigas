@@ -47,6 +47,21 @@ describe("MemorySessionStore TTL", () => {
   it("exposes default TTL constant of 12 hours", () => {
     assert.equal(DEFAULT_SESSION_TTL_SECONDS, 12 * 60 * 60);
   });
+
+  it("updates session payload in place", () => {
+    const store = new MemorySessionStore({ ttlSeconds: 60 });
+    const sid = store.create("odoo-1", session);
+    assert.equal(
+      store.updateSession(sid, { uid: 2, name: "Admin", login: "nuevo" }),
+      true
+    );
+    assert.deepEqual(store.get(sid)?.session, {
+      uid: 2,
+      name: "Admin",
+      login: "nuevo",
+    });
+    assert.equal(store.updateSession("missing", session), false);
+  });
 });
 
 describe("FileSessionStore", () => {

@@ -69,6 +69,8 @@ describe("shell UI contracts", () => {
     assert.match(login, />Servigas</);
     assert.match(login, /changed/);
     assert.match(login, /Contraseña actualizada/);
+    assert.match(login, /loginChanged/);
+    assert.match(login, /Usuario actualizado/);
   });
 
   it("protects and renders the launcher using tile navigation", async () => {
@@ -197,6 +199,9 @@ describe("shell UI contracts", () => {
     assert.match(settings, /Tu cuenta/);
     assert.match(settings, /Cambiar contraseña/);
     assert.match(settings, /\/api\/auth\/change-password/);
+    assert.match(settings, /\/api\/auth\/change-login/);
+    assert.match(settings, /data-login-edit/);
+    assert.match(settings, /login\?loginChanged=1/);
     assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
     assert.doesNotMatch(settings, /todavía no está disponible/);

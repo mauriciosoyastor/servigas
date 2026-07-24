@@ -373,6 +373,54 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async updateLogin(
+    odooSessionId: string,
+    uid: number,
+    login: string
+  ): Promise<{ login: string }> {
+    const next = String(login || "").trim();
+    if (!next) {
+      throw new BffError("validation_error", 400, "El usuario no puede estar vacío");
+    }
+    if (!Number.isFinite(uid) || uid <= 0) {
+      throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+    }
+    if (!/^[a-zA-Z0-9._@+-]{2,64}$/.test(next)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Usá un usuario de 2 a 64 caracteres (letras, números o . _ @ + -)"
+      );
+    }
+
+    try {
+      await this.#callKw(odooSessionId, "res.users", "write", [
+        [uid],
+        { login: next },
+      ]);
+    } catch (cause) {
+      if (cause instanceof BffError) {
+        if (cause.code === "unauthorized") throw cause;
+        const detail = cause.message || "";
+        if (/(already|existe|unique|duplic|taken)/i.test(detail)) {
+          throw new BffError(
+            "validation_error",
+            400,
+            "Ese usuario ya está en uso"
+          );
+        }
+        throw new BffError(
+          "validation_error",
+          400,
+          "No se pudo actualizar el usuario"
+        );
+      }
+      throw cause;
+    }
+
+    return { login: next };
+  }
+
   getLauncher(odooSessionId: string): Promise<LauncherPayload> {
     return this.#callKw(
       odooSessionId,

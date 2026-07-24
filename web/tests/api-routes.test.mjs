@@ -17,6 +17,7 @@ import { __setBackendForTests } from "../src/lib/bff/get-backend.ts";
 import { GET as getSession } from "../src/pages/api/auth/session.ts";
 import { POST as postLogin } from "../src/pages/api/auth/login.ts";
 import { POST as postChangePassword } from "../src/pages/api/auth/change-password.ts";
+import { POST as postChangeLogin } from "../src/pages/api/auth/change-login.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
 import { POST as postRecord } from "../src/pages/api/records/[...slug].ts";
@@ -624,6 +625,76 @@ describe("POST /api/auth/change-password", () => {
       assert.equal(sessionStore.get(bffSid)?.odooSessionId, "odoo-sid");
     } finally {
       __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+});
+
+describe("POST /api/auth/change-login", () => {
+  it("updates login then destroys BFF session", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    const calls = [];
+    __setBackendForTests({
+      updateLogin: async (odooSessionId, uid, login) => {
+        calls.push(["updateLogin", odooSessionId, uid, login]);
+        return { login };
+      },
+      logout: async (...args) => {
+        calls.push(["logout", ...args]);
+      },
+    });
+    try {
+      const response = await postChangeLogin({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ login: "nuevo" }),
+        }),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        login: "nuevo",
+      });
+      assert.deepEqual(calls, [
+        ["updateLogin", "odoo-sid", 2, "nuevo"],
+        ["logout", "odoo-sid"],
+      ]);
+      assert.equal(sessionStore.get(bffSid), undefined);
+      assert.ok(cookies.deleteCalls.some((c) => c.name === BFF_COOKIE));
+    } finally {
+      __setBackendForTests(undefined);
+    }
+  });
+
+  it("rejects the same login", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo-sid", {
+      uid: 2,
+      name: "Admin",
+      login: "admin",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    try {
+      const response = await postChangeLogin({
+        cookies,
+        request: new Request("http://localhost/api/auth/change-login", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ login: "admin" }),
+        }),
+      });
+      assert.equal(response.status, 400);
+      const body = await response.json();
+      assert.equal(body.error.code, "validation_error");
+    } finally {
       sessionStore.destroy(bffSid);
     }
   });

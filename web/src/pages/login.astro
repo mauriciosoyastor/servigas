@@ -15,6 +15,7 @@ try {
 }
 
 const passwordChanged = Astro.url.searchParams.get('changed') === '1';
+const loginChanged = Astro.url.searchParams.get('loginChanged') === '1';
 ---
 
 <BaseLayout title="Ingresar | Servigas" bodyClass="sg-shell-canvas font-sans antialiased">
@@ -49,6 +50,11 @@ const passwordChanged = Astro.url.searchParams.get('changed') === '1';
 			{passwordChanged && (
 				<p class="sg-login-success" role="status">
 					Contraseña actualizada. Ingresá con la nueva.
+				</p>
+			)}
+			{loginChanged && (
+				<p class="sg-login-success" role="status">
+					Usuario actualizado. Ingresá con el nuevo usuario.
 				</p>
 			)}
 

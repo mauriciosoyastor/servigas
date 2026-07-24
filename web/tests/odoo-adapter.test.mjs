@@ -1765,3 +1765,50 @@ describe("OdooAdapter.changePassword", () => {
     assert.equal(fetchImpl.mock.calls.length, 0);
   });
 });
+
+describe("OdooAdapter.updateLogin", () => {
+  it("writes res.users login for the given uid", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({ result: true }, { status: 200 })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const out = await adapter.updateLogin("sid-1", 2, "nuevo");
+    assert.deepEqual(out, { login: "nuevo" });
+
+    const [url, init] = fetchImpl.mock.calls[0].arguments;
+    assert.equal(String(url), "http://odoo.test/web/dataset/call_kw");
+    assert.deepEqual(JSON.parse(String(init.body)), {
+      jsonrpc: "2.0",
+      params: {
+        model: "res.users",
+        method: "write",
+        args: [[2], { login: "nuevo" }],
+        kwargs: {},
+      },
+    });
+  });
+
+  it("rejects empty or invalid login before calling Odoo", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: true }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () => adapter.updateLogin("sid-1", 2, " "),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    await assert.rejects(
+      () => adapter.updateLogin("sid-1", 2, "bad login"),
+      (err) => err instanceof BffError && err.code === "validation_error"
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+});

@@ -12,6 +12,13 @@ try {
 	invalidateBffSession(Astro.cookies);
 	return Astro.redirect('/login');
 }
+
+const initials = userName
+	.split(/\s+/)
+	.filter(Boolean)
+	.slice(0, 2)
+	.map((part) => part[0]?.toUpperCase() ?? '')
+	.join('') || (userLogin[0]?.toUpperCase() ?? '?');
 ---
 
 <ShellLayout title="Ajustes | Servigas" active="home" userName={userName}>
@@ -24,18 +31,56 @@ try {
 			</p>
 		</header>
 
-		<section class="sg-landing-card sg-glass" aria-labelledby="settings-account-title">
-			<strong id="settings-account-title">Tu cuenta</strong>
-			<dl class="sg-settings-dl">
-				<div>
-					<dt>Nombre</dt>
-					<dd>{userName}</dd>
+		<section class="sg-landing-card sg-glass sg-settings-account" aria-labelledby="settings-account-title">
+			<div class="sg-settings-account-head">
+				<strong id="settings-account-title">Tu cuenta</strong>
+			</div>
+			<div class="sg-settings-identity">
+				<span class="sg-settings-avatar" aria-hidden="true">{initials}</span>
+				<div class="sg-settings-identity-text">
+					<p class="sg-settings-identity-name">{userName}</p>
+					<div class="sg-settings-identity-login" data-login-view>
+						<span>Usuario</span>
+						<code data-login-display>{userLogin}</code>
+						<button
+							class="sg-settings-edit-btn sg-focus-ring"
+							type="button"
+							data-login-edit
+						>
+							Editar
+						</button>
+					</div>
+					<form class="sg-settings-login-form" data-login-form hidden>
+						<label>
+							<span>Usuario</span>
+							<input
+								class="sg-focus-ring"
+								name="login"
+								type="text"
+								autocomplete="username"
+								required
+								minlength="2"
+								maxlength="64"
+								value={userLogin}
+								data-login-input
+							/>
+						</label>
+						<p class="sg-settings-error" data-login-error role="alert" hidden></p>
+						<div class="sg-settings-login-actions">
+							<button class="sg-landing-cta sg-focus-ring" type="submit">
+								Guardar usuario
+							</button>
+							<button
+								class="sg-settings-cancel sg-focus-ring"
+								type="button"
+								data-login-cancel
+							>
+								Cancelar
+							</button>
+						</div>
+					</form>
 				</div>
-				<div>
-					<dt>Usuario</dt>
-					<dd>{userLogin}</dd>
-				</div>
-			</dl>
+			</div>
 		</section>
 
 		<section class="sg-landing-card sg-glass" aria-labelledby="settings-password-title">
@@ -91,6 +136,68 @@ try {
 </ShellLayout>
 
 <script>
+	const loginView = document.querySelector<HTMLElement>('[data-login-view]');
+	const loginForm = document.querySelector<HTMLFormElement>('[data-login-form]');
+	const loginDisplay = document.querySelector<HTMLElement>('[data-login-display]');
+	const loginInput = document.querySelector<HTMLInputElement>('[data-login-input]');
+	const loginEdit = document.querySelector<HTMLButtonElement>('[data-login-edit]');
+	const loginCancel = document.querySelector<HTMLButtonElement>('[data-login-cancel]');
+	const loginError = document.querySelector<HTMLElement>('[data-login-error]');
+	const loginSubmit = loginForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+	const showLoginView = () => {
+		if (!loginView || !loginForm) return;
+		loginForm.hidden = true;
+		loginView.hidden = false;
+		if (loginError) loginError.hidden = true;
+	};
+
+	const showLoginEdit = () => {
+		if (!loginView || !loginForm || !loginInput || !loginDisplay) return;
+		loginInput.value = loginDisplay.textContent?.trim() || '';
+		loginView.hidden = true;
+		loginForm.hidden = false;
+		if (loginError) loginError.hidden = true;
+		loginInput.focus();
+		loginInput.select();
+	};
+
+	loginEdit?.addEventListener('click', showLoginEdit);
+	loginCancel?.addEventListener('click', showLoginView);
+
+	loginForm?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!loginSubmit || !loginError || !loginInput) return;
+
+		loginError.hidden = true;
+		const login = loginInput.value.trim();
+		if (!login) {
+			loginError.textContent = 'El usuario no puede estar vacío';
+			loginError.hidden = false;
+			return;
+		}
+
+		loginSubmit.disabled = true;
+		try {
+			const response = await fetch('/api/auth/change-login', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ login }),
+			});
+			const payload = await response.json();
+			if (!response.ok) {
+				throw new Error(payload?.error?.message || 'No se pudo actualizar el usuario');
+			}
+			window.location.assign('/login?loginChanged=1');
+		} catch (cause) {
+			loginError.textContent =
+				cause instanceof Error ? cause.message : 'No se pudo actualizar el usuario';
+			loginError.hidden = false;
+		} finally {
+			loginSubmit.disabled = false;
+		}
+	});
+
 	const form = document.querySelector<HTMLFormElement>('[data-change-password-form]');
 	const error = document.querySelector<HTMLElement>('[data-change-password-error]');
 	const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
@@ -179,25 +286,123 @@ try {
 		font-weight: 400;
 		line-height: 1.5;
 	}
-	.sg-settings-dl {
-		display: grid;
-		gap: 0.85rem;
-		margin: 0;
+	.sg-settings-account {
+		gap: 1.1rem;
 	}
-	.sg-settings-dl div {
-		display: grid;
-		gap: 0.2rem;
+	.sg-settings-account-head {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
 	}
-	.sg-settings-dl dt,
-	.sg-settings-form span {
-		color: var(--sg-text-muted-dark);
+	.sg-settings-identity {
+		display: grid;
+		grid-template-columns: auto minmax(0, 1fr);
+		align-items: center;
+		gap: 1rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: calc(var(--sg-radius-card) - 0.2rem);
+		padding: 0.95rem 1rem;
+		background: color-mix(in srgb, var(--sg-glass-fill) 85%, transparent);
+	}
+	.sg-settings-avatar {
+		display: grid;
+		place-items: center;
+		width: 3rem;
+		height: 3rem;
+		border-radius: 999px;
+		border: 1px solid color-mix(in srgb, var(--sg-flame-yellow) 35%, var(--sg-glass-border));
+		color: var(--sg-flame-yellow);
+		background: color-mix(in srgb, var(--sg-flame-yellow) 14%, transparent);
+		font-size: 0.95rem;
+		font-weight: 700;
+		letter-spacing: 0.02em;
+	}
+	.sg-settings-identity-text {
+		display: grid;
+		gap: 0.35rem;
+		min-width: 0;
+	}
+	.sg-settings-identity-name {
+		margin: 0 !important;
+		color: var(--sg-text-on-dark) !important;
+		font-size: 1.15rem !important;
+		font-weight: 650 !important;
+		letter-spacing: -0.02em;
+		line-height: 1.2 !important;
+		overflow-wrap: anywhere;
+	}
+	.sg-settings-identity-login {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.45rem 0.65rem;
+		margin: 0 !important;
+		color: rgba(255, 255, 255, 0.55) !important;
+		font-size: 0.78rem !important;
+		font-weight: 500 !important;
+	}
+	.sg-settings-identity-login code {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.45rem;
+		padding: 0.18rem 0.45rem;
+		color: var(--sg-text-on-dark);
+		background: color-mix(in srgb, var(--sg-glass-fill) 80%, transparent);
+		font-family: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', monospace;
+		font-size: 0.8rem;
+		font-weight: 600;
+	}
+	.sg-settings-edit-btn,
+	.sg-settings-cancel {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.28rem 0.7rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font: inherit;
+		font-size: 0.75rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-settings-login-form {
+		display: grid;
+		gap: 0.75rem;
+		margin-top: 0.35rem;
+	}
+	.sg-settings-login-form[hidden] {
+		display: none !important;
+	}
+	.sg-settings-identity-login[hidden] {
+		display: none !important;
+	}
+	.sg-settings-login-form label {
+		display: grid;
+		gap: 0.4rem;
+	}
+	.sg-settings-login-form input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-card);
+		padding: 0.7rem 0.85rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font: inherit;
+	}
+	.sg-settings-login-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.55rem;
+	}
+	.sg-settings-login-actions .sg-landing-cta {
+		margin-top: 0;
+	}
+	.sg-settings-form span,
+	.sg-settings-login-form span {
+		color: rgba(255, 255, 255, 0.58);
 		font-size: 0.78rem;
 		font-weight: 500;
-	}
-	.sg-settings-dl dd {
-		margin: 0;
-		color: var(--sg-text-on-dark);
-		font-size: 0.95rem;
 	}
 	.sg-settings-form,
 	.sg-settings-form label {
