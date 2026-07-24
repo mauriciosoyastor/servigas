@@ -151,10 +151,17 @@ Cobro POS siempre permitido
 
 ---
 
-## Fase 2 — Backlog (FC con destino)
+## Fase 2 — FC con destino
+
+Arco D secuencial:
+
+| Entrega | Spec | Estado |
+|---------|------|--------|
+| **2a** | [fc-create-publish-destino](./2026-07-24-fc-create-publish-destino-design.md) — alta manual + Publicar + badge | En diseño |
+| **2b** | Crear FC desde pedido a facturar | Backlog tras 2a |
 
 1. Alta/publicación de **FC** (`account.move` out_invoice) desde Astro.  
-2. Destino heredado del partner; override explícito solo si se define en plan.  
+2. Destino heredado del partner (sin override en 2a).  
 3. Si destino CUIT → exigir `vat` + domicilio mínimo antes de publicar.  
 4. Lista/ficha FC con badge CF/CUIT.  
 5. Puente Factura Web documentado usando esos datos (sigue manual salvo otro spec).
