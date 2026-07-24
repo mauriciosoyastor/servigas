@@ -192,7 +192,12 @@ describe("shell UI contracts", () => {
     assert.match(apps, /Aplicaciones/);
     assert.match(apps, /href=\"\/\"/);
     assert.match(settings, /Ajustes/);
+    assert.match(settings, /Tu cuenta/);
+    assert.match(settings, /Cambiar contraseña/);
+    assert.match(settings, /\/api\/auth\/change-password/);
+    assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
+    assert.doesNotMatch(settings, /todavía no está disponible/);
   });
 
   it("renders credit-note and variant detail pages", async () => {

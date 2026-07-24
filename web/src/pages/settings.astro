@@ -3,9 +3,11 @@ import ShellLayout from '../layouts/ShellLayout.astro';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 
 let userName = '';
+let userLogin = '';
 try {
 	const { session } = requireOdooSession(Astro.cookies);
 	userName = session.name || session.login;
+	userLogin = session.login || '';
 } catch {
 	invalidateBffSession(Astro.cookies);
 	return Astro.redirect('/login');
@@ -18,10 +20,65 @@ try {
 			<p>Inicio</p>
 			<h1>Ajustes</h1>
 			<p class="sg-landing-lead">
-				Esta pantalla todavía no está disponible. Por ahora usá Integraciones y las secciones del
-				día a día desde el inicio.
+				Gestioná tu cuenta. Otras configuraciones de empresa siguen en Integraciones.
 			</p>
 		</header>
+
+		<section class="sg-landing-card sg-glass" aria-labelledby="settings-account-title">
+			<strong id="settings-account-title">Tu cuenta</strong>
+			<dl class="sg-settings-dl">
+				<div>
+					<dt>Nombre</dt>
+					<dd>{userName}</dd>
+				</div>
+				<div>
+					<dt>Usuario</dt>
+					<dd>{userLogin}</dd>
+				</div>
+			</dl>
+		</section>
+
+		<section class="sg-landing-card sg-glass" aria-labelledby="settings-password-title">
+			<strong id="settings-password-title">Cambiar contraseña</strong>
+			<p>Después de guardar vas a tener que ingresar de nuevo con la clave nueva.</p>
+			<form data-change-password-form class="sg-settings-form">
+				<label>
+					<span>Contraseña actual</span>
+					<input
+						class="sg-focus-ring"
+						name="currentPassword"
+						type="password"
+						autocomplete="current-password"
+						required
+					/>
+				</label>
+				<label>
+					<span>Nueva contraseña</span>
+					<input
+						class="sg-focus-ring"
+						name="newPassword"
+						type="password"
+						autocomplete="new-password"
+						required
+					/>
+				</label>
+				<label>
+					<span>Confirmar nueva contraseña</span>
+					<input
+						class="sg-focus-ring"
+						name="confirmPassword"
+						type="password"
+						autocomplete="new-password"
+						required
+					/>
+				</label>
+				<p class="sg-settings-error" data-change-password-error role="alert" hidden></p>
+				<button class="sg-landing-cta sg-focus-ring" type="submit">
+					Guardar contraseña
+				</button>
+			</form>
+		</section>
+
 		<section class="sg-landing-card sg-glass">
 			<strong>Integraciones</strong>
 			<p>Factura Web y portales de proveedores.</p>
@@ -32,6 +89,59 @@ try {
 		</p>
 	</main>
 </ShellLayout>
+
+<script>
+	const form = document.querySelector<HTMLFormElement>('[data-change-password-form]');
+	const error = document.querySelector<HTMLElement>('[data-change-password-error]');
+	const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+	form?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!submit || !error) return;
+
+		error.hidden = true;
+		const data = new FormData(form);
+		const currentPassword = String(data.get('currentPassword') || '');
+		const newPassword = String(data.get('newPassword') || '');
+		const confirmPassword = String(data.get('confirmPassword') || '');
+
+		if (!currentPassword || !newPassword) {
+			error.textContent = 'Completá la contraseña actual y la nueva';
+			error.hidden = false;
+			return;
+		}
+		if (newPassword !== confirmPassword) {
+			error.textContent = 'La confirmación no coincide con la nueva contraseña';
+			error.hidden = false;
+			return;
+		}
+		if (currentPassword === newPassword) {
+			error.textContent = 'La nueva contraseña debe ser distinta a la actual';
+			error.hidden = false;
+			return;
+		}
+
+		submit.disabled = true;
+		try {
+			const response = await fetch('/api/auth/change-password', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ currentPassword, newPassword }),
+			});
+			const payload = await response.json();
+			if (!response.ok) {
+				throw new Error(payload?.error?.message || 'No se pudo cambiar la contraseña');
+			}
+			window.location.assign('/login?changed=1');
+		} catch (cause) {
+			error.textContent =
+				cause instanceof Error ? cause.message : 'No se pudo cambiar la contraseña';
+			error.hidden = false;
+		} finally {
+			submit.disabled = false;
+		}
+	});
+</script>
 
 <style>
 	.sg-landing {
@@ -69,6 +179,49 @@ try {
 		font-weight: 400;
 		line-height: 1.5;
 	}
+	.sg-settings-dl {
+		display: grid;
+		gap: 0.85rem;
+		margin: 0;
+	}
+	.sg-settings-dl div {
+		display: grid;
+		gap: 0.2rem;
+	}
+	.sg-settings-dl dt,
+	.sg-settings-form span {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-settings-dl dd {
+		margin: 0;
+		color: var(--sg-text-on-dark);
+		font-size: 0.95rem;
+	}
+	.sg-settings-form,
+	.sg-settings-form label {
+		display: grid;
+		gap: 0.45rem;
+	}
+	.sg-settings-form {
+		gap: 1rem;
+		margin-top: 0.35rem;
+	}
+	.sg-settings-form input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-card);
+		padding: 0.75rem 0.85rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font: inherit;
+	}
+	.sg-settings-error {
+		margin: 0 !important;
+		color: var(--sg-ember-coral) !important;
+	}
 	.sg-landing-cta {
 		justify-self: start;
 		margin-top: 0.35rem;
@@ -80,6 +233,13 @@ try {
 		font-size: 0.85rem;
 		font-weight: 650;
 		text-decoration: none;
+	}
+	button.sg-landing-cta {
+		cursor: pointer;
+	}
+	button.sg-landing-cta:disabled {
+		cursor: wait;
+		opacity: 0.65;
 	}
 	.sg-landing-back {
 		margin-top: 1.5rem;
