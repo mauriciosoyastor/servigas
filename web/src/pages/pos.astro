@@ -129,9 +129,10 @@ try {
 						</p>
 					</div>
 					<div
-						class="sg-pos-scroll sg-pos-cart-ops"
+						class="sg-pos-numpad-panel"
+						data-pos-numpad-panel
 						tabindex="0"
-						aria-label="Teclado y cobro"
+						aria-label="Teclado"
 					>
 						<section class="sg-pos-numpad" data-pos-numpad aria-label="Teclado">
 							<div class="sg-pos-numpad-modes" role="group" aria-label="Modo">
@@ -172,6 +173,8 @@ try {
 								Aplicar
 							</button>
 						</section>
+					</div>
+					<div class="sg-pos-cart-footer">
 						<div class="sg-pos-customer" data-pos-customer>
 							<label>
 								<span>Cliente (opcional)</span>
@@ -972,14 +975,25 @@ try {
 		flex: 1 1 auto;
 		min-width: 0;
 	}
-	.sg-pos-cart-ops {
+	.sg-pos-numpad-panel {
 		display: grid;
 		gap: 0.75rem;
 		align-content: start;
-		flex: 1 1 58%;
-		min-height: 11rem;
+		/* No encoger: el teclado completo tiene prioridad sobre sticky/viewport */
+		flex: 0 0 auto;
+		min-height: 26rem;
+		max-height: none;
+		overflow: visible;
 		padding-top: 0.15rem;
 		border-top: 1px solid var(--sg-glass-border);
+	}
+	.sg-pos-cart-footer {
+		display: grid;
+		gap: 0.75rem;
+		flex: 0 0 auto;
+		padding-top: 0.55rem;
+		border-top: 1px solid var(--sg-glass-border);
+		background: inherit;
 	}
 	/* :global — líneas del ticket se renderizan en JS sin data-astro-cid */
 	.sg-pos-cart :global(.sg-pos-cart-lines li) {
@@ -1353,8 +1367,11 @@ try {
 		.sg-pos-cart-ticket {
 			max-height: 28vh;
 		}
-		.sg-pos-cart-ops {
-			max-height: 52vh;
+		.sg-pos-numpad-panel {
+			min-height: 22rem;
+		}
+		.sg-pos-cart-footer {
+			max-height: none;
 		}
 	}
 </style>

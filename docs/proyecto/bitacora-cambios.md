@@ -41,7 +41,7 @@
 | POS OWL | **Fallback** | Tema oscuro + glass; norte = POS Astro |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
-| Shell Astro BFF (`web/`) | **Shell oficial (go condicional)** | Corte autorizado 2026-07-23; deuda = smoke real Odoo |
+| Shell Astro BFF (`web/`) | **Shell oficial (go condicional)** | Smoke lectura OK 2026-07-23; deuda = `SMOKE_MUTATE` checkout |
 | Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 **Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
@@ -49,6 +49,30 @@
 ---
 
 ## Entradas
+
+### 2026-07-23 — Smoke lectura OK + CI tests + numpad no recortado
+
+**Área:** web | infra | docs | POS  
+**Motivo:** cerrar deuda de verificación parcial del go condicional y endurecer proceso (tests en CI, smoke usable en Windows).  
+**Archivos:**
+- `web/scripts/smoke-shell-path.mjs` (default `localhost`)
+- `web/scripts/test-env.mjs` + `web/package.json` (tests cross-platform)
+- `.github/workflows/ci.yml` (`npm test` antes del build)
+- `web/src/pages/pos.astro` (panel numpad separado del footer de cobro)
+- `docs/adr/0016-astro-shell-cutover.md`, `CONTEXT.md`
+
+**Cambios:**
+- Smoke lectura PASS contra Odoo `servigas_dev` + Astro `:4321`.
+- `SMOKE_MUTATE=1` sigue fallando (`checkout_failed` 503).
+- CI corre suite unitaria; `npm test` ya no depende de `NODE_ENV=…` estilo Unix.
+- Numpad: `sg-pos-numpad-panel` + `sg-pos-cart-footer` (puerto del fix de `feature/astro-pos-numpad` sin pisar cliente/IVA/stock).
+
+**Verificación:**
+- `$env:SMOKE_BASE_URL='http://localhost:4321'; npm run smoke:shell` → PASS
+- `npm test` → suite verde
+- `SMOKE_MUTATE=1` → fail documentado
+
+**Automatización:** CI + smoke script; diagnosticar checkout POS en siguiente slice.
 
 ### 2026-07-23 — Cargar lista de precios (shell Astro + Odoo)
 

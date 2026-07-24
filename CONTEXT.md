@@ -74,8 +74,9 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 
 **Corte autorizado (condicional) — 2026-07-23.**  
 Shell oficial = Astro BFF (`web/`).  
-Deuda pre-prod: smoke camino feliz contra Odoo (login → hubs → producto → cotización/RFQ → venta POS).  
-OWL queda como fallback hasta que ese smoke pase en el entorno objetivo.
+Smoke lectura camino feliz: **OK** 2026-07-23 (login → hubs → producto → cotización/RFQ → POS).  
+Deuda pre-prod restante: `SMOKE_MUTATE=1` (checkout POS 503) antes del día D operativo.  
+OWL queda como fallback hasta que la mutación de venta pase en el entorno objetivo.
 
 **Gobernanza (ADR 0016):** postura **B** cerrada con go condicional. Spec: [go condicional](docs/superpowers/specs/2026-07-23-astro-cutover-go-condicional-design.md).
 
@@ -83,7 +84,7 @@ OWL queda como fallback hasta que ese smoke pase en el entorno objetivo.
 |------------------|----------------------------------------|
 | Astro login → hubs → listas → POS caja = **shell oficial** | UI OWL de negocio apagada / residual |
 | OWL launcher/hubs/POS = **fallback** | Odoo = backend únicamente |
-| Smoke real contra Odoo = **deuda pre-prod** | Smoke verde en el entorno objetivo |
+| Smoke lectura OK; mutate POS = **deuda pre-prod** | Smoke mutate verde en el entorno objetivo |
 
 **Regla de build:** solo paridad del camino feliz, endurecer BFF, o onboarding spotlight del shell. Fuera de alcance post-go (hasta priorizar): offline, multi-caja.
 

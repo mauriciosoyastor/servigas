@@ -11,7 +11,8 @@
  *
  * Exit 0 = camino OK. Exit 1 = fallo. Exit 2 = prereq down (Astro/Odoo).
  */
-const base = process.env.SMOKE_BASE_URL || "http://127.0.0.1:4321";
+// localhost (no 127.0.0.1): en Windows Astro suele bind a ::1 y 127.0.0.1 falla.
+const base = process.env.SMOKE_BASE_URL || "http://localhost:4321";
 const loginName = process.env.SMOKE_LOGIN || "admin";
 const password = process.env.SMOKE_PASSWORD || "admin";
 const mutate = process.env.SMOKE_MUTATE === "1";

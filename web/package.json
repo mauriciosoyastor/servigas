@@ -10,7 +10,7 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "test": "NODE_ENV=test node --experimental-strip-types --test tests/**/*.test.mjs",
+    "test": "node --experimental-strip-types --import ./scripts/test-env.mjs --test tests/**/*.test.mjs",
     "smoke:shell": "node scripts/smoke-shell-path.mjs"
   },
   "dependencies": {

@@ -30,7 +30,8 @@ Adoptar la **postura B — camino a corte**, con alcance de corte **completo del
 
 ### Checklist go/no-go (mínimo)
 
-- [ ] Smoke camino feliz contra Odoo dev: login → hubs → producto → cotización/RFQ → venta POS Astro — **deuda pre-prod del go condicional** (`cd web && npm run smoke:shell`)
+- [x] Smoke camino feliz (lectura) contra Odoo dev: login → hubs → producto → cotización/RFQ → POS catálogo/página — OK 2026-07-23 (`SMOKE_BASE_URL=http://localhost:4321 npm run smoke:shell`)
+- [ ] Smoke mutación venta POS (`SMOKE_MUTATE=1`) — **sigue deuda**: checkout 503 `checkout_failed` en entorno actual
 - [x] Session store durable (reemplazo de `MemorySessionStore`) — #13
 - [x] Errores BFF seguros + logout/timeout definidos — #24
 - [x] Paridad Liquid Glass “usable en mostrador” (no pixel-perfect) — #27

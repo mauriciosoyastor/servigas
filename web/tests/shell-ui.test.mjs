@@ -131,6 +131,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /addToCart|cartTotal/);
     assert.match(page, /data-pos-pay-method|paymentMethods/);
     assert.match(page, /data-pos-numpad|data-np-mode/);
+    assert.match(page, /sg-pos-numpad-panel|overscroll-behavior/);
+    assert.match(page, /sg-pos-cart-footer/);
     assert.match(page, /sg-pos-scroll|overscroll-behavior/);
     assert.match(page, /sg-pos-line-thumb|data-line-thumb/);
     assert.match(page, /data-line-disc|data-pos-order-disc/);
