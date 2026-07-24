@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="launcher_tile_sales" model="sg.app.tile">
+            <field name="label">Ventas</field>
+            <field name="hint">Pedidos, cotizaciones y clientes</field>
+            <field name="icon">fa-line-chart</field>
+            <field name="sequence">10</field>
+            <field name="accent_key">flame-yellow</field>
+            <field name="target_type">hub</field>
+            <field name="client_tag">servigas_sales_hub</field>
+            <field name="metric_model">sale.order</field>
+            <field name="metric_domain">[('state', 'in', ['sale', 'done'])]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="launcher_tile_inventory" model="sg.app.tile">
+            <field name="label">Inventario</field>
+            <field name="hint">Productos, stock y operaciones</field>
+            <field name="icon">fa-cubes</field>
+            <field name="sequence">20</field>
+            <field name="accent_key">flame-orange</field>
+            <field name="target_type">hub</field>
+            <field name="client_tag">servigas_inventory_hub</field>
+            <field name="metric_model">product.product</field>
+            <field name="metric_domain">[('active', '=', True)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="launcher_tile_purchase" model="sg.app.tile">
+            <field name="label">Compras</field>
+            <field name="hint">Pedidos y proveedores</field>
+            <field name="icon">fa-shopping-cart</field>
+            <field name="sequence">30</field>
+            <field name="accent_key">flame-deep</field>
+            <field name="target_type">hub</field>
+            <field name="client_tag">servigas_purchase_hub</field>
+            <field name="metric_model">purchase.order</field>
+            <field name="metric_domain">[('state', 'in', ['draft', 'sent', 'to approve'])]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="launcher_tile_accounting" model="sg.app.tile">
+            <field name="label">Facturación</field>
+            <field name="hint">Facturas, pagos y contabilidad</field>
+            <field name="icon">fa-file-text-o</field>
+            <field name="sequence">40</field>
+            <field name="accent_key">flame-rust</field>
+            <field name="target_type">hub</field>
+            <field name="client_tag">servigas_accounting_hub</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('state', '=', 'draft'), ('move_type', 'in', ['out_invoice', 'in_invoice'])]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="launcher_tile_pos" model="sg.app.tile">
+            <field name="label">Punto de venta</field>
+            <field name="hint">Mostrador Servigas</field>
+            <field name="icon">fa-shopping-basket</field>
+            <field name="sequence">50</field>
+            <field name="accent_key">bg-mid</field>
+            <field name="target_type">action</field>
+            <field name="action_id" ref="point_of_sale.action_pos_config_kanban"/>
+        </record>
+
+        <record id="launcher_tile_apps" model="sg.app.tile">
+            <field name="label">Aplicaciones</field>
+            <field name="hint">Instalar y gestionar módulos</field>
+            <field name="icon">fa-puzzle-piece</field>
+            <field name="sequence">70</field>
+            <field name="accent_key">bg-deep</field>
+            <field name="target_type">action</field>
+            <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
+            <field name="action_id" ref="base.open_module_tree"/>
+        </record>
+
+        <record id="launcher_tile_settings" model="sg.app.tile">
+            <field name="label">Ajustes</field>
+            <field name="hint">Configuración general</field>
+            <field name="icon">fa-cog</field>
+            <field name="sequence">80</field>
+            <field name="accent_key">bg-deep</field>
+            <field name="target_type">action</field>
+            <field name="groups_id" eval="[(4, ref('base.group_system'))]"/>
+            <field name="action_id" ref="base_setup.action_general_configuration"/>
+        </record>
+    </data>
+
+    <!-- Actualiza accent_key en bases ya instaladas (noupdate=1 en registros arriba) -->
+    <data>
+        <record id="launcher_tile_sales" model="sg.app.tile">
+            <field name="accent_key">flame-yellow</field>
+        </record>
+        <record id="launcher_tile_inventory" model="sg.app.tile">
+            <field name="accent_key">flame-orange</field>
+        </record>
+        <record id="launcher_tile_purchase" model="sg.app.tile">
+            <field name="accent_key">flame-deep</field>
+        </record>
+        <record id="launcher_tile_accounting" model="sg.app.tile">
+            <field name="accent_key">flame-rust</field>
+        </record>
+        <record id="launcher_tile_pos" model="sg.app.tile">
+            <field name="accent_key">bg-mid</field>
+            <field name="action_id" ref="point_of_sale.action_pos_config_kanban"/>
+        </record>
+        <record id="launcher_tile_apps" model="sg.app.tile">
+            <field name="accent_key">bg-deep</field>
+        </record>
+        <record id="launcher_tile_settings" model="sg.app.tile">
+            <field name="accent_key">bg-deep</field>
+        </record>
+    </data>
+</odoo>
