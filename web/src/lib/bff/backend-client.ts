@@ -120,6 +120,11 @@ export interface BackendClient {
     id: number,
     field: string
   ): Promise<{ body: ArrayBuffer; contentType: string }>;
+  fetchInvoicePdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }>;
   previewPriceListImport(
     odooSessionId: string,
     input: {

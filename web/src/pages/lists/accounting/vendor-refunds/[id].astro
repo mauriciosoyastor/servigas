@@ -1,5 +1,6 @@
 ---
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordInvoicePdfControl from '../../../../components/RecordInvoicePdfControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
@@ -24,5 +25,15 @@ const { userName, detail, error } = loaded;
 		eyebrow="Ficha de NC proveedor"
 		fallbackTitle="NC proveedor"
 		fallbackListPath="/lists/accounting/vendor-refunds"
-	/>
+		recordId={id}
+	>
+		{detail && !error ? (
+			<RecordInvoicePdfControl
+				slot="secondary"
+				listKey="accounting/vendor-refunds"
+				recordId={id}
+				title={detail.title}
+			/>
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>

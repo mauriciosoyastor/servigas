@@ -31,6 +31,24 @@
 
 ---
 
+### 2026-07-24 — PDF embebido en fichas de facturas (Astro)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** leer el PDF del comprobante sin salir del shell (misma sesión BFF).  
+**Archivos:**  
+- `web/src/lib/shell/invoice-pdf.ts`  
+- `web/src/lib/bff/{backend-client,odoo-adapter}.ts`  
+- `web/src/pages/api/reports/invoice/[...slug].ts`  
+- `web/src/components/RecordInvoicePdfControl.astro`  
+- fichas `accounting/{customer-invoices,vendor-bills,credit-notes,vendor-refunds,drafts}/[id].astro`  
+- tests `invoice-pdf.test.mjs` + contrato shell-ui  
+**Cambios:**  
+- Proxy BFF → Odoo `/report/pdf/account.report_invoice_with_payments/<id>` con allowlist de listKeys  
+- Modal con iframe (blob URL) + Descargar (`Content-Disposition: attachment`)  
+- Validación magic bytes `%PDF-` para no embeber HTML de login  
+**Verificación:** `cd web && npm test`  
+**Automatización:** patrón reutilizable “binary proxy + modal viewer” para otros reportes QWeb  
+
 ### 2026-07-24 — Contabilidad ops: pagos, NC, FP, vencimientos
 
 **Área:** contabilidad | web | BFF | hubs  

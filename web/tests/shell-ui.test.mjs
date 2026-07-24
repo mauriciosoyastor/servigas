@@ -179,7 +179,31 @@ describe("shell UI contracts", () => {
     const invoice = await source("pages/lists/accounting/customer-invoices/[id].astro");
     const customer = await source("pages/lists/sales/customers/[id].astro");
     assert.match(invoice, /['"]accounting\/customer-invoices['"]/);
+    assert.match(invoice, /RecordInvoicePdfControl/);
     assert.match(customer, /['"]sales\/customers['"]/);
+  });
+
+  it("embeds invoice PDF viewer on accounting move fichas", async () => {
+    const control = await source("components/RecordInvoicePdfControl.astro");
+    const pages = await Promise.all([
+      source("pages/lists/accounting/customer-invoices/[id].astro"),
+      source("pages/lists/accounting/vendor-bills/[id].astro"),
+      source("pages/lists/accounting/credit-notes/[id].astro"),
+      source("pages/lists/accounting/vendor-refunds/[id].astro"),
+      source("pages/lists/accounting/drafts/[id].astro"),
+    ]);
+    assert.match(control, /data-invoice-pdf/);
+    assert.match(control, /Ver PDF/);
+    assert.match(control, /Descargar/);
+    assert.match(control, /iframe/);
+    assert.match(control, /createObjectURL/);
+    assert.match(control, /role=["']dialog["']/);
+    for (const page of pages) {
+      assert.match(page, /RecordInvoicePdfControl/);
+    }
+    const api = await source("pages/api/reports/invoice/[...slug].ts");
+    assert.match(api, /fetchInvoicePdf/);
+    assert.match(api, /"cache-control":\s*"private, no-store"/);
   });
 
   it("renders transfer detail page", async () => {

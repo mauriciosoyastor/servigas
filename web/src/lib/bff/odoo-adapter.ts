@@ -69,6 +69,11 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
+import {
+  canFetchInvoicePdf,
+  INVOICE_PDF_REPORT,
+  invoicePdfFilename,
+} from "../shell/invoice-pdf.ts";
 
 /** Never requested from Odoo; computed in the BFF. */
 const COMPUTED_LIST_FIELDS = new Set(["sg_doc_type_short"]);
@@ -2241,6 +2246,78 @@ export class OdooAdapter implements BackendClient {
       return {
         body: await response.arrayBuffer(),
         contentType: response.headers.get("content-type") || "image/png",
+      };
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+  }
+
+  async fetchInvoicePdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }> {
+    if (!canFetchInvoicePdf(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "PDF no permitido");
+    }
+
+    let title: string | null = null;
+    try {
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "account.move",
+        "read",
+        [[id], ["name", "display_name"]]
+      );
+      if (!row) {
+        throw new BffError("not_found", 404, "Comprobante no encontrado");
+      }
+      title = String(row.display_name || row.name || "") || null;
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      this.#mapFetchFailure(cause);
+    }
+
+    try {
+      const response = await this.#fetch(
+        `${this.#baseUrl}/report/pdf/${INVOICE_PDF_REPORT}/${id}`,
+        {
+          headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
+        }
+      );
+      if (!response.ok) {
+        throw new BffError(
+          "not_found",
+          404,
+          "No se pudo generar el PDF del comprobante"
+        );
+      }
+      const contentType =
+        response.headers.get("content-type") || "application/pdf";
+      const body = await response.arrayBuffer();
+      // Odoo may return an HTML login/error page with 200 — reject non-PDF.
+      const head = new Uint8Array(body.slice(0, 5));
+      const isPdf =
+        head.length >= 5 &&
+        head[0] === 0x25 &&
+        head[1] === 0x50 &&
+        head[2] === 0x44 &&
+        head[3] === 0x46 &&
+        head[4] === 0x2d; // %PDF-
+      if (!isPdf) {
+        throw new BffError(
+          "odoo_unavailable",
+          503,
+          "Odoo no devolvió un PDF válido"
+        );
+      }
+      return {
+        body,
+        contentType: contentType.includes("pdf")
+          ? contentType
+          : "application/pdf",
+        filename: invoicePdfFilename(title, id),
       };
     } catch (cause) {
       this.#mapFetchFailure(cause);
