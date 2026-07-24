@@ -293,6 +293,28 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Nueva factura/);
   });
 
+  it("wires vendor bill create with attachment and publish UI", async () => {
+    const billNew = await source(
+      "pages/lists/accounting/vendor-bills/new.astro"
+    );
+    const billDetail = await source(
+      "pages/lists/accounting/vendor-bills/[id].astro"
+    );
+    const form = await source("components/OrderCreateForm.astro");
+    const detailBody = await source("components/RecordDetailBody.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(billNew, /requireAttachment/);
+    assert.match(billNew, /showBillSource/);
+    assert.match(billNew, /purchase\/vendors/);
+    assert.match(billNew, /accounting\/vendor-bills/);
+    assert.match(form, /data-bill-attachment/);
+    assert.match(form, /data-bill-source/);
+    assert.match(billDetail, /RecordConfirmControl/);
+    assert.match(billDetail, /Publicar/);
+    assert.match(detailBody, /sg-detail-attachments|Comprobante/);
+    assert.match(listPage, /Cargar FP/);
+  });
+
   it("wires Crear FC on sale order detail when to invoice", async () => {
     const orderDetail = await source("pages/lists/sales/orders/[id].astro");
     const control = await source("components/RecordCreateInvoiceControl.astro");
@@ -331,6 +353,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /OrderCreateForm/);
     assert.match(page, /partnerListKey=["']sales\/customers["']/);
     assert.match(page, /productListKey=["']inventory\/variants["']/);
+    assert.doesNotMatch(page, /showBillSource|requireAttachment/);
     assert.match(form, /data-order-picker/);
     assert.match(form, /data-picker-query/);
     assert.match(form, /name=["']partnerId["']/);
@@ -339,7 +362,8 @@ describe("shell UI contracts", () => {
     assert.match(form, /lines:\s*lines\.map/);
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /action:\s*['"]create['"]/);
-    assert.doesNotMatch(form, /<select/);
+    // <select> is only for optional FP bill source (gated by showBillSource).
+    assert.match(form, /showBillSource/);
   });
 
   it("renders purchase order create page with searchable pickers", async () => {

@@ -1182,6 +1182,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "amount_total",
       "payment_state",
       "state",
+      "sg_bill_source",
     ],
     columns: moveCols(),
     limit: 50,

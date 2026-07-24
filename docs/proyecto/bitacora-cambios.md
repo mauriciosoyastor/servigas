@@ -50,6 +50,26 @@
 
 ## Entradas
 
+### 2026-07-24 — Cargar FP con adjunto (PDF/foto)
+
+**Área:** contabilidad | web | BFF | core  
+**Motivo:** cargar facturas de proveedor que llegan por WhatsApp/mail sin OCR.  
+**Archivos:**
+- `custom_addons/servigas_core/models/account_move.py` (`sg_bill_source`)
+- `web/src/lib/shell/bill-attachment.ts`, `invoice-creates.ts`, `record-actions.ts`
+- `web/src/lib/bff/odoo-adapter.ts` (create `in_invoice` + `ir.attachment`)
+- `web/src/pages/lists/accounting/vendor-bills/new.astro` + ficha Publicar
+- `web/src/pages/api/attachments/[id].ts`
+- Spec: `docs/superpowers/specs/2026-07-24-vendor-bill-attachment-design.md`
+
+**Cambios:**
+- CTA **Cargar FP**: archivo obligatorio + proveedor + líneas + origen opcional.
+- Adjunto ligado a la FP; ficha con descarga; **Publicar** en draft.
+- Rollback unlink si falla el adjunto.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** patrón attachment reutilizable para otros comprobantes.
+
 ### 2026-07-24 — Tipo comprobante sugerido + checklist l10n_ar (fase 3a/3b)
 
 **Área:** contabilidad | docs | integraciones  

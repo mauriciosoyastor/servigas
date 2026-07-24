@@ -36,7 +36,7 @@ describe("record-actions allowlist", () => {
     assert.equal(canConfirmRecord("sales/orders"), false);
   });
 
-  it("allows publishing draft customer invoices", () => {
+  it("allows publishing draft customer invoices and vendor bills", () => {
     const def = getRecordActionDef("accounting/customer-invoices");
     assert.ok(def);
     assert.equal(def.method, "action_post");
@@ -48,6 +48,11 @@ describe("record-actions allowlist", () => {
       isConfirmableState("accounting/customer-invoices", "posted"),
       false
     );
+    const vendor = getRecordActionDef("accounting/vendor-bills");
+    assert.ok(vendor);
+    assert.equal(vendor.method, "action_post");
+    assert.equal(canConfirmRecord("accounting/vendor-bills"), true);
+    assert.equal(isConfirmableState("accounting/vendor-bills", "draft"), true);
   });
 
   it("gates confirm by state", () => {

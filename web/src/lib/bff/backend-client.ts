@@ -104,6 +104,14 @@ export interface BackendClient {
     id: number,
     field: string
   ): Promise<{ body: ArrayBuffer; contentType: string }>;
+  fetchAttachment(
+    odooSessionId: string,
+    attachmentId: number
+  ): Promise<{
+    body: ArrayBuffer;
+    contentType: string;
+    filename: string;
+  }>;
   previewPriceListImport(
     odooSessionId: string,
     input: {

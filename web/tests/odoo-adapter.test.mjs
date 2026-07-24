@@ -1128,6 +1128,101 @@ describe("OdooAdapter.createRecord", () => {
       ],
     });
   });
+
+  it("creates a vendor bill draft with attachment", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      if (body.params?.model === "account.move" && body.params?.method === "create") {
+        return Response.json({ result: 66 });
+      }
+      if (body.params?.model === "ir.attachment" && body.params?.method === "create") {
+        return Response.json({ result: 9001 });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "accounting/vendor-bills", {
+      partnerId: 8,
+      billSource: "mail",
+      lines: [{ productId: 42, qty: 1, price: 200 }],
+      attachment: {
+        filename: "fp.png",
+        mimetype: "image/png",
+        content: png,
+      },
+    });
+    assert.equal(result.id, 66);
+    assert.equal(result.detailPath, "/lists/accounting/vendor-bills/66");
+
+    const moveBody = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(moveBody.params.model, "account.move");
+    assert.deepEqual(moveBody.params.args[0], {
+      move_type: "in_invoice",
+      partner_id: 8,
+      sg_bill_source: "mail",
+      invoice_line_ids: [
+        [0, 0, { product_id: 42, quantity: 1, price_unit: 200 }],
+      ],
+    });
+
+    const attBody = JSON.parse(fetchImpl.mock.calls[1].arguments[1].body);
+    assert.equal(attBody.params.model, "ir.attachment");
+    assert.equal(attBody.params.args[0].res_model, "account.move");
+    assert.equal(attBody.params.args[0].res_id, 66);
+    assert.equal(attBody.params.args[0].datas, png);
+  });
+
+  it("unlinks vendor bill if attachment create fails", async () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      if (body.params?.model === "account.move" && body.params?.method === "create") {
+        return Response.json({ result: 67 });
+      }
+      if (body.params?.model === "ir.attachment") {
+        return Response.json({
+          error: { data: { message: "boom" }, message: "boom" },
+        });
+      }
+      if (body.params?.method === "unlink") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "accounting/vendor-bills", {
+          partnerId: 8,
+          lines: [{ productId: 1, qty: 1 }],
+          attachment: {
+            filename: "fp.png",
+            mimetype: "image/png",
+            content: png,
+          },
+        }),
+      /adjuntar|boom|upstream|error/i
+    );
+
+    const methods = fetchImpl.mock.calls.map((call) => {
+      const body = JSON.parse(call.arguments[1].body);
+      return `${body.params.model}.${body.params.method}`;
+    });
+    assert.ok(methods.includes("account.move.unlink"));
+  });
 });
 
 describe("OdooAdapter.archiveRecord", () => {

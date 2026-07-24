@@ -41,7 +41,9 @@ const createLabel =
 						? 'Nuevo pedido a proveedor'
 						: listKey === 'accounting/customer-invoices'
 							? 'Nueva factura'
-							: 'Nuevo';
+							: listKey === 'accounting/vendor-bills'
+								? 'Cargar FP'
+								: 'Nuevo';
 
 let userName = '';
 let listError = '';

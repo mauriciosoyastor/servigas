@@ -88,6 +88,13 @@ export type RecordDetailLines = {
   rows: RecordListRow[];
 };
 
+export type RecordDetailAttachment = {
+  id: number;
+  name: string;
+  mimetype: string;
+  url: string;
+};
+
 export type RecordDetailPayload = {
   key: string;
   title: string;
@@ -97,6 +104,7 @@ export type RecordDetailPayload = {
   fields: { key: string; label: string; value: string | number | boolean | null }[];
   imageUrl: string | null;
   lines?: RecordDetailLines | null;
+  attachments?: RecordDetailAttachment[];
 };
 
 export type RecordNote = {

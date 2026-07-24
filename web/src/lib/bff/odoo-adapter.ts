@@ -43,6 +43,7 @@ import {
   filterInvoiceCreateValues,
   getInvoiceCreateDef,
 } from "../shell/invoice-creates.ts";
+import { billSourceLabel } from "../shell/bill-attachment.ts";
 import {
   publishInvoiceDestError,
   SUGGESTED_DOC_TYPE_NOTE,
@@ -495,6 +496,7 @@ export class OdooAdapter implements BackendClient {
       phone: "Teléfono",
       sg_invoice_dest: "Destino fiscal",
       sg_doc_type_short: "Tipo sug.",
+      sg_bill_source: "Origen del comprobante",
       invoice_status: "Estado factura",
     };
     for (const column of def.columns) {
@@ -504,11 +506,17 @@ export class OdooAdapter implements BackendClient {
 
     const lines = await this.#loadDetailLines(odooSessionId, def.model, id);
 
-    const detailFields = displayFields.map((key) => ({
-      key,
-      label: labels[key] || key,
-      value: this.#cellValue(row[key]),
-    }));
+    const detailFields = displayFields.map((key) => {
+      let value = this.#cellValue(row[key]);
+      if (key === "sg_bill_source") {
+        value = billSourceLabel(value) || value;
+      }
+      return {
+        key,
+        label: labels[key] || key,
+        value,
+      };
+    });
 
     // Tipo sugerido largo en fichas de cliente / FC (fase 3a)
     if (
@@ -521,6 +529,11 @@ export class OdooAdapter implements BackendClient {
         value: `${suggestedDocTypeLabel(row.sg_invoice_dest)} — ${SUGGESTED_DOC_TYPE_NOTE}`,
       });
     }
+
+    const attachments =
+      def.key === "accounting/vendor-bills"
+        ? await this.#loadMoveAttachments(odooSessionId, id)
+        : undefined;
 
     return {
       key: def.key,
@@ -535,6 +548,7 @@ export class OdooAdapter implements BackendClient {
         : null,
       fields: detailFields,
       lines,
+      ...(attachments ? { attachments } : {}),
     };
   }
 
@@ -574,7 +588,7 @@ export class OdooAdapter implements BackendClient {
     values: Record<string, unknown>
   ): Promise<{ id: number; detailPath: string }> {
     if (getInvoiceCreateDef(listKey)) {
-      return this.#createCustomerInvoice(odooSessionId, listKey, values);
+      return this.#createInvoice(odooSessionId, listKey, values);
     }
     if (getOrderCreateDef(listKey)) {
       return this.#createMinimalOrder(odooSessionId, listKey, values);
@@ -788,7 +802,7 @@ export class OdooAdapter implements BackendClient {
     return out;
   }
 
-  async #createCustomerInvoice(
+  async #createInvoice(
     odooSessionId: string,
     listKey: string,
     values: Record<string, unknown>
@@ -812,24 +826,54 @@ export class OdooAdapter implements BackendClient {
       return [0, 0, vals];
     });
 
-    const id = await this.#callKw<number>(
-      odooSessionId,
-      invoiceDef.model,
-      "create",
-      [
-        {
-          move_type: invoiceDef.moveType,
-          partner_id: filtered.partnerId,
-          invoice_line_ids,
-        },
-      ]
+    const createVals: Record<string, unknown> = {
+      move_type: invoiceDef.moveType,
+      partner_id: filtered.partnerId,
+      invoice_line_ids,
+    };
+    if (filtered.billSource) {
+      createVals.sg_bill_source = filtered.billSource;
+    }
+
+    const id = Number(
+      await this.#callKw<number>(odooSessionId, invoiceDef.model, "create", [
+        createVals,
+      ])
     );
+
+    if (invoiceDef.requireAttachment && filtered.attachment) {
+      try {
+        await this.#callKw(odooSessionId, "ir.attachment", "create", [
+          {
+            name: filtered.attachment.filename,
+            type: "binary",
+            datas: filtered.attachment.content,
+            mimetype: filtered.attachment.mimetype,
+            res_model: "account.move",
+            res_id: id,
+          },
+        ]);
+      } catch (cause) {
+        try {
+          await this.#callKw(odooSessionId, invoiceDef.model, "unlink", [
+            [id],
+          ]);
+        } catch {
+          // Best-effort rollback; surface the original failure below.
+        }
+        if (cause instanceof BffError) throw cause;
+        throw new BffError(
+          "upstream_error",
+          502,
+          "No se pudo adjuntar el comprobante"
+        );
+      }
+    }
 
     const list = getRecordListDef(listKey);
     const detailPath =
-      (list && buildDetailPath(list, Number(id))) ||
-      `/lists/${listKey}/${id}`;
-    return { id: Number(id), detailPath };
+      (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
+    return { id, detailPath };
   }
 
   async #enrichRowsWithPartnerInvoiceDest(
@@ -1945,6 +1989,114 @@ export class OdooAdapter implements BackendClient {
       };
     } catch (cause) {
       this.#mapFetchFailure(cause);
+    }
+  }
+
+  async fetchAttachment(
+    odooSessionId: string,
+    attachmentId: number
+  ): Promise<{
+    body: ArrayBuffer;
+    contentType: string;
+    filename: string;
+  }> {
+    if (!Number.isFinite(attachmentId) || attachmentId <= 0) {
+      throw new BffError("not_found", 404, "Adjunto no encontrado");
+    }
+
+    const [attachment] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "ir.attachment",
+      "read",
+      [[attachmentId], ["name", "mimetype", "res_model", "res_id"]]
+    );
+    if (!attachment || String(attachment.res_model) !== "account.move") {
+      throw new BffError("not_found", 404, "Adjunto no encontrado");
+    }
+
+    const moveId = Number(attachment.res_id);
+    if (!Number.isFinite(moveId) || moveId <= 0) {
+      throw new BffError("not_found", 404, "Adjunto no encontrado");
+    }
+
+    const [move] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [[moveId], ["move_type"]]
+    );
+    if (!move || String(move.move_type) !== "in_invoice") {
+      throw new BffError("not_found", 404, "Adjunto no encontrado");
+    }
+
+    try {
+      const response = await this.#fetch(
+        `${this.#baseUrl}/web/content/${attachmentId}?download=true`,
+        {
+          headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
+        }
+      );
+      if (!response.ok) {
+        throw new BffError("not_found", 404, "Adjunto no encontrado");
+      }
+      return {
+        body: await response.arrayBuffer(),
+        contentType:
+          response.headers.get("content-type") ||
+          String(attachment.mimetype || "application/octet-stream"),
+        filename: String(attachment.name || "comprobante"),
+      };
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+  }
+
+  async #loadMoveAttachments(
+    odooSessionId: string,
+    moveId: number
+  ): Promise<
+    { id: number; name: string; mimetype: string; url: string }[]
+  > {
+    try {
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "ir.attachment",
+        [
+          ["res_model", "=", "account.move"],
+          ["res_id", "=", moveId],
+        ],
+        ["id", "name", "mimetype"],
+        20,
+        0,
+        "id desc"
+      );
+      return rows
+        .map((row) => {
+          const id = Number(row.id);
+          if (!Number.isFinite(id) || id <= 0) return null;
+          return {
+            id,
+            name: String(row.name || "comprobante"),
+            mimetype: String(row.mimetype || "application/octet-stream"),
+            url: `/api/attachments/${id}`,
+          };
+        })
+        .filter(
+          (
+            row
+          ): row is {
+            id: number;
+            name: string;
+            mimetype: string;
+            url: string;
+          } => Boolean(row)
+        );
+    } catch (cause) {
+      if (cause instanceof BffError && cause.code === "unauthorized") {
+        throw cause;
+      }
+      return [];
     }
   }
 
