@@ -1,10 +1,18 @@
 ---
 import type { RecordDetailPayload } from '../lib/bff/types.ts';
+import { invoiceDestLabel } from '../lib/shell/invoice-dest.ts';
+
+interface EditFieldOption {
+	value: string;
+	label: string;
+}
 
 interface EditField {
 	key: string;
 	label: string;
 	value: string;
+	type?: 'text' | 'email' | 'select';
+	options?: EditFieldOption[];
 }
 
 interface Props {
@@ -40,9 +48,13 @@ const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field
 const detailFieldKeys = new Set((detail?.fields ?? []).map((field) => field.key));
 const extraEditFields = editFields.filter((field) => !detailFieldKeys.has(field.key));
 
-function displayValue(value: string | number | boolean | null): string {
+function displayValue(
+	key: string,
+	value: string | number | boolean | null
+): string {
 	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
 	if (value === null || value === '') return '—';
+	if (key === 'sg_invoice_dest') return invoiceDestLabel(value);
 	return String(value);
 }
 ---
@@ -144,18 +156,38 @@ function displayValue(value: string | number | boolean | null): string {
 										<div data-field-key={field.key}>
 											<dt>{field.label}</dt>
 											<dd class="sg-detail-field-read" data-field-read>
-												{displayValue(field.value)}
+												{displayValue(field.key, field.value)}
 											</dd>
 											{editable && editDef ? (
 												<label class="sg-detail-field-edit" data-field-edit hidden>
 													<span class="sr-only">{editDef.label}</span>
-													<input
-														class="sg-focus-ring"
-														type={editDef.key === 'email' ? 'email' : 'text'}
-														name={editDef.key}
-														value={editDef.value}
-														autocomplete="off"
-													/>
+													{editDef.type === 'select' && editDef.options?.length ? (
+														<select
+															class="sg-focus-ring"
+															name={editDef.key}
+														>
+															{editDef.options.map((option) => (
+																<option
+																	value={option.value}
+																	selected={option.value === editDef.value}
+																>
+																	{option.label}
+																</option>
+															))}
+														</select>
+													) : (
+														<input
+															class="sg-focus-ring"
+															type={
+																editDef.type === 'email' || editDef.key === 'email'
+																	? 'email'
+																	: 'text'
+															}
+															name={editDef.key}
+															value={editDef.value}
+															autocomplete="off"
+														/>
+													)}
 												</label>
 											) : null}
 										</div>
@@ -165,17 +197,34 @@ function displayValue(value: string | number | boolean | null): string {
 									<div data-field-key={editDef.key}>
 										<dt>{editDef.label}</dt>
 										<dd class="sg-detail-field-read" data-field-read>
-											{editDef.value || '—'}
+											{displayValue(editDef.key, editDef.value || null)}
 										</dd>
 										<label class="sg-detail-field-edit" data-field-edit hidden>
 											<span class="sr-only">{editDef.label}</span>
-											<input
-												class="sg-focus-ring"
-												type={editDef.key === 'email' ? 'email' : 'text'}
-												name={editDef.key}
-												value={editDef.value}
-												autocomplete="off"
-											/>
+											{editDef.type === 'select' && editDef.options?.length ? (
+												<select class="sg-focus-ring" name={editDef.key}>
+													{editDef.options.map((option) => (
+														<option
+															value={option.value}
+															selected={option.value === editDef.value}
+														>
+															{option.label}
+														</option>
+													))}
+												</select>
+											) : (
+												<input
+													class="sg-focus-ring"
+													type={
+														editDef.type === 'email' || editDef.key === 'email'
+															? 'email'
+															: 'text'
+													}
+													name={editDef.key}
+													value={editDef.value}
+													autocomplete="off"
+												/>
+											)}
 										</label>
 									</div>
 								))}

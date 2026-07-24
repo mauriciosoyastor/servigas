@@ -3,30 +3,43 @@ import assert from "node:assert/strict";
 import {
   canArchiveRecord,
   canCreateRecord,
+  customerInvoiceDestError,
   filterCreateValues,
   filterWritableValues,
   getRecordWriteDef,
 } from "../src/lib/shell/record-writes.ts";
+import { CUIT_DEST_REQUIRED_MSG } from "../src/lib/shell/invoice-dest.ts";
 
 describe("record-writes allowlist", () => {
-  it("allows phone, email, vat and address updates on sales customers", () => {
+  it("allows phone, email, vat, dest and address updates on sales customers", () => {
     const def = getRecordWriteDef("sales/customers");
     assert.ok(def);
     assert.equal(def.model, "res.partner");
     assert.deepEqual(
       def.fields.sort(),
-      ["city", "email", "phone", "street", "vat"].sort()
+      ["city", "email", "phone", "sg_invoice_dest", "street", "vat"].sort()
     );
   });
 
-  it("defines create fields and customer_rank default", () => {
+  it("defines create fields and customer_rank + dest defaults", () => {
     const def = getRecordWriteDef("sales/customers");
     assert.ok(def);
     assert.deepEqual(
       def.createFields.sort(),
-      ["city", "email", "name", "phone", "street", "vat"].sort()
+      [
+        "city",
+        "email",
+        "name",
+        "phone",
+        "sg_invoice_dest",
+        "street",
+        "vat",
+      ].sort()
     );
-    assert.deepEqual(def.createDefaults, { customer_rank: 1 });
+    assert.deepEqual(def.createDefaults, {
+      customer_rank: 1,
+      sg_invoice_dest: "cf",
+    });
     assert.equal(canCreateRecord("sales/customers"), true);
     assert.equal(canArchiveRecord("sales/customers"), true);
   });
@@ -61,6 +74,7 @@ describe("record-writes allowlist", () => {
       vat: "20-12345678-9",
       street: "Av. Demo 100",
       city: "CABA",
+      sg_invoice_dest: "cuit",
       name: "HACK",
       active: false,
     });
@@ -70,6 +84,7 @@ describe("record-writes allowlist", () => {
       vat: "20-12345678-9",
       street: "Av. Demo 100",
       city: "CABA",
+      sg_invoice_dest: "cuit",
     });
   });
 
@@ -91,7 +106,28 @@ describe("record-writes allowlist", () => {
       street: "Calle Falsa 123",
       city: "Rosario",
       customer_rank: 1,
+      sg_invoice_dest: "cf",
     });
+  });
+
+  it("rejects cuit destination without vat on customers", () => {
+    const created = filterCreateValues("sales/customers", {
+      name: "Empresa",
+      sg_invoice_dest: "cuit",
+      vat: "",
+    });
+    assert.ok(created);
+    assert.equal(
+      customerInvoiceDestError("sales/customers", created),
+      CUIT_DEST_REQUIRED_MSG
+    );
+    assert.equal(
+      customerInvoiceDestError("sales/customers", {
+        sg_invoice_dest: "cf",
+        vat: "",
+      }),
+      null
+    );
   });
 
   it("rejects create without name", () => {

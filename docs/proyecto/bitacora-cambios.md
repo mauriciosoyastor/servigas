@@ -50,6 +50,78 @@
 
 ## Entradas
 
+### 2026-07-24 — Tipo comprobante sugerido + checklist l10n_ar (fase 3a/3b)
+
+**Área:** contabilidad | docs | integraciones  
+**Motivo:** preparar AFIP sin emitir: CF→B/C, CUIT→A/B + guía instalación.  
+**Archivos:**
+- `web/src/lib/shell/invoice-dest.ts` (`suggestedDocType*`)
+- `web/src/lib/bff/odoo-adapter.ts` (columna/ficha tipo sugerido)
+- `servigas_integrations` process_notes Factura Web + `19.0.1.0.1`
+- `docs/proyecto/checklist-l10n-ar-afip.md`, CONTEXT
+
+**Cambios:**
+- Lista/ficha muestran tipo sugerido; alta FC informa al elegir cliente.
+- Checklist `l10n_ar`; emisión real queda 3c.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** helper reutilizable cuando llegue EDI.
+
+### 2026-07-24 — Crear FC desde pedido (fase 2b)
+
+**Área:** ventas | contabilidad | web  
+**Motivo:** cerrar arco D: pedido a facturar → FC borrador → Publicar.  
+**Archivos:**
+- `web/src/lib/shell/order-invoice.ts`
+- `web/src/lib/bff/odoo-adapter.ts` (`createInvoiceFromOrder`)
+- `web/src/components/RecordCreateInvoiceControl.astro`
+- `web/src/pages/lists/sales/orders/[id].astro`
+- Spec: `docs/superpowers/specs/2026-07-24-fc-from-sale-order-design.md`
+
+**Cambios:**
+- Botón **Crear FC** si `invoice_status = to invoice`.
+- BFF `action: create_invoice` → `_create_invoices` / wizard; redirect a FC.
+- Publicar sigue validando CF/CUIT (2a).
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** allowlist order-invoice reutilizable.
+
+### 2026-07-24 — FC create + publicar con destino (fase 2a)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** alta manual de FC y Publicar con validación CF/CUIT.  
+**Archivos:**
+- `web/src/lib/shell/invoice-creates.ts`, `invoice-dest.ts`, `record-actions.ts`
+- `web/src/lib/bff/odoo-adapter.ts` (create `account.move`, `action_post`, enrich dest)
+- `web/src/pages/lists/accounting/customer-invoices/new.astro` + fichas Publicar
+- Spec/plan 2a en `docs/superpowers/`
+
+**Cambios:**
+- Crear FC borrador multi-línea desde Astro; badge destino desde partner.
+- Publicar con `action_post`; CUIT exige vat + calle + ciudad.
+- CTA **Nueva factura** en lista FC.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** patrón invoice-creates reutilizable para 2b (desde pedido).
+
+### 2026-07-24 — Destino fiscal CF vs CUIT (fase 1)
+
+**Área:** contabilidad | partners | POS | web | core  
+**Motivo:** clasificar clientes Consumidor final / Con CUIT antes de FC Astro y AFIP.  
+**Archivos:**
+- `custom_addons/servigas_core/models/res_partner.py` (`sg_invoice_dest`)
+- `web/src/lib/shell/invoice-dest.ts`, `record-writes.ts`, `record-lists.ts`
+- `web/src/pages/lists/sales/customers/*`, `pos.astro`, forms create/detail
+- Spec/plan: `docs/superpowers/specs/2026-07-24-cf-cuit-invoice-destination-design.md`
+
+**Cambios:**
+- Campo `sg_invoice_dest` (`cf`|`cuit`) + constraint Odoo si CUIT sin `vat`.
+- Alta/edición Astro con selector; lista badge CF/CUIT; POS badge + aviso no bloqueante.
+- BFF valida destino CUIT sin CUIT (400). Módulo `19.0.1.20.34`.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** helper `invoice-dest.ts` reutilizable para fase 2 FC.
+
 ### 2026-07-23 — Día D: apagar UI OWL de negocio para operativos
 
 **Área:** core | gobernanza | shell  

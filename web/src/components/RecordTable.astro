@@ -1,5 +1,6 @@
 ---
 import type { RecordListColumn, RecordListRow } from '../lib/bff/types.ts';
+import { invoiceDestBadge } from '../lib/shell/invoice-dest.ts';
 
 interface Props {
 	columns: RecordListColumn[];
@@ -13,6 +14,7 @@ const { columns, rows, caption = 'Registros', imageUploadApiPath = '' } = Astro.
 function formatCell(key: string, value: string | number | boolean | null): string {
 	if (value === null || value === undefined || value === '') return '—';
 	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+	if (key === 'sg_invoice_dest') return invoiceDestBadge(value);
 	if ((key === 'qty_available' || key === 'id') && typeof value === 'number') {
 		return value.toLocaleString('es-AR');
 	}
