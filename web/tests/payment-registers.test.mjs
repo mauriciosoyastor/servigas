@@ -5,6 +5,7 @@ import {
   filterPaymentRegisterValues,
   getPaymentRegisterDef,
   isPaymentRegisterableState,
+  pickJournalId,
 } from "../src/lib/shell/payment-registers.ts";
 
 describe("payment-registers allowlist", () => {
@@ -22,25 +23,36 @@ describe("payment-registers allowlist", () => {
     assert.equal(canRegisterPayment("accounting/drafts"), false);
   });
 
-  it("filters optional amount", () => {
-    assert.deepEqual(
+  it("requires payment method and filters optional amount", () => {
+    assert.equal(
       filterPaymentRegisterValues("accounting/customer-invoices", {}),
-      {}
+      null
     );
     assert.deepEqual(
       filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "cash",
+      }),
+      { paymentMethod: "cash" }
+    );
+    assert.deepEqual(
+      filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "transfer",
         amount: "150.5",
       }),
-      { amount: 150.5 }
+      { paymentMethod: "transfer", amount: 150.5 }
     );
     assert.equal(
       filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "cash",
         amount: 0,
       }),
       null
     );
     assert.equal(
-      filterPaymentRegisterValues("accounting/drafts", { amount: 10 }),
+      filterPaymentRegisterValues("accounting/drafts", {
+        paymentMethod: "cash",
+        amount: 10,
+      }),
       null
     );
   });
@@ -51,5 +63,18 @@ describe("payment-registers allowlist", () => {
     assert.equal(isPaymentRegisterableState("posted", "in_payment"), true);
     assert.equal(isPaymentRegisterableState("posted", "paid"), false);
     assert.equal(isPaymentRegisterableState("draft", "not_paid"), false);
+  });
+
+  it("picks journals by method hints", () => {
+    const journals = [
+      { id: 1, name: "Caja", type: "cash" },
+      { id: 2, name: "Banco Galicia", type: "bank" },
+      { id: 3, name: "Tarjeta Mercado Pago", type: "bank" },
+      { id: 4, name: "Transferencias", type: "bank" },
+    ];
+    assert.equal(pickJournalId("cash", journals), 1);
+    assert.equal(pickJournalId("transfer", journals), 4);
+    assert.equal(pickJournalId("card", journals), 3);
+    assert.equal(pickJournalId("cash", [{ id: 9, name: "Bank", type: "bank" }]), null);
   });
 });

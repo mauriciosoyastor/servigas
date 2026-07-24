@@ -1,4 +1,6 @@
 ---
+import { PAYMENT_METHOD_OPTIONS } from '../lib/shell/payment-registers.ts';
+
 interface Props {
 	listKey: string;
 	recordId: number;
@@ -7,6 +9,8 @@ interface Props {
 	defaultAmount?: number | string;
 	label?: string;
 	directionLabel?: string;
+	/** Default medio: cash */
+	defaultPaymentMethod?: 'cash' | 'transfer' | 'card';
 }
 
 const {
@@ -16,6 +20,7 @@ const {
 	defaultAmount = '',
 	label = 'Registrar pago',
 	directionLabel = 'pago',
+	defaultPaymentMethod = 'cash',
 } = Astro.props;
 
 const residualHint =
@@ -42,6 +47,21 @@ const residualHint =
 			placeholder="Saldo completo"
 		/>
 	</label>
+	<fieldset class="sg-record-pay-methods">
+		<legend>Medio</legend>
+		{PAYMENT_METHOD_OPTIONS.map((option) => (
+			<label>
+				<input
+					type="radio"
+					name={`sg-pay-method-${recordId}`}
+					value={option.value}
+					data-pay-method
+					checked={option.value === defaultPaymentMethod}
+				/>
+				<span>{option.label}</span>
+			</label>
+		))}
+	</fieldset>
 	<button
 		class="sg-focus-ring"
 		type="button"
@@ -54,7 +74,7 @@ const residualHint =
 	</button>
 	<span class="sg-record-pay-status" data-pay-status hidden></span>
 	<p class="sg-record-pay-hint">
-		Dejá el monto vacío o igual al saldo para pagar el total. Un monto menor registra un pago parcial.
+		Elegí el medio (caja/banco). Dejá el monto vacío o igual al saldo para el total; un monto menor es pago parcial.
 	</p>
 </section>
 
@@ -70,8 +90,18 @@ const residualHint =
 	) {
 		btn.addEventListener('click', async () => {
 			const direction = btn.dataset.direction || 'pago';
+			const methodInput = root?.querySelector<HTMLInputElement>(
+				'[data-pay-method]:checked'
+			);
+			const paymentMethod = methodInput?.value || '';
+			if (!paymentMethod) {
+				status.hidden = false;
+				status.textContent = 'Elegí un medio de pago.';
+				status.dataset.state = 'error';
+				return;
+			}
 			const raw = amountInput.value.trim();
-			const values: Record<string, unknown> = {};
+			const values: Record<string, unknown> = { paymentMethod };
 			if (raw !== '') {
 				const amount = Number(raw);
 				if (!Number.isFinite(amount) || amount <= 0) {
@@ -82,11 +112,14 @@ const residualHint =
 				}
 				values.amount = amount;
 			}
+			const methodLabel =
+				methodInput?.parentElement?.querySelector('span')?.textContent ||
+				paymentMethod;
 			if (
 				!window.confirm(
 					raw
-						? `¿Registrar ${direction} por ${raw}?`
-						: `¿Registrar ${direction} por el saldo completo?`
+						? `¿Registrar ${direction} por ${raw} (${methodLabel})?`
+						: `¿Registrar ${direction} por el saldo completo (${methodLabel})?`
 				)
 			) {
 				return;
@@ -143,6 +176,26 @@ const residualHint =
 		background: rgba(0, 0, 0, 0.25);
 		color: var(--sg-text-dark, #f4f1ea);
 		font-size: 0.95rem;
+	}
+	.sg-record-pay-methods {
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 0.75rem;
+		padding: 0.55rem 0.75rem 0.65rem;
+		margin: 0;
+		display: grid;
+		gap: 0.35rem;
+	}
+	.sg-record-pay-methods legend {
+		padding: 0 0.25rem;
+		font-size: 0.72rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-pay-methods label {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.85rem;
+		cursor: pointer;
 	}
 	.sg-record-pay button {
 		justify-self: start;

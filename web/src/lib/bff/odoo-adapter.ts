@@ -61,6 +61,9 @@ import {
   filterPaymentRegisterValues,
   getPaymentRegisterDef,
   isPaymentRegisterableState,
+  paymentMethodLabel,
+  pickJournalId,
+  type PaymentMethodCode,
 } from "../shell/payment-registers.ts";
 import {
   canArchiveRecord,
@@ -1017,7 +1020,11 @@ export class OdooAdapter implements BackendClient {
 
     const filtered = filterPaymentRegisterValues(listKey, values);
     if (!filtered) {
-      throw new BffError("validation_error", 400, "Monto de pago inválido");
+      throw new BffError(
+        "validation_error",
+        400,
+        "Medio de pago o monto inválido"
+      );
     }
 
     const [move] = await this.#callKw<Record<string, unknown>[]>(
@@ -1077,7 +1084,21 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
-    const wizardVals: Record<string, unknown> = {};
+    const journalId = await this.#resolvePaymentJournalId(
+      odooSessionId,
+      filtered.paymentMethod
+    );
+    if (!journalId) {
+      throw new BffError(
+        "validation_error",
+        400,
+        `No hay un diario contable para ${paymentMethodLabel(filtered.paymentMethod)}. Configurá caja/banco en Odoo.`
+      );
+    }
+
+    const wizardVals: Record<string, unknown> = {
+      journal_id: journalId,
+    };
     if (filtered.amount !== undefined) {
       wizardVals.amount = filtered.amount;
     }
@@ -2215,6 +2236,29 @@ export class OdooAdapter implements BackendClient {
       }
       return { title: lineDef.title, columns: lineDef.columns, rows: [] };
     }
+  }
+
+  async #resolvePaymentJournalId(
+    odooSessionId: string,
+    method: PaymentMethodCode
+  ): Promise<number | null> {
+    const journals = await this.#searchRead(
+      odooSessionId,
+      "account.journal",
+      [["type", "in", ["cash", "bank"]]],
+      ["id", "name", "type"],
+      50,
+      0,
+      "sequence asc, id asc"
+    );
+    const normalized = journals
+      .map((row) => ({
+        id: Number(row.id),
+        name: row.name == null ? "" : String(row.name),
+        type: row.type == null ? "" : String(row.type),
+      }))
+      .filter((row) => Number.isFinite(row.id) && row.id > 0);
+    return pickJournalId(method, normalized);
   }
 
   async fetchMedia(

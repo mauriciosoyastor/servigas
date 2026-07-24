@@ -350,6 +350,8 @@ describe("shell UI contracts", () => {
     assert.match(vendorDetail, /RecordRegisterPaymentControl/);
     assert.match(invoiceDetail, /RecordRegisterPaymentControl/);
     assert.match(payControl, /register_payment/);
+    assert.match(payControl, /paymentMethod|data-pay-method/);
+    assert.match(payControl, /PAYMENT_METHOD_OPTIONS/);
     assert.match(listPage, /Nueva nota de crédito/);
     assert.match(listPage, /Nueva factura de proveedor/);
   });
