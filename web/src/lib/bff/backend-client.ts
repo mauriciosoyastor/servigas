@@ -23,6 +23,11 @@ export interface BackendClient {
   ): Promise<{ sessionId: string; session: SessionInfo }>;
   logout(odooSessionId: string): Promise<void>;
   validateSession(odooSessionId: string): Promise<void>;
+  changePassword(
+    odooSessionId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void>;
   getLauncher(odooSessionId: string): Promise<LauncherPayload>;
   getHub(
     odooSessionId: string,

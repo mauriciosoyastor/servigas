@@ -261,6 +261,78 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async changePassword(
+    odooSessionId: string,
+    currentPassword: string,
+    newPassword: string
+  ): Promise<void> {
+    const current = String(currentPassword || "");
+    const next = String(newPassword || "");
+    if (!current || !next) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Completá la contraseña actual y la nueva"
+      );
+    }
+    if (current === next) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "La nueva contraseña debe ser distinta a la actual"
+      );
+    }
+
+    // Dedicated call: do NOT use #callKw — its Access Denied → unauthorized
+    // mapping would wipe the BFF session on a wrong current password.
+    let response: Response;
+    try {
+      response = await this.#post(
+        "/web/dataset/call_kw",
+        {
+          jsonrpc: "2.0",
+          params: {
+            model: "res.users",
+            method: "change_password",
+            args: [current, next],
+            kwargs: {},
+          },
+        },
+        odooSessionId
+      );
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+
+    const payload = (await response.json()) as JsonRpcResponse<unknown>;
+    if (payload.error !== undefined) {
+      const errorText = this.#describeRpcError(payload.error);
+      if (
+        /(incorrect|wrong|invalid|actual|current|password|contraseñ)/i.test(
+          errorText
+        )
+      ) {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      }
+      if (/(session|authenticat|unauthoriz)/i.test(errorText)) {
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
+      }
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+      );
+    }
+  }
+
   getLauncher(odooSessionId: string): Promise<LauncherPayload> {
     return this.#callKw(
       odooSessionId,
