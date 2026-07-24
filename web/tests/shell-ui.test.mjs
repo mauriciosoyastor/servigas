@@ -152,6 +152,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /addToCart|cartTotal/);
     assert.match(page, /data-pos-pay-method|paymentMethods/);
     assert.match(page, /data-pos-numpad|data-np-mode/);
+    assert.match(page, /sg-pos-cart-ops/);
     assert.match(page, /sg-pos-numpad-panel|overscroll-behavior/);
     assert.match(page, /sg-pos-cart-footer/);
     assert.match(page, /sg-pos-scroll|overscroll-behavior/);
@@ -344,7 +345,7 @@ describe("shell UI contracts", () => {
     const quote = await source("pages/lists/sales/quotations/[id].astro");
     const po = await source("pages/lists/purchase/orders/[id].astro");
     assert.match(productNew, /inventory\/products/);
-    assert.match(productImport, /Cargar lista de precios/);
+    assert.match(productImport, /Cargar lista de precios\/Productos/);
     assert.match(productImport, /\/api\/inventory\/price-list-import/);
     assert.match(listPage, /\/lists\/inventory\/products\/import/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);

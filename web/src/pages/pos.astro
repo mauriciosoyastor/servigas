@@ -129,137 +129,139 @@ try {
 						</p>
 					</div>
 					<div
-						class="sg-pos-numpad-panel"
-						data-pos-numpad-panel
+						class="sg-pos-scroll sg-pos-cart-ops"
+						data-pos-cart-ops
 						tabindex="0"
-						aria-label="Teclado"
+						aria-label="Teclado y cobro"
 					>
-						<section class="sg-pos-numpad" data-pos-numpad aria-label="Teclado">
-							<div class="sg-pos-numpad-modes" role="group" aria-label="Modo">
-								<button type="button" class="sg-focus-ring" data-np-mode="qty">Cant.</button>
-								<button type="button" class="sg-focus-ring" data-np-mode="price">Precio</button>
-								<button
-									type="button"
-									class="sg-focus-ring"
-									data-np-mode="discount"
-									title="Descuento % de la línea seleccionada"
-								>
-									% línea
-								</button>
-								<button
-									type="button"
-									class="sg-focus-ring"
-									data-np-mode="order_discount"
-									title="Descuento % sobre el total del ticket"
-								>
-									Desc. total
-								</button>
-							</div>
-							<p class="sg-pos-numpad-hint" data-np-hint>Elegí una línea y un modo</p>
-							<p class="sg-pos-numpad-buffer" data-np-buffer aria-live="polite">—</p>
-							<p class="sg-pos-numpad-order" data-np-order-disc hidden></p>
-							<div class="sg-pos-numpad-keys" data-np-keys>
-								{['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
+						<div class="sg-pos-numpad-panel" data-pos-numpad-panel>
+							<section class="sg-pos-numpad" data-pos-numpad aria-label="Teclado">
+								<div class="sg-pos-numpad-modes" role="group" aria-label="Modo">
+									<button type="button" class="sg-focus-ring" data-np-mode="qty">Cant.</button>
+									<button type="button" class="sg-focus-ring" data-np-mode="price">Precio</button>
 									<button
 										type="button"
 										class="sg-focus-ring"
-										data-np-key={key === '⌫' ? 'back' : key}
+										data-np-mode="discount"
+										title="Descuento % de la línea seleccionada"
 									>
-										{key}
+										% línea
 									</button>
-								))}
-							</div>
-							<button type="button" class="sg-pos-numpad-apply sg-focus-ring" data-np-apply>
-								Aplicar
-							</button>
-						</section>
-					</div>
-					<div class="sg-pos-cart-footer">
-						<div class="sg-pos-customer" data-pos-customer>
-							<label>
-								<span>Cliente (opcional)</span>
-								<input
-									class="sg-focus-ring"
-									type="search"
-									autocomplete="off"
-									placeholder="Buscar cliente…"
-									data-pos-customer-query
-								/>
-							</label>
-							<input type="hidden" value="" data-pos-customer-id />
-							<p class="sg-pos-customer-selected" data-pos-customer-selected hidden></p>
-							<p class="sg-pos-customer-warn" data-pos-customer-warn hidden></p>
-							<ul class="sg-pos-customer-results" data-pos-customer-results hidden></ul>
-							<button type="button" class="sg-pos-customer-clear sg-focus-ring" data-pos-customer-clear hidden>
-								Sin cliente
-							</button>
+									<button
+										type="button"
+										class="sg-focus-ring"
+										data-np-mode="order_discount"
+										title="Descuento % sobre el total del ticket"
+									>
+										Desc. total
+									</button>
+								</div>
+								<p class="sg-pos-numpad-hint" data-np-hint>Elegí una línea y un modo</p>
+								<p class="sg-pos-numpad-buffer" data-np-buffer aria-live="polite">—</p>
+								<p class="sg-pos-numpad-order" data-np-order-disc hidden></p>
+								<div class="sg-pos-numpad-keys" data-np-keys>
+									{['7', '8', '9', '4', '5', '6', '1', '2', '3', '.', '0', '⌫'].map((key) => (
+										<button
+											type="button"
+											class="sg-focus-ring"
+											data-np-key={key === '⌫' ? 'back' : key}
+										>
+											{key}
+										</button>
+									))}
+								</div>
+								<button type="button" class="sg-pos-numpad-apply sg-focus-ring" data-np-apply>
+									Aplicar
+								</button>
+							</section>
 						</div>
-						<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
-							<legend>Pago</legend>
-							{(catalog?.paymentMethods || []).map((method, index) => (
+						<div class="sg-pos-cart-footer">
+							<div class="sg-pos-customer" data-pos-customer>
 								<label>
+									<span>Cliente (opcional)</span>
 									<input
-										type="radio"
-										name="pos-pay"
-										value={method.id}
-										checked={index === 0}
-										data-pos-pay-method
+										class="sg-focus-ring"
+										type="search"
+										autocomplete="off"
+										placeholder="Buscar cliente…"
+										data-pos-customer-query
 									/>
-									<span>{method.name}</span>
 								</label>
-							))}
-							{(catalog?.paymentMethods || []).length === 0 ? (
-								<p class="sg-pos-empty">Sin métodos de pago configurados.</p>
-							) : null}
-						</fieldset>
-						<div class="sg-pos-cart-totals">
-							<div class="sg-pos-cart-subrow" data-pos-order-disc-row hidden>
-								<span>Desc. total</span>
-								<strong data-pos-order-disc-value>0%</strong>
+								<input type="hidden" value="" data-pos-customer-id />
+								<p class="sg-pos-customer-selected" data-pos-customer-selected hidden></p>
+								<p class="sg-pos-customer-warn" data-pos-customer-warn hidden></p>
+								<ul class="sg-pos-customer-results" data-pos-customer-results hidden></ul>
+								<button type="button" class="sg-pos-customer-clear sg-focus-ring" data-pos-customer-clear hidden>
+									Sin cliente
+								</button>
 							</div>
-							<div class="sg-pos-cart-subrow">
-								<span>Subtotal</span>
-								<strong data-pos-untaxed>$ 0,00</strong>
-							</div>
-							<div class="sg-pos-cart-subrow">
-								<span>IVA</span>
-								<strong data-pos-tax>$ 0,00</strong>
-							</div>
-							<div class="sg-pos-cart-total">
-								<span>Total</span>
-								<strong data-pos-total>$ 0,00</strong>
+							<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
+								<legend>Pago</legend>
+								{(catalog?.paymentMethods || []).map((method, index) => (
+									<label>
+										<input
+											type="radio"
+											name="pos-pay"
+											value={method.id}
+											checked={index === 0}
+											data-pos-pay-method
+										/>
+										<span>{method.name}</span>
+									</label>
+								))}
+								{(catalog?.paymentMethods || []).length === 0 ? (
+									<p class="sg-pos-empty">Sin métodos de pago configurados.</p>
+								) : null}
+							</fieldset>
+							<div class="sg-pos-cart-totals">
+								<div class="sg-pos-cart-subrow" data-pos-order-disc-row hidden>
+									<span>Desc. total</span>
+									<strong data-pos-order-disc-value>0%</strong>
+								</div>
+								<div class="sg-pos-cart-subrow">
+									<span>Subtotal</span>
+									<strong data-pos-untaxed>$ 0,00</strong>
+								</div>
+								<div class="sg-pos-cart-subrow">
+									<span>IVA</span>
+									<strong data-pos-tax>$ 0,00</strong>
+								</div>
+								<div class="sg-pos-cart-total">
+									<span>Total</span>
+									<strong data-pos-total>$ 0,00</strong>
+								</div>
+								<button
+									type="button"
+									class="sg-pos-total-disc sg-focus-ring"
+									data-pos-order-disc
+									title="Descuento personalizable sobre el total del ticket"
+								>
+									Desc. al total…
+								</button>
 							</div>
 							<button
+								class="sg-pos-pay sg-focus-ring"
 								type="button"
-								class="sg-pos-total-disc sg-focus-ring"
-								data-pos-order-disc
-								title="Descuento personalizable sobre el total del ticket"
+								data-pos-checkout
+								data-tour="pos-checkout"
+								disabled
 							>
-								Desc. al total…
+								Registrar venta
 							</button>
+							<p class="sg-pos-cart-status" data-pos-status hidden></p>
+							<section class="sg-pos-receipt" data-pos-receipt hidden>
+								<strong>Venta registrada</strong>
+								<p data-pos-receipt-name></p>
+								<p data-pos-receipt-meta></p>
+								<p class="sg-pos-receipt-total" data-pos-receipt-total></p>
+								<div class="sg-pos-receipt-actions">
+									<button type="button" class="sg-focus-ring" data-pos-receipt-new>
+										Nueva venta
+									</button>
+									<a class="sg-focus-ring" data-pos-receipt-detail href="#">Ver pedido</a>
+								</div>
+							</section>
 						</div>
-						<button
-							class="sg-pos-pay sg-focus-ring"
-							type="button"
-							data-pos-checkout
-							data-tour="pos-checkout"
-							disabled
-						>
-							Registrar venta
-						</button>
-						<p class="sg-pos-cart-status" data-pos-status hidden></p>
-						<section class="sg-pos-receipt" data-pos-receipt hidden>
-							<strong>Venta registrada</strong>
-							<p data-pos-receipt-name></p>
-							<p data-pos-receipt-meta></p>
-							<p class="sg-pos-receipt-total" data-pos-receipt-total></p>
-							<div class="sg-pos-receipt-actions">
-								<button type="button" class="sg-focus-ring" data-pos-receipt-new>
-									Nueva venta
-								</button>
-								<a class="sg-focus-ring" data-pos-receipt-detail href="#">Ver pedido</a>
-							</div>
-						</section>
 					</div>
 				</aside>
 			</div>
@@ -832,14 +834,17 @@ try {
 		overflow-x: hidden;
 		overflow-y: auto;
 		overscroll-behavior: contain;
-		scrollbar-width: none;
-		-ms-overflow-style: none;
+		scrollbar-gutter: stable;
+		scrollbar-width: thin;
+		scrollbar-color: color-mix(in srgb, var(--sg-text-muted-dark), transparent 35%) transparent;
 		min-height: 0;
 	}
 	.sg-pos-scroll::-webkit-scrollbar {
-		width: 0;
-		height: 0;
-		display: none;
+		width: 0.45rem;
+	}
+	.sg-pos-scroll::-webkit-scrollbar-thumb {
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--sg-text-muted-dark), transparent 35%);
 	}
 	.sg-pos-catalog,
 	.sg-pos-cart {
@@ -854,7 +859,7 @@ try {
 		overflow: hidden;
 	}
 	.sg-pos-catalog-scroll {
-		flex: 1 1 auto;
+		flex: 1 1 0;
 	}
 	.sg-pos-search {
 		display: flex;
@@ -987,8 +992,10 @@ try {
 		display: flex;
 		flex-direction: column;
 		gap: 0.55rem;
-		flex: 1 1 42%;
-		min-height: 7rem;
+		/* Crece con líneas, pero no se come el teclado/cobro */
+		flex: 0 1 auto;
+		min-height: 5.5rem;
+		max-height: 34%;
 		min-width: 0;
 		overflow: hidden;
 	}
@@ -1005,15 +1012,19 @@ try {
 		flex: 1 1 auto;
 		min-width: 0;
 	}
+	.sg-pos-cart-ops {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		align-content: start;
+		flex: 1 1 0;
+		min-height: 0;
+	}
 	.sg-pos-numpad-panel {
 		display: grid;
 		gap: 0.75rem;
 		align-content: start;
-		/* No encoger: el teclado completo tiene prioridad sobre sticky/viewport */
 		flex: 0 0 auto;
-		min-height: 26rem;
-		max-height: none;
-		overflow: visible;
 		padding-top: 0.15rem;
 		border-top: 1px solid var(--sg-glass-border);
 	}
@@ -1403,11 +1414,8 @@ try {
 		.sg-pos-cart-ticket {
 			max-height: 28vh;
 		}
-		.sg-pos-numpad-panel {
-			min-height: 22rem;
-		}
-		.sg-pos-cart-footer {
-			max-height: none;
+		.sg-pos-cart-ops {
+			max-height: 52vh;
 		}
 	}
 </style>
