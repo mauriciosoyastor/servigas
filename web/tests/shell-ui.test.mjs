@@ -343,6 +343,12 @@ describe("shell UI contracts", () => {
       /const file = fileInput\.files && fileInput\.files\[0\];\s+const generation = \+\+readGeneration;\s+pending\.dataUrl = null;\s+btnSave\.disabled = true;/s
     );
     assert.match(host, /if\s*\(\s*generation\s*!==\s*readGeneration\s*\)\s*return/);
+    assert.match(host, /location\.reload\(\)/);
+  });
+
+  it("does not cache product media so uploads survive reload", async () => {
+    const media = await source("pages/api/media/[model]/[id]/[field].ts");
+    assert.match(media, /"cache-control":\s*"private, no-store"/);
   });
 
   it("wires product image upload triggers on table and detail", async () => {
