@@ -6,6 +6,7 @@ import {
   TOUR_STEP_KEY,
   TOUR_STEPS,
   advanceTour,
+  clampTourTipPosition,
   clearTourStep,
   markTourDone,
   markTourSkippedSession,
@@ -114,5 +115,37 @@ describe("onboarding-tour", () => {
   it("builds progress label in Spanish", () => {
     assert.equal(tourProgressLabel("home-ops"), "Paso 1 de 7");
     assert.equal(tourProgressLabel("pos-cobrar"), "Paso 7 de 7");
+  });
+
+  it("keeps tip inside viewport when hole is near the bottom (pos-cobrar)", () => {
+    const pos = clampTourTipPosition({
+      holeTop: 660,
+      holeLeft: 24,
+      holeWidth: 550,
+      holeHeight: 52,
+      tipWidth: 352,
+      tipHeight: 220,
+      viewportWidth: 615,
+      viewportHeight: 714,
+    });
+    assert.ok(pos.top >= 8);
+    assert.ok(pos.top + 220 <= 714 - 8);
+    assert.ok(pos.left >= 8);
+    assert.ok(pos.left + 352 <= 615 - 8);
+  });
+
+  it("places tip below the hole when there is room", () => {
+    const pos = clampTourTipPosition({
+      holeTop: 80,
+      holeLeft: 40,
+      holeWidth: 200,
+      holeHeight: 40,
+      tipWidth: 320,
+      tipHeight: 180,
+      viewportWidth: 800,
+      viewportHeight: 700,
+    });
+    assert.equal(pos.top, 80 + 40 + 12);
+    assert.equal(pos.left, 40);
   });
 });

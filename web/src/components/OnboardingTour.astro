@@ -28,6 +28,7 @@
 <script>
 	import {
 		advanceTour,
+		clampTourTipPosition,
 		markTourDone,
 		markTourSkippedSession,
 		resolveInitialStep,
@@ -62,6 +63,7 @@
 	} else {
 		let current: TourStep | null = null;
 		let resizeTimer: ReturnType<typeof setTimeout> | undefined;
+		let placeRetry = 0;
 
 		const hasTarget = (target: string) =>
 			Boolean(document.querySelector(`[data-tour="${target}"]`));
@@ -72,34 +74,57 @@
 		function place(step: TourStep) {
 			const el = targetEl(step);
 			if (!el || !hole || !tip) return;
-			el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+
+			// Instant scroll — measuring mid smooth-scroll left the tip off-screen
+			// and the spotlight hole at height 0 (full dim, no dialog).
+			el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'auto' });
+
 			const pad = 8;
 			const rect = el.getBoundingClientRect();
-			const top = Math.max(8, rect.top - pad);
-			const left = Math.max(8, rect.left - pad);
-			const width = Math.min(window.innerWidth - left - 8, rect.width + pad * 2);
-			const height = Math.min(window.innerHeight - top - 8, rect.height + pad * 2);
+			if (rect.width < 2 || rect.height < 2) {
+				if (placeRetry < 5) {
+					placeRetry += 1;
+					requestAnimationFrame(() => place(step));
+				}
+				return;
+			}
+			placeRetry = 0;
+
+			const top = Math.max(pad, rect.top - pad);
+			const left = Math.max(pad, rect.left - pad);
+			const width = Math.min(
+				window.innerWidth - left - pad,
+				Math.max(rect.width + pad * 2, 48)
+			);
+			const height = Math.min(
+				window.innerHeight - top - pad,
+				Math.max(rect.height + pad * 2, 48)
+			);
 			hole.style.top = `${top}px`;
 			hole.style.left = `${left}px`;
 			hole.style.width = `${width}px`;
 			hole.style.height = `${height}px`;
 
 			const tipW = Math.min(352, window.innerWidth - 32);
-			let tipTop = top + height + 12;
-			let tipLeft = left;
-			if (tipTop + 200 > window.innerHeight) {
-				tipTop = Math.max(8, top - 12 - 200);
-			}
-			if (tipLeft + tipW > window.innerWidth - 8) {
-				tipLeft = Math.max(8, window.innerWidth - tipW - 8);
-			}
-			tip.style.top = `${tipTop}px`;
-			tip.style.left = `${tipLeft}px`;
 			tip.style.width = `${tipW}px`;
+			const tipH = Math.max(tip.offsetHeight, 160);
+			const pos = clampTourTipPosition({
+				holeTop: top,
+				holeLeft: left,
+				holeWidth: width,
+				holeHeight: height,
+				tipWidth: tipW,
+				tipHeight: tipH,
+				viewportWidth: window.innerWidth,
+				viewportHeight: window.innerHeight,
+			});
+			tip.style.top = `${pos.top}px`;
+			tip.style.left = `${pos.left}px`;
 		}
 
 		function render(step: TourStep) {
 			current = step;
+			placeRetry = 0;
 			setTourStep(localStorage, step.id);
 			progressEl!.textContent = tourProgressLabel(step.id);
 			titleEl!.textContent = step.title;
@@ -107,13 +132,21 @@
 			nextBtn!.textContent = step.id === 'pos-cobrar' ? 'Listo' : 'Siguiente';
 			root!.hidden = false;
 			document.body.style.overflow = 'hidden';
-			requestAnimationFrame(() => place(step));
+			// Double rAF: wait for tip content + layout before measuring.
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => place(step));
+			});
 		}
 
 		function closeTour() {
 			root!.hidden = true;
 			document.body.style.overflow = '';
 			current = null;
+			placeRetry = 0;
+			hole!.style.top = '';
+			hole!.style.left = '';
+			hole!.style.width = '';
+			hole!.style.height = '';
 		}
 
 		function skip() {

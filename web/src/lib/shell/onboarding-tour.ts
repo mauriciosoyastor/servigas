@@ -222,3 +222,52 @@ export function tourProgressLabel(id: TourStepId): string {
   const n = stepIndex(id) + 1;
   return `Paso ${n} de ${TOUR_STEPS.length}`;
 }
+
+export type TourTipLayoutInput = {
+  holeTop: number;
+  holeLeft: number;
+  holeWidth: number;
+  holeHeight: number;
+  tipWidth: number;
+  tipHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  gap?: number;
+  margin?: number;
+};
+
+/**
+ * Keep the tip fully inside the viewport. Prefer below the hole, then above;
+ * if neither fits, clamp within margins (may overlap the hole).
+ */
+export function clampTourTipPosition(input: TourTipLayoutInput): {
+  top: number;
+  left: number;
+} {
+  const gap = input.gap ?? 12;
+  const margin = input.margin ?? 8;
+  const maxLeft = Math.max(
+    margin,
+    input.viewportWidth - input.tipWidth - margin
+  );
+  let left = Math.min(Math.max(margin, input.holeLeft), maxLeft);
+
+  const below = input.holeTop + input.holeHeight + gap;
+  const above = input.holeTop - gap - input.tipHeight;
+  const maxTop = Math.max(
+    margin,
+    input.viewportHeight - input.tipHeight - margin
+  );
+
+  let top: number;
+  if (below + input.tipHeight <= input.viewportHeight - margin) {
+    top = below;
+  } else if (above >= margin) {
+    top = above;
+  } else {
+    top = Math.min(Math.max(margin, below), maxTop);
+  }
+
+  top = Math.min(Math.max(margin, top), maxTop);
+  return { top, left };
+}

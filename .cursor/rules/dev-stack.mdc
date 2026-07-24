@@ -1,0 +1,32 @@
+---
+description: Al pedir el servidor de desarrollo, levantar Astro + Odoo en puertos separados
+alwaysApply: true
+---
+
+# Stack de desarrollo Servigas
+
+Cuando el usuario pida **correr / levantar / iniciar el servidor de desarrollo** (o equivalente), SIEMPRE arrancar el stack completo, no solo Astro.
+
+## Puertos (obligatorio)
+
+| Servicio | Puerto | URL |
+|----------|--------|-----|
+| Astro (web BFF) | `4321` | http://127.0.0.1:4321 |
+| Odoo nativo | `8070` | http://127.0.0.1:8070 |
+
+Odoo va en **otro puerto** que Astro. No uses el 4321 para Odoo.
+
+## Procedimiento
+
+Desde `web/`:
+
+1. Asegurar Odoo: `npm run odoo:ensure` (idempotente; no duplica si ya escucha en 8070).
+2. Verificar `.env` con `ODOO_URL=http://127.0.0.1:8070` y `ODOO_DB=servigas_dev`.
+3. Arrancar Astro en background: `npm run astro -- dev --background --host 127.0.0.1 --port 4321`.
+4. Confirmar con `npm run astro -- dev status` y que `:8070` responde.
+
+## Notas
+
+- Config Odoo: `../odoo-workspace/config/servigas.conf` (relativo al repo `servigas`).
+- Si Odoo falla al arrancar, reportar el error; no digas que el login funciona sin backend.
+- Gestionar Astro: `astro dev stop` / `status` / `logs`.

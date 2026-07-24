@@ -7,6 +7,8 @@
   },
   "scripts": {
     "dev": "astro dev",
+    "dev:stack": "node scripts/ensure-odoo-dev.mjs && astro dev --host 127.0.0.1 --port 4321",
+    "odoo:ensure": "node scripts/ensure-odoo-dev.mjs",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
