@@ -5,11 +5,16 @@ import type {
   PosCheckoutLine,
   PosCheckoutOptions,
   PosCheckoutResult,
+  PriceListImportApplyLine,
+  PriceListImportApplyResult,
+  PriceListImportPreview,
   RecordDetailPayload,
   RecordListPayload,
+  RecordNote,
   SessionInfo,
 } from "./types.ts";
 import type { RecordListQuery } from "../shell/record-lists.ts";
+import type { PriceListMapping } from "../shell/price-list-import.ts";
 
 export interface BackendClient {
   login(
@@ -50,6 +55,30 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<void>;
+  listRecordNotes(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    viewerUid: number
+  ): Promise<RecordNote[]>;
+  createRecordNote(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote>;
+  updateRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote>;
+  deleteRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number
+  ): Promise<void>;
   confirmRecord(
     odooSessionId: string,
     listKey: string,
@@ -70,4 +99,16 @@ export interface BackendClient {
     id: number,
     field: string
   ): Promise<{ body: ArrayBuffer; contentType: string }>;
+  previewPriceListImport(
+    odooSessionId: string,
+    input: {
+      filename: string;
+      content: string;
+      mapping?: PriceListMapping;
+    }
+  ): Promise<PriceListImportPreview>;
+  applyPriceListImport(
+    odooSessionId: string,
+    lines: PriceListImportApplyLine[]
+  ): Promise<PriceListImportApplyResult>;
 }

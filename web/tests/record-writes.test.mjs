@@ -140,4 +140,20 @@ describe("record-writes allowlist", () => {
       available_in_pos: true,
     });
   });
+
+  it("allows image_1920 updates on inventory products", () => {
+    const def = getRecordWriteDef("inventory/products");
+    assert.ok(def);
+    assert.ok(def.fields.includes("image_1920"));
+  });
+
+  it("filters product image_1920 from a data-URL", () => {
+    const png =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+    const filtered = filterWritableValues("inventory/products", {
+      image_1920: `data:image/png;base64,${png}`,
+      name: "HACK",
+    });
+    assert.deepEqual(filtered, { image_1920: png });
+  });
 });

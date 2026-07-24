@@ -19,6 +19,11 @@ import { POST as postLogin } from "../src/pages/api/auth/login.ts";
 import { GET as getLauncher } from "../src/pages/api/launcher.ts";
 import { GET as getHub } from "../src/pages/api/hub/[app].ts";
 import { POST as postRecord } from "../src/pages/api/records/[...slug].ts";
+import {
+  GET as getNotes,
+  PATCH as patchNote,
+  POST as postNote,
+} from "../src/pages/api/notes.ts";
 import { GET as getPosCatalog } from "../src/pages/api/pos/catalog.ts";
 import { POST as postPosCheckout } from "../src/pages/api/pos/checkout.ts";
 
@@ -300,7 +305,7 @@ describe("BFF API routes", () => {
     assert.deepEqual(await response.json(), {
       error: {
         code: "validation_error",
-        message: "Revisá los datos e intentá de nuevo",
+        message: "Usuario y contraseña son requeridos",
       },
     });
   });
@@ -326,9 +331,171 @@ describe("BFF API routes", () => {
     assert.deepEqual(await response.json(), {
       error: {
         code: "validation_error",
-        message: "Revisá los datos e intentá de nuevo",
+        message: "Acción inválida",
       },
     });
     sessionStore.destroy(bffSid);
+  });
+
+  it("returns 401 when listing notes without a session", async () => {
+    const response = await getNotes({
+      cookies: new FakeCookies(),
+      url: new URL("http://localhost/api/notes?listKey=sales/customers&recordId=1"),
+    });
+
+    assert.equal(response.status, 401);
+  });
+
+  it("returns 404 when listing notes for an invalid list key", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 7,
+      name: "Usuario",
+      login: "usuario",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      listRecordNotes: async () => {
+        throw new BffError("not_found", 404, "Bitácora no disponible");
+      },
+    });
+
+    try {
+      const response = await getNotes({
+        cookies,
+        url: new URL("http://localhost/api/notes?listKey=unknown&recordId=1"),
+      });
+
+      assert.equal(response.status, 404);
+      assert.deepEqual(await response.json(), {
+        error: { code: "not_found", message: "No encontrado" },
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("rejects an empty note body", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 7,
+      name: "Usuario",
+      login: "usuario",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+
+    try {
+      const response = await postNote({
+        cookies,
+        request: new Request("http://localhost/api/notes", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            listKey: "sales/customers",
+            recordId: 1,
+            body: "   ",
+          }),
+        }),
+      });
+
+      assert.equal(response.status, 400);
+      assert.deepEqual(await response.json(), {
+        error: { code: "validation_error", message: "Escribí una nota" },
+      });
+    } finally {
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("returns 403 when updating another user's note", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 7,
+      name: "Usuario",
+      login: "usuario",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    __setBackendForTests({
+      updateRecordNote: async () => {
+        throw new BffError("forbidden", 403, "Solo podés editar tus propias notas");
+      },
+    });
+
+    try {
+      const response = await patchNote({
+        cookies,
+        request: new Request("http://localhost/api/notes", {
+          method: "PATCH",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ id: 5, body: "Cambio" }),
+        }),
+      });
+
+      assert.equal(response.status, 403);
+      assert.deepEqual(await response.json(), {
+        error: {
+          code: "forbidden",
+          message: "Solo podés editar tus propias notas",
+        },
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("creates a normalized note for the current viewer", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 7,
+      name: "Usuario",
+      login: "usuario",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let received;
+    const note = {
+      id: 1,
+      body: "Primera nota",
+      authorId: 7,
+      authorName: "Usuario",
+      createdAt: "2026-07-23 19:00:00",
+      updatedAt: "2026-07-23 19:00:00",
+      canEdit: true,
+    };
+    __setBackendForTests({
+      createRecordNote: async (...args) => {
+        received = args;
+        return note;
+      },
+    });
+
+    try {
+      const response = await postNote({
+        cookies,
+        request: new Request("http://localhost/api/notes", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            listKey: "sales/customers",
+            recordId: 4,
+            body: "  Primera nota  ",
+          }),
+        }),
+      });
+
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true, note });
+      assert.deepEqual(received, [
+        "odoo",
+        "sales/customers",
+        4,
+        "Primera nota",
+        7,
+      ]);
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
   });
 });

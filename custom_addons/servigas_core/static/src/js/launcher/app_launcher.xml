@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.AppLauncher">
+        <SgLauncherShell t-props="shellProps">
+            <div class="sg-launcher-body">
+                <t t-if="state.tiles.length">
+                    <div t-attf-class="sg-launcher-grid sg-stagger-list {{ state.loading ? 'sg-launcher-grid--loading' : '' }}">
+                        <t t-foreach="state.tiles" t-as="tile" t-key="tile.id">
+                            <SgLauncherTile
+                                tile="tile"
+                                loading="state.loading"
+                                onClick.bind="onTileClick"
+                            />
+                        </t>
+                    </div>
+                </t>
+                <t t-else="">
+                    <div class="sg-hub-empty">
+                        <t t-if="state.loading">Cargando aplicaciones…</t>
+                        <t t-else="">No hay aplicaciones disponibles.</t>
+                    </div>
+                </t>
+            </div>
+        </SgLauncherShell>
+    </t>
+
+</templates>

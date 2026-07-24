@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Título inicial del webclient (antes de que JS pinte la acción) -->
+    <template id="servigas_webclient_title" inherit_id="web.webclient_bootstrap" name="Servigas Webclient Title">
+        <xpath expr="//t[@t-call='web.layout']" position="inside">
+            <t t-set="title">Servigas</t>
+        </xpath>
+    </template>
+
+    <!-- Título del Mostrador (POS Index) -->
+    <template id="servigas_pos_index_title" inherit_id="point_of_sale.index" name="Servigas POS Title">
+        <xpath expr="//head/title" position="replace">
+            <title>Mostrador Servigas</title>
+        </xpath>
+    </template>
+
+    <!-- Montserrat para pantalla de login -->
+    <template id="servigas_login_fonts" inherit_id="web.login_layout" name="Servigas Login Fonts">
+        <xpath expr="//t[@t-call='web.frontend_layout']" position="before">
+            <t t-set="head">
+                <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&amp;display=swap"/>
+            </t>
+        </xpath>
+    </template>
+
+    <!-- Layout glass oscuro + logo Servigas -->
+    <template id="servigas_login_layout" inherit_id="web.login_layout" name="Servigas Login Layout">
+        <xpath expr="//t[@t-call='web.frontend_layout']" position="inside">
+            <t t-set="title">Servigas</t>
+        </xpath>
+        <xpath expr="//t[@t-set='body_classname']" position="replace">
+            <t t-set="body_classname" t-value="'sg-login-page'"/>
+        </xpath>
+        <xpath expr="//div[hasclass('container')]" position="replace">
+            <div class="sg-login-frame d-flex align-items-center justify-content-center min-vh-100 py-4 px-3">
+                <div t-attf-class="sg-login-glass-panel sg-view-enter mx-auto w-100 {{login_card_classes or ''}} o_database_list" style="max-width: 420px;">
+                    <div class="sg-login-body p-4 p-md-5">
+                        <div class="text-center pb-4 mb-2">
+                            <img src="/servigas_core/static/src/img/servigas_logo.png" alt="Servigas" class="sg-login-logo"/>
+                        </div>
+                        <t t-out="0"/>
+                        <div class="text-center small mt-4 pt-3 sg-login-footer" t-if="not disable_footer and not disable_database_manager">
+                            <a class="sg-login-db-link" href="/web/database/manager">Administrar bases de datos</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </xpath>
+    </template>
+
+    <!-- Copy español (AR) -->
+    <template id="servigas_login_form" inherit_id="web.login" name="Servigas Login Form">
+        <xpath expr="//label[@for='db']" position="replace">
+            <label for="db" class="col-form-label">Base de datos</label>
+        </xpath>
+        <xpath expr="//a[@href='/web/database/selector']" position="replace">
+            <a role="button" href="/web/database/selector" class="btn sg-login-btn-secondary border border-start-0">Elegir <i class="fa fa-database" role="img" aria-label="Base de datos" title="Base de datos"/></a>
+        </xpath>
+        <xpath expr="//label[@for='login']" position="replace">
+            <label for="login" class="form-label d-flex justify-content-between">Correo electrónico</label>
+        </xpath>
+        <xpath expr="//input[@id='login']" position="attributes">
+            <attribute name="placeholder">Ingresá tu correo</attribute>
+        </xpath>
+        <xpath expr="//label[@for='password']" position="replace">
+            <label for="password" class="form-label">Contraseña</label>
+        </xpath>
+        <xpath expr="//input[@id='password']" position="attributes">
+            <attribute name="placeholder">Ingresá tu contraseña</attribute>
+        </xpath>
+        <xpath expr="//button[@type='submit' and hasclass('btn-primary')]" position="replace">
+            <button type="submit" class="btn btn-primary sg-login-submit">Iniciar sesión</button>
+        </xpath>
+        <xpath expr="//button[@name='redirect']" position="replace">
+            <button type="submit" name="redirect" value="/web/become" class="btn btn-link btn-sm sg-login-superuser">Ingresar como superusuario</button>
+        </xpath>
+    </template>
+</odoo>

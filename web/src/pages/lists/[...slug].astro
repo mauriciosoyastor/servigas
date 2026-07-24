@@ -1,5 +1,6 @@
 ---
 import ShellLayout from '../../layouts/ShellLayout.astro';
+import ProductImageUploadHost from '../../components/ProductImageUploadHost.astro';
 import RecordTable from '../../components/RecordTable.astro';
 import ListToolbar from '../../components/ListToolbar.astro';
 import { BffError } from '../../lib/bff/errors.ts';
@@ -88,6 +89,11 @@ if (!def) {
 					{createPath ? (
 						<a class="sg-list-create sg-focus-ring" href={createPath}>{createLabel}</a>
 					) : null}
+					{listKey === 'inventory/products' ? (
+						<a class="sg-list-create sg-focus-ring" href="/lists/inventory/products/import">
+							Cargar lista de precios
+						</a>
+					) : null}
 					<a class="sg-list-back sg-focus-ring" href={def.hubBack}>← Volver</a>
 				</div>
 			</header>
@@ -108,7 +114,19 @@ if (!def) {
 					<p>{listError}</p>
 				</section>
 			) : payload && payload.rows.length ? (
-				<RecordTable columns={payload.columns} rows={payload.rows} caption={payload.title} />
+				<>
+					<RecordTable
+						columns={payload.columns}
+						rows={payload.rows}
+						caption={payload.title}
+						imageUploadApiPath={
+							listKey === 'inventory/products'
+								? '/api/records/inventory/products'
+								: undefined
+						}
+					/>
+					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
+				</>
 			) : (
 				<section class="sg-list-state sg-glass">
 					<strong>Sin resultados</strong>

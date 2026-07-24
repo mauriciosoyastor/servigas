@@ -1,0 +1,268 @@
+---
+interface Props {
+	listKey: string;
+	recordId: number;
+}
+
+const { listKey, recordId } = Astro.props;
+---
+
+<section
+	class="sg-record-notes sg-glass"
+	data-record-notes
+	data-list-key={listKey}
+	data-record-id={String(recordId)}
+>
+	<h2>Notas</h2>
+	<form class="sg-record-notes-form" data-note-form>
+		<label for={`record-note-${recordId}`}>Agregar una nota</label>
+		<textarea
+			class="sg-focus-ring"
+			id={`record-note-${recordId}`}
+			data-note-input
+			maxlength="4000"
+			rows="3"
+			required
+		></textarea>
+		<div class="sg-record-notes-form-actions">
+			<button class="sg-focus-ring sg-record-notes-primary" type="submit">Agregar</button>
+			<span class="sg-record-notes-status" data-note-status hidden aria-live="polite"></span>
+		</div>
+	</form>
+	<ul class="sg-record-notes-list" data-note-list aria-live="polite"></ul>
+</section>
+
+<script>
+	type Note = {
+		id: number;
+		body: string;
+		authorName: string;
+		createdAt: string;
+		canEdit: boolean;
+	};
+
+	type NotesPayload = {
+		notes?: Note[];
+		note?: Note;
+		error?: { message?: string };
+	};
+
+	const apiPath = '/api/notes';
+
+	const errorMessage = (payload: NotesPayload, fallback: string) =>
+		payload?.error?.message || fallback;
+
+	const request = async (options?: RequestInit, query = ''): Promise<NotesPayload> => {
+		const response = await fetch(`${apiPath}${query}`, {
+			credentials: 'same-origin',
+			...options,
+		});
+		const payload = (await response.json().catch(() => ({}))) as NotesPayload;
+		if (!response.ok) throw new Error(errorMessage(payload, 'No se pudo completar la acción'));
+		return payload;
+	};
+
+	document.querySelectorAll<HTMLElement>('[data-record-notes]').forEach((root) => {
+		const form = root.querySelector<HTMLFormElement>('[data-note-form]');
+		const input = root.querySelector<HTMLTextAreaElement>('[data-note-input]');
+		const list = root.querySelector<HTMLUListElement>('[data-note-list]');
+		const status = root.querySelector<HTMLElement>('[data-note-status]');
+		const listKey = root.dataset.listKey || '';
+		const recordId = Number(root.dataset.recordId);
+		let notes: Note[] = [];
+
+		if (!form || !input || !list || !status) return;
+
+		const setStatus = (message = '', state = '') => {
+			status.hidden = !message;
+			status.textContent = message;
+			if (state) status.dataset.state = state;
+			else delete status.dataset.state;
+		};
+
+		const formatDate = (value: string) => {
+			const date = new Date(value);
+			return Number.isNaN(date.getTime())
+				? value
+				: new Intl.DateTimeFormat('es-AR', {
+						dateStyle: 'short',
+						timeStyle: 'short',
+					}).format(date);
+		};
+
+		const renderNotes = () => {
+			list.replaceChildren();
+			if (notes.length === 0) {
+				const empty = document.createElement('li');
+				empty.className = 'sg-record-notes-empty';
+				empty.textContent = 'Todavía no hay notas en esta ficha';
+				list.append(empty);
+				return;
+			}
+
+			for (const note of notes) {
+				const item = document.createElement('li');
+				item.className = 'sg-record-notes-item';
+				item.dataset.noteId = String(note.id);
+
+				const body = document.createElement('p');
+				body.className = 'sg-record-notes-body';
+				body.textContent = note.body;
+
+				const footer = document.createElement('div');
+				footer.className = 'sg-record-notes-footer';
+
+				const meta = document.createElement('span');
+				meta.className = 'sg-record-notes-meta';
+				meta.textContent = `${note.authorName} · ${formatDate(note.createdAt)}`;
+				footer.append(meta);
+
+				const itemStatus = document.createElement('span');
+				itemStatus.className = 'sg-record-notes-item-status';
+				itemStatus.setAttribute('aria-live', 'polite');
+
+				if (note.canEdit) {
+					const actions = document.createElement('span');
+					actions.className = 'sg-record-notes-actions';
+
+					const edit = document.createElement('button');
+					edit.type = 'button';
+					edit.className = 'sg-focus-ring';
+					edit.textContent = 'Editar';
+					edit.addEventListener('click', () => startEditing(item, note, body, footer));
+
+					const remove = document.createElement('button');
+					remove.type = 'button';
+					remove.className = 'sg-focus-ring sg-record-notes-delete';
+					remove.textContent = 'Borrar';
+					remove.addEventListener('click', () => deleteNote(note, itemStatus));
+
+					actions.append(edit, remove);
+					footer.append(actions);
+				}
+
+				item.append(body, footer, itemStatus);
+				list.append(item);
+			}
+		};
+
+		const startEditing = (
+			item: HTMLLIElement,
+			note: Note,
+			body: HTMLParagraphElement,
+			footer: HTMLDivElement,
+		) => {
+			const editor = document.createElement('form');
+			editor.className = 'sg-record-notes-editor';
+
+			const textarea = document.createElement('textarea');
+			textarea.className = 'sg-focus-ring';
+			textarea.maxLength = 4000;
+			textarea.rows = 3;
+			textarea.required = true;
+			textarea.value = note.body;
+
+			const actions = document.createElement('div');
+			actions.className = 'sg-record-notes-actions';
+			const save = document.createElement('button');
+			save.type = 'submit';
+			save.className = 'sg-focus-ring';
+			save.textContent = 'Guardar';
+			const cancel = document.createElement('button');
+			cancel.type = 'button';
+			cancel.className = 'sg-focus-ring';
+			cancel.textContent = 'Cancelar';
+			cancel.addEventListener('click', renderNotes);
+			const editStatus = document.createElement('span');
+			editStatus.className = 'sg-record-notes-item-status';
+			editStatus.setAttribute('aria-live', 'polite');
+
+			actions.append(save, cancel, editStatus);
+			editor.append(textarea, actions);
+			body.replaceWith(editor);
+			footer.hidden = true;
+			textarea.focus();
+
+			editor.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				save.disabled = true;
+				editStatus.textContent = 'Guardando…';
+				try {
+					const payload = await request({
+						method: 'PATCH',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ id: note.id, body: textarea.value }),
+					});
+					if (payload.note) {
+						notes = notes.map((current) =>
+							current.id === note.id ? payload.note as Note : current,
+						);
+					}
+					renderNotes();
+				} catch (error) {
+					editStatus.textContent =
+						error instanceof Error ? error.message : 'No se pudo guardar';
+					editStatus.dataset.state = 'error';
+					save.disabled = false;
+				}
+			});
+		};
+
+		const deleteNote = async (note: Note, itemStatus: HTMLElement) => {
+			if (!confirm('¿Borrar esta nota?')) return;
+			itemStatus.textContent = 'Borrando…';
+			try {
+				await request({
+					method: 'DELETE',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ id: note.id }),
+				});
+				notes = notes.filter((current) => current.id !== note.id);
+				renderNotes();
+			} catch (error) {
+				itemStatus.textContent =
+					error instanceof Error ? error.message : 'No se pudo borrar';
+				itemStatus.dataset.state = 'error';
+			}
+		};
+
+		const loadNotes = async () => {
+			setStatus('Cargando…', 'pending');
+			try {
+				const query = new URLSearchParams({ listKey, recordId: String(recordId) });
+				const payload = await request(undefined, `?${query.toString()}`);
+				notes = Array.isArray(payload.notes) ? payload.notes : [];
+				renderNotes();
+				setStatus();
+			} catch (error) {
+				setStatus(
+					error instanceof Error ? error.message : 'No se pudieron cargar las notas',
+					'error',
+				);
+			}
+		};
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			setStatus('Agregando…', 'pending');
+			try {
+				const payload = await request({
+					method: 'POST',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ listKey, recordId, body: input.value }),
+				});
+				if (payload.note) notes = [payload.note, ...notes];
+				input.value = '';
+				renderNotes();
+				setStatus('Nota agregada', 'ok');
+			} catch (error) {
+				setStatus(
+					error instanceof Error ? error.message : 'No se pudo agregar la nota',
+					'error',
+				);
+			}
+		});
+
+		void loadNotes();
+	});
+</script>
