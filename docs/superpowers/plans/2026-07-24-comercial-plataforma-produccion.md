@@ -139,15 +139,15 @@ Contenido exacto de `docs/marketing/comercial-plataforma/02-shot-list-ui.md`:
 
 | # | Duración | Rol / mensaje | Acción en pantalla |
 |---|----------|---------------|--------------------|
-| U1 | 2s | Home producto | Launcher “¿Qué querés gestionar hoy?” |
-| U2 | 2s | Cajero | Entrar a Mostrador / Caja |
-| U3 | 2s | Depósito | Hub Inventario / lista productos o stock |
-| U4 | 2s | Admin | Hub completo o Inicio con todas las áreas |
-| U5 | 2s | Facilidad | Buscar producto en Mostrador |
-| U6 | 2s | Ticket | Agregar ítem(s) al ticket |
+| U1 | 1.5s | Home producto | Launcher “¿Qué querés gestionar hoy?” |
+| U2 | 1.5s | Cajero | Entrar a Mostrador / Caja |
+| U3 | 1.5s | Depósito | Hub Inventario / lista productos o stock |
+| U4 | 1.5s | Admin | Hub completo o Inicio con todas las áreas |
+| U5 | 1.5s | Facilidad | Buscar producto en Mostrador |
+| U6 | 1.5s | Ticket | Agregar ítem(s) al ticket |
 | U7 | 2–3s | Cierre UI | Click claro en **Cobrar** |
 
-Total escena 3: ~12s.
+Total escena 3: ~12s (trim en montaje si hace falta).
 
 ## Checklist de calidad por toma
 
@@ -190,7 +190,7 @@ git commit -m "docs(marketing): shot list UI para escena cockpit"
 
 Contenido exacto de `docs/marketing/comercial-plataforma/03-prompts-veo.md`:
 
-```markdown
+````markdown
 # Prompts Veo 3.1 — escenas 1, 2, 4
 
 ## Settings globales
@@ -248,7 +248,7 @@ Same Argentine spare-parts shop, now calm mid-afternoon. Wide then medium shot: 
 ```
 chaos, long queues, paper mess, neon, purple, fake UI, exaggerated smiles
 ```
-```
+````
 
 - [ ] **Step 2: Verificar que los 3 prompts están**
 
