@@ -201,10 +201,18 @@ describe("shell UI contracts", () => {
     assert.match(settings, /\/api\/auth\/change-password/);
     assert.match(settings, /\/api\/auth\/change-login/);
     assert.match(settings, /data-login-edit/);
+    assert.match(settings, /PasswordField|data-password-toggle/);
     assert.match(settings, /login\?loginChanged=1/);
     assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
     assert.doesNotMatch(settings, /todavía no está disponible/);
+  });
+
+  it("provides password visibility toggle field", async () => {
+    const field = await source("components/PasswordField.astro");
+    assert.match(field, /data-password-toggle/);
+    assert.match(field, /type=\"password\"/);
+    assert.match(field, /Mostrar contraseña/);
   });
 
   it("renders credit-note and variant detail pages", async () => {

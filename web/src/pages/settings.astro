@@ -1,4 +1,5 @@
 ---
+import PasswordField from '../components/PasswordField.astro';
 import ShellLayout from '../layouts/ShellLayout.astro';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 
@@ -87,36 +88,21 @@ const initials = userName
 			<strong id="settings-password-title">Cambiar contraseña</strong>
 			<p>Después de guardar vas a tener que ingresar de nuevo con la clave nueva.</p>
 			<form data-change-password-form class="sg-settings-form">
-				<label>
-					<span>Contraseña actual</span>
-					<input
-						class="sg-focus-ring"
-						name="currentPassword"
-						type="password"
-						autocomplete="current-password"
-						required
-					/>
-				</label>
-				<label>
-					<span>Nueva contraseña</span>
-					<input
-						class="sg-focus-ring"
-						name="newPassword"
-						type="password"
-						autocomplete="new-password"
-						required
-					/>
-				</label>
-				<label>
-					<span>Confirmar nueva contraseña</span>
-					<input
-						class="sg-focus-ring"
-						name="confirmPassword"
-						type="password"
-						autocomplete="new-password"
-						required
-					/>
-				</label>
+				<PasswordField
+					name="currentPassword"
+					label="Contraseña actual"
+					autocomplete="current-password"
+				/>
+				<PasswordField
+					name="newPassword"
+					label="Nueva contraseña"
+					autocomplete="new-password"
+				/>
+				<PasswordField
+					name="confirmPassword"
+					label="Confirmar nueva contraseña"
+					autocomplete="new-password"
+				/>
 				<p class="sg-settings-error" data-change-password-error role="alert" hidden></p>
 				<button class="sg-landing-cta sg-focus-ring" type="submit">
 					Guardar contraseña
@@ -201,6 +187,25 @@ const initials = userName
 	const form = document.querySelector<HTMLFormElement>('[data-change-password-form]');
 	const error = document.querySelector<HTMLElement>('[data-change-password-error]');
 	const submit = form?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+	form?.querySelectorAll<HTMLButtonElement>('[data-password-toggle]').forEach((toggle) => {
+		toggle.addEventListener('click', () => {
+			const field = toggle.closest('.sg-password-field');
+			const input = field?.querySelector<HTMLInputElement>('input');
+			const showIcon = toggle.querySelector<SVGElement>('.sg-password-icon-show');
+			const hideIcon = toggle.querySelector<SVGElement>('.sg-password-icon-hide');
+			if (!input) return;
+			const showing = input.type === 'text';
+			input.type = showing ? 'password' : 'text';
+			toggle.setAttribute('aria-pressed', showing ? 'false' : 'true');
+			toggle.setAttribute(
+				'aria-label',
+				showing ? 'Mostrar contraseña' : 'Ocultar contraseña'
+			);
+			if (showIcon) showIcon.hidden = !showing;
+			if (hideIcon) hideIcon.hidden = showing;
+		});
+	});
 
 	form?.addEventListener('submit', async (event) => {
 		event.preventDefault();
@@ -413,7 +418,7 @@ const initials = userName
 		gap: 1rem;
 		margin-top: 0.35rem;
 	}
-	.sg-settings-form input {
+	.sg-settings-form .sg-settings-login-form input {
 		width: 100%;
 		box-sizing: border-box;
 		border: 1px solid var(--sg-glass-border);
