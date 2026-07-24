@@ -1,7 +1,7 @@
 # Design: Ajustes — perfil + cambiar contraseña (Astro shell)
 
 **Fecha:** 2026-07-24  
-**Estado:** draft (pending user review)  
+**Estado:** approved  
 **Repo:** servigas (`web/`)  
 **Ruta afectada:** `/settings`
 
