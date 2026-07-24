@@ -704,8 +704,9 @@ describe("OdooAdapter.getPosCatalog", () => {
     assert.equal(catalog.products[0].price_includes_tax, false);
     assert.equal(catalog.total, 1);
     assert.equal(catalog.paymentMethods.length, 2);
-    assert.equal(catalog.paymentMethods[0].name, "Cash");
+    assert.equal(catalog.paymentMethods[0].name, "Efectivo");
     assert.equal(catalog.paymentMethods[1].id, 2);
+    assert.equal(catalog.paymentMethods[1].name, "Transferencia");
 
     const bodies = fetchImpl.mock.calls.map((call) =>
       JSON.parse(call.arguments[1].body)
@@ -803,7 +804,7 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(result.detailPath, "/lists/sales/ventas-caja/55");
     assert.equal(result.channel, "pos.order");
     assert.equal(result.paymentMethodId, 2);
-    assert.equal(result.paymentMethodName, "Card");
+    assert.equal(result.paymentMethodName, "Transferencia");
     // 180 sin IVA + 21% = 217.80
     assert.equal(result.amountUntaxed, 180);
     assert.equal(result.amountTax, 37.8);

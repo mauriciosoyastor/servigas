@@ -18,6 +18,7 @@ import type {
   RecordNote,
   SessionInfo,
 } from "./types.ts";
+import { localizePaymentMethodName } from "../pos/payment-methods.ts";
 import {
   buildProductIndexes,
   classifyRows,
@@ -1021,7 +1022,7 @@ export class OdooAdapter implements BackendClient {
       );
       paymentMethods = rowsPm.map((row) => ({
         id: Number(row.id),
-        name: String(row.name || "Pago"),
+        name: localizePaymentMethodName(String(row.name || "Pago")),
         isCash: row.is_cash_count === true,
       }));
     } else {
@@ -1036,7 +1037,7 @@ export class OdooAdapter implements BackendClient {
       );
       paymentMethods = rowsPm.map((row) => ({
         id: Number(row.id),
-        name: String(row.name || "Pago"),
+        name: localizePaymentMethodName(String(row.name || "Pago")),
         isCash: row.is_cash_count === true,
       }));
     }
@@ -1479,7 +1480,9 @@ export class OdooAdapter implements BackendClient {
       detailPath: `/lists/sales/ventas-caja/${orderId}`,
       channel: "pos.order",
       paymentMethodId,
-      paymentMethodName: String(cash?.name || "Pago"),
+      paymentMethodName: localizePaymentMethodName(
+        String(cash?.name || "Pago")
+      ),
       partnerId: partnerId === false ? null : partnerId,
       partnerName,
       amountUntaxed,
