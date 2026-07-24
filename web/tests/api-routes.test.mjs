@@ -456,7 +456,7 @@ describe("BFF API routes", () => {
             body: JSON.stringify({
               action: "register_payment",
               id: 55,
-              values: { amount: 200 },
+              values: { amount: 200, paymentMethod: "transfer" },
             }),
           }
         ),
@@ -471,7 +471,7 @@ describe("BFF API routes", () => {
         sessionId: "odoo",
         listKey: "accounting/customer-invoices",
         id: 55,
-        values: { amount: 200 },
+        values: { amount: 200, paymentMethod: "transfer" },
       });
     } finally {
       __setBackendForTests(undefined);

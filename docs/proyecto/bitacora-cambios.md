@@ -31,6 +31,21 @@
 
 ---
 
+### 2026-07-24 — Medio de pago al registrar cobro/pago
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** elegir efectivo/transferencia/tarjeta al cobrar o pagar.  
+**Archivos:**  
+- `web/src/lib/shell/payment-registers.ts`  
+- `RecordRegisterPaymentControl` (radios de medio)  
+- `OdooAdapter.registerPayment` → `journal_id`  
+- Spec: `docs/superpowers/specs/2026-07-24-fc-pdf-payment-method-design.md`  
+**Cambios:**  
+- Cobro/pago envía `paymentMethod` → resuelve diario caja/banco en Odoo  
+- Default UI: efectivo en cobros  
+**Verificación:** `cd web && npm test`  
+**Automatización:** resolución de journal por tipo reutilizable para otros pagos.
+
 ### 2026-07-24 — Factura Web cola + POS→FC + NC proveedor
 
 **Área:** contabilidad | POS | integraciones | web | BFF  

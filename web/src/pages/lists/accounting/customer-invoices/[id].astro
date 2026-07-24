@@ -76,6 +76,7 @@ const showMarkFw = isFwMarkableState(state, fwLoaded);
 				defaultAmount={residual}
 				label="Registrar cobro"
 				directionLabel="cobro"
+				defaultPaymentMethod="cash"
 			/>
 		) : null}
 		{detail && !error && showMarkFw ? (

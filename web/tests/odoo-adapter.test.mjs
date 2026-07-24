@@ -1322,6 +1322,14 @@ describe("OdooAdapter.registerPayment", () => {
           ],
         });
       }
+      if (model === "account.journal" && method === "search_read") {
+        return Response.json({
+          result: [
+            { id: 10, name: "Caja", type: "cash" },
+            { id: 11, name: "Banco", type: "bank" },
+          ],
+        });
+      }
       if (model === "account.payment.register" && method === "create") {
         return Response.json({ result: 77 });
       }
@@ -1343,7 +1351,7 @@ describe("OdooAdapter.registerPayment", () => {
       "sess",
       "accounting/customer-invoices",
       55,
-      { amount: 400 }
+      { amount: 400, paymentMethod: "cash" }
     );
     assert.equal(result.ok, true);
     assert.equal(result.paymentState, "partial");
@@ -1358,7 +1366,10 @@ describe("OdooAdapter.registerPayment", () => {
         body.params?.method === "create"
     );
     assert.ok(createWizard);
-    assert.deepEqual(createWizard.params.args[0], { amount: 400 });
+    assert.deepEqual(createWizard.params.args[0], {
+      journal_id: 10,
+      amount: 400,
+    });
     assert.deepEqual(createWizard.params.kwargs.context.active_ids, [55]);
   });
 
@@ -1386,6 +1397,7 @@ describe("OdooAdapter.registerPayment", () => {
       () =>
         adapter.registerPayment("sess", "accounting/customer-invoices", 55, {
           amount: 150,
+          paymentMethod: "cash",
         }),
       (err) =>
         err?.code === "validation_error" &&
