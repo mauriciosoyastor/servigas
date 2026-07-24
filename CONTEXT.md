@@ -67,6 +67,7 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Puerto HTTP | `8069` (default Odoo; config puede decir otro) |
 | Config Odoo | `../odoo-workspace/config/servigas.conf` |
 | Runtime Odoo 19 | `../odoo-workspace/odoo-19/` |
+| PDF Windows | `wkhtmltopdf` + `odoo-workspace/scripts/apply-odoo-patches.ps1` (doc: `odoo-workspace/docs/WINDOWS-PDF.md`) |
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 

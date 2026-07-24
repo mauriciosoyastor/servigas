@@ -11,6 +11,8 @@ MÃ³dulos Odoo custom para **Odoo custom - Servigas**. No incluye el core de Od
 - Odoo 19 Community en `../odoo-workspace/odoo-19/` (runtime compartido, no se clona)
 - Python 3.10+, PostgreSQL
 - Config local: `../odoo-workspace/config/servigas.conf` (no estÃ¡ en este repo)
+- **PDF (Windows):** `wkhtmltopdf` en PATH + parches del host  
+  (`../odoo-workspace/scripts/apply-odoo-patches.ps1`, guía `../odoo-workspace/docs/WINDOWS-PDF.md`)
 
 ## Inicio rÃ¡pido
 

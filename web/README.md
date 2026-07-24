@@ -15,6 +15,8 @@ para Settings. Smoke: `npm run smoke:shell` (+ `SMOKE_MUTATE=1` para cobro).
 - Node.js 22.12 o posterior.
 - Odoo de desarrollo accesible, con los modelos `sg.app.tile` y `sg.hub.card`.
 - Una base con un usuario válido; en Servigas se usa `servigas_dev`.
+- Para **PDF de facturas** en Windows: `wkhtmltopdf` en PATH y parches del host  
+  (`../odoo-workspace/docs/WINDOWS-PDF.md`). `npm run odoo:ensure` avisa si faltan.
 
 ## Ejecutar
 
