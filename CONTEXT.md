@@ -151,5 +151,5 @@ Tokens: `astorproptech/docs/design/tokens.md`
 - [ ] Actualizar módulos en BD y validar visualmente (`-u servigas_core,servigas_integrations`)
 - [x] Venta de prueba POS validada (smoke `SMOKE_MUTATE=1` 2026-07-23)
 - [ ] Stock masivo (conteo físico)
-- [ ] Ubicaciones internas configuradas
+- [ ] Ubicaciones internas configuradas — checklist: [docs/proyecto/checklist-ubicaciones-internas.md](docs/proyecto/checklist-ubicaciones-internas.md)
 - [ ] AFIP / facturación en Odoo
