@@ -138,6 +138,12 @@ const {
 		return name;
 	}
 
+	function suggestedDocLabel(dest) {
+		return String(dest || '').toLowerCase() === 'cuit'
+			? 'Factura A/B (CUIT)'
+			: 'Factura B/C (consumidor final)';
+	}
+
 	function setPartnerFiscalWarn(row) {
 		const warn = root?.querySelector('[data-partner-fiscal-warn]');
 		if (!(warn instanceof HTMLElement)) return;
@@ -146,16 +152,19 @@ const {
 			warn.textContent = '';
 			return;
 		}
-		const dest = String(row?.sg_invoice_dest || '').toLowerCase();
+		const dest = String(row?.sg_invoice_dest || 'cf').toLowerCase();
 		const vat = String(row?.vat || '').trim();
-		if (dest === 'cuit' && !vat) {
-			warn.hidden = false;
-			warn.textContent =
-				'Falta CUIT; completá la ficha antes de facturar.';
-		} else {
-			warn.hidden = true;
-			warn.textContent = '';
+		const parts = [
+			`Tipo sugerido: ${suggestedDocLabel(dest)}.`,
+			'Sugerido según destino. El tipo final lo define AFIP/l10n_ar según tu condición IVA.',
+		];
+		const missingCuit = dest === 'cuit' && !vat;
+		if (missingCuit) {
+			parts.unshift('Falta CUIT; completá la ficha antes de facturar.');
 		}
+		warn.hidden = false;
+		warn.dataset.state = missingCuit ? 'warn' : 'info';
+		warn.textContent = parts.join(' ');
 	}
 
 	function labelProduct(row) {
@@ -492,7 +501,13 @@ const {
 		margin: 0;
 		font-size: 0.72rem;
 		line-height: 1.35;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-order-picker-warn[data-state='warn'] {
 		color: #ffb4a2;
+	}
+	.sg-order-picker-warn[data-state='info'] {
+		color: #9ec5e8;
 	}
 	.sg-order-picker-results {
 		list-style: none;

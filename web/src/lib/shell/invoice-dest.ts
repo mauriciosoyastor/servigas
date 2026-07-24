@@ -100,3 +100,44 @@ export function publishInvoiceDestError(
   }
   return null;
 }
+
+/** Tipo de comprobante sugerido (fase 3a) — no es emisión AFIP. */
+export type SuggestedDocTypeCode = "bc_cf" | "ab_cuit";
+
+export type SuggestedDocType = {
+  code: SuggestedDocTypeCode;
+  /** Lista corta: B/C o A/B */
+  short: string;
+  /** Label ficha */
+  label: string;
+  /** Nota educativa */
+  note: string;
+};
+
+export const SUGGESTED_DOC_TYPE_NOTE =
+  "Sugerido según destino. El tipo final lo define AFIP/l10n_ar según tu condición IVA.";
+
+export function suggestedDocType(dest: unknown): SuggestedDocType {
+  if (normalizeInvoiceDest(dest) === INVOICE_DEST_CUIT) {
+    return {
+      code: "ab_cuit",
+      short: "A/B",
+      label: "Factura A/B (CUIT)",
+      note: SUGGESTED_DOC_TYPE_NOTE,
+    };
+  }
+  return {
+    code: "bc_cf",
+    short: "B/C",
+    label: "Factura B/C (consumidor final)",
+    note: SUGGESTED_DOC_TYPE_NOTE,
+  };
+}
+
+export function suggestedDocTypeShort(dest: unknown): string {
+  return suggestedDocType(dest).short;
+}
+
+export function suggestedDocTypeLabel(dest: unknown): string {
+  return suggestedDocType(dest).label;
+}

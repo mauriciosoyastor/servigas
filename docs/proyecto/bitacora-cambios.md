@@ -50,6 +50,23 @@
 
 ## Entradas
 
+### 2026-07-24 — Tipo comprobante sugerido + checklist l10n_ar (fase 3a/3b)
+
+**Área:** contabilidad | docs | integraciones  
+**Motivo:** preparar AFIP sin emitir: CF→B/C, CUIT→A/B + guía instalación.  
+**Archivos:**
+- `web/src/lib/shell/invoice-dest.ts` (`suggestedDocType*`)
+- `web/src/lib/bff/odoo-adapter.ts` (columna/ficha tipo sugerido)
+- `servigas_integrations` process_notes Factura Web + `19.0.1.0.1`
+- `docs/proyecto/checklist-l10n-ar-afip.md`, CONTEXT
+
+**Cambios:**
+- Lista/ficha muestran tipo sugerido; alta FC informa al elegir cliente.
+- Checklist `l10n_ar`; emisión real queda 3c.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** helper reutilizable cuando llegue EDI.
+
 ### 2026-07-24 — Crear FC desde pedido (fase 2b)
 
 **Área:** ventas | contabilidad | web  

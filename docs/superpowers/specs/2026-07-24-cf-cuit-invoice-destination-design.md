@@ -166,11 +166,17 @@ Arco D secuencial:
 4. Lista/ficha FC con badge CF/CUIT.  
 5. Puente Factura Web documentado usando esos datos (sigue manual salvo otro spec).
 
-## Fase 3 — Backlog (AFIP / `l10n_ar`)
+## Fase 3 — AFIP / `l10n_ar`
 
-1. Instalar/configurar localización AR.  
-2. Mapear CF/CUIT (+ condición IVA) → tipo de comprobante.  
-3. Emisión electrónica.  
+| Entrega | Spec | Estado |
+|---------|------|--------|
+| **3a** | [afip-doc-type-hint](./2026-07-24-afip-doc-type-hint-design.md) — tipo sugerido B/C vs A/B | Implementada |
+| **3b** | [checklist-l10n-ar-afip](../../proyecto/checklist-l10n-ar-afip.md) — guía instalación | Hecha |
+| **3c** | Emisión electrónica real (CAE/WSFE) | Backlog |
+
+1. ~~Mapear CF/CUIT → tipo sugerido en UI~~ (3a).  
+2. ~~Checklist `l10n_ar`~~ (3b).  
+3. Emisión electrónica (3c).  
 4. IIBB / padrones: solo si se prioriza en spec aparte.
 
 ---

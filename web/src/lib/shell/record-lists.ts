@@ -133,6 +133,7 @@ function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
   ];
   if (includeInvoiceDest) {
     cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+    cols.push({ key: "sg_doc_type_short", label: "Tipo sug." });
   }
   cols.push(
     { key: "vat", label: "CUIT" },
@@ -571,6 +572,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "sg_invoice_dest",
+      "sg_doc_type_short",
       "vat",
       "email",
       "phone",
@@ -595,6 +597,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "sg_invoice_dest",
+      "sg_doc_type_short",
       "vat",
       "email",
       "phone",

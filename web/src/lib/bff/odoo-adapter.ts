@@ -43,7 +43,12 @@ import {
   filterInvoiceCreateValues,
   getInvoiceCreateDef,
 } from "../shell/invoice-creates.ts";
-import { publishInvoiceDestError } from "../shell/invoice-dest.ts";
+import {
+  publishInvoiceDestError,
+  SUGGESTED_DOC_TYPE_NOTE,
+  suggestedDocTypeLabel,
+  suggestedDocTypeShort,
+} from "../shell/invoice-dest.ts";
 import {
   canCreateInvoiceFromOrder,
   isOrderReadyToInvoice,
@@ -60,7 +65,10 @@ import {
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
 
-const DERIVED_LIST_FIELDS = new Set(["sg_invoice_dest"]);
+/** Never requested from Odoo; computed in the BFF. */
+const COMPUTED_LIST_FIELDS = new Set(["sg_doc_type_short"]);
+/** On account.move only: filled from partner, not a move column. */
+const MOVE_PARTNER_DEST_FIELD = "sg_invoice_dest";
 import {
   isAllowedNoteModel,
   normalizeNoteBody,
@@ -311,7 +319,16 @@ export class OdooAdapter implements BackendClient {
     const offset = (page - 1) * def.limit;
 
     const displayFields = [...def.fields];
-    let fields = displayFields.filter((field) => !DERIVED_LIST_FIELDS.has(field));
+    let fields = displayFields.filter((field) => {
+      if (COMPUTED_LIST_FIELDS.has(field)) return false;
+      if (
+        def.model === "account.move" &&
+        field === MOVE_PARTNER_DEST_FIELD
+      ) {
+        return false;
+      }
+      return true;
+    });
     let rawRows: Record<string, unknown>[];
 
     try {
@@ -347,6 +364,12 @@ export class OdooAdapter implements BackendClient {
       await this.#enrichRowsWithPartnerInvoiceDest(odooSessionId, rawRows);
     }
 
+    if (displayFields.includes("sg_doc_type_short")) {
+      for (const row of rawRows) {
+        row.sg_doc_type_short = suggestedDocTypeShort(row.sg_invoice_dest);
+      }
+    }
+
     const total = await this.#callKw<number>(
       odooSessionId,
       def.model,
@@ -358,7 +381,9 @@ export class OdooAdapter implements BackendClient {
       (column) =>
         column.kind === "image" ||
         fields.includes(column.key) ||
-        DERIVED_LIST_FIELDS.has(column.key) ||
+        COMPUTED_LIST_FIELDS.has(column.key) ||
+        (def.model === "account.move" &&
+          column.key === MOVE_PARTNER_DEST_FIELD) ||
         column.key === "image_url"
     );
 
@@ -409,7 +434,16 @@ export class OdooAdapter implements BackendClient {
     }
 
     const displayFields = [...def.fields];
-    let fields = displayFields.filter((field) => !DERIVED_LIST_FIELDS.has(field));
+    let fields = displayFields.filter((field) => {
+      if (COMPUTED_LIST_FIELDS.has(field)) return false;
+      if (
+        def.model === "account.move" &&
+        field === MOVE_PARTNER_DEST_FIELD
+      ) {
+        return false;
+      }
+      return true;
+    });
     let rows: Record<string, unknown>[];
     try {
       rows = await this.#callKw<Record<string, unknown>[]>(
@@ -443,6 +477,10 @@ export class OdooAdapter implements BackendClient {
       await this.#enrichRowsWithPartnerInvoiceDest(odooSessionId, [row]);
     }
 
+    if (displayFields.includes("sg_doc_type_short")) {
+      row.sg_doc_type_short = suggestedDocTypeShort(row.sg_invoice_dest);
+    }
+
     const labels: Record<string, string> = {
       name: "Nombre",
       display_name: "Nombre",
@@ -456,6 +494,7 @@ export class OdooAdapter implements BackendClient {
       email: "Email",
       phone: "Teléfono",
       sg_invoice_dest: "Destino fiscal",
+      sg_doc_type_short: "Tipo sug.",
       invoice_status: "Estado factura",
     };
     for (const column of def.columns) {
@@ -464,6 +503,24 @@ export class OdooAdapter implements BackendClient {
     }
 
     const lines = await this.#loadDetailLines(odooSessionId, def.model, id);
+
+    const detailFields = displayFields.map((key) => ({
+      key,
+      label: labels[key] || key,
+      value: this.#cellValue(row[key]),
+    }));
+
+    // Tipo sugerido largo en fichas de cliente / FC (fase 3a)
+    if (
+      (def.model === "res.partner" || def.model === "account.move") &&
+      (row.sg_invoice_dest != null || def.model === "res.partner")
+    ) {
+      detailFields.push({
+        key: "sg_doc_type_label",
+        label: "Tipo sugerido",
+        value: `${suggestedDocTypeLabel(row.sg_invoice_dest)} — ${SUGGESTED_DOC_TYPE_NOTE}`,
+      });
+    }
 
     return {
       key: def.key,
@@ -476,11 +533,7 @@ export class OdooAdapter implements BackendClient {
       imageUrl: def.imageField
         ? mediaPath(def.model, id, def.imageField)
         : null,
-      fields: displayFields.map((key) => ({
-        key,
-        label: labels[key] || key,
-        value: this.#cellValue(row[key]),
-      })),
+      fields: detailFields,
       lines,
     };
   }

@@ -9,6 +9,8 @@ import {
   invoiceDestVatError,
   needsCuitWarning,
   normalizeInvoiceDest,
+  suggestedDocType,
+  suggestedDocTypeShort,
 } from "../src/lib/shell/invoice-dest.ts";
 
 describe("invoice-dest helpers", () => {
@@ -42,5 +44,14 @@ describe("invoice-dest helpers", () => {
     assert.equal(needsCuitWarning("cuit", ""), true);
     assert.equal(needsCuitWarning("cuit", "20123456789"), false);
     assert.equal(needsCuitWarning("cf", ""), false);
+  });
+
+  it("suggests document type from destination", () => {
+    assert.equal(suggestedDocTypeShort("cf"), "B/C");
+    assert.equal(suggestedDocTypeShort("cuit"), "A/B");
+    assert.equal(suggestedDocType("cf").code, "bc_cf");
+    assert.equal(suggestedDocType("cuit").code, "ab_cuit");
+    assert.match(suggestedDocType("cf").label, /B\/C/);
+    assert.match(suggestedDocType("cuit").label, /A\/B/);
   });
 });

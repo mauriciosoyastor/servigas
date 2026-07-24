@@ -302,6 +302,13 @@ describe("shell UI contracts", () => {
     assert.match(control, /create_invoice/);
   });
 
+  it("surfaces suggested doc type hint on invoice create partner pick", async () => {
+    const form = await source("components/OrderCreateForm.astro");
+    assert.match(form, /Tipo sugerido/);
+    assert.match(form, /Factura A\/B|Factura B\/C/);
+    assert.match(form, /AFIP\/l10n_ar/);
+  });
+
   it("renders product create/archive and quotation confirm", async () => {
     const productNew = await source("pages/lists/inventory/products/new.astro");
     const productDetail = await source("pages/lists/inventory/products/[id].astro");
