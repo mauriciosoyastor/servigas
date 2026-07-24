@@ -52,3 +52,7 @@ datos/import/imagenes_originales/*
 datos/import/cache/*.json
 datos/import/descargar_fotos_report.csv
 
+
+# Comercial prototipo — regenerable
+docs/marketing/comercial-plataforma/export/work/
+docs/marketing/comercial-plataforma/export/frames/*.chrome.log
