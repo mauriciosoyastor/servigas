@@ -14,22 +14,25 @@ try {
 }
 ---
 
-<ShellLayout title="Nueva factura de proveedor | Servigas" active="accounting" userName={userName}>
+<ShellLayout title="Cargar FP | Servigas" active="accounting" userName={userName}>
 	<main class="sg-create-page">
 		<header>
 			<p>Contabilidad</p>
-			<h1>Nueva factura de proveedor</h1>
+			<h1>Cargar factura de proveedor</h1>
 		</header>
 		<OrderCreateForm
 			apiPath="/api/records/accounting/vendor-bills"
 			listPath="/lists/accounting/vendor-bills"
 			partnerListKey="purchase/vendors"
 			productListKey="inventory/variants"
-			title="Alta de factura de proveedor"
-			hint="Elegí proveedor y líneas. Queda en borrador; publicá desde la ficha para dejarla por pagar."
+			title="Alta de FP"
+			hint="Adjuntá el PDF o la foto que llegó por WhatsApp o mail, elegí proveedor y líneas. Queda en borrador; publicá desde la ficha."
 			partnerLabel="Proveedor"
 			partnerPlaceholder="Buscar proveedor…"
 			submitLabel="Crear borrador"
+			requireAttachment={true}
+			showBillSource={true}
+			suppressFiscalHints={true}
 		/>
 	</main>
 </ShellLayout>

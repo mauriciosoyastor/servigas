@@ -10,6 +10,12 @@ interface Props {
 	partnerPlaceholder?: string;
 	productPlaceholder?: string;
 	submitLabel?: string;
+	/** FP: require PDF/JPG/PNG proof attachment */
+	requireAttachment?: boolean;
+	/** FP: optional WhatsApp / Mail / Other source */
+	showBillSource?: boolean;
+	/** Hide CF/CUIT fiscal hints (vendor bills) */
+	suppressFiscalHints?: boolean;
 }
 
 const {
@@ -23,13 +29,45 @@ const {
 	partnerPlaceholder = 'Buscar cliente…',
 	productPlaceholder = 'Buscar producto por nombre o código…',
 	submitLabel = 'Crear borrador',
+	requireAttachment = false,
+	showBillSource = false,
+	suppressFiscalHints = false,
 } = Astro.props;
 ---
 
-<section class="sg-order-create sg-glass" data-order-create>
+<section
+	class="sg-order-create sg-glass"
+	data-order-create
+	data-require-attachment={requireAttachment ? '1' : '0'}
+	data-suppress-fiscal={suppressFiscalHints ? '1' : '0'}
+>
 	<strong>{title}</strong>
 	<p>{hint}</p>
 	<form class="sg-order-create-form" data-order-create-form>
+		{showBillSource ? (
+			<label class="sg-order-bill-source">
+				<span>Origen (opcional)</span>
+				<select class="sg-focus-ring" name="billSource" data-bill-source>
+					<option value="">Sin indicar</option>
+					<option value="whatsapp">WhatsApp</option>
+					<option value="mail">Mail</option>
+					<option value="other">Otro</option>
+				</select>
+			</label>
+		) : null}
+
+		{requireAttachment ? (
+			<label class="sg-order-attachment">
+				<span>Comprobante (PDF, JPG o PNG) *</span>
+				<input
+					class="sg-focus-ring"
+					type="file"
+					accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+					data-bill-attachment
+				/>
+			</label>
+		) : null}
+
 		<div
 			class="sg-order-picker"
 			data-order-picker
@@ -132,6 +170,7 @@ const {
 			typeof row?.name === 'string' && row.name.trim()
 				? row.name.trim()
 				: String(row?.id ?? '');
+		if (root?.getAttribute('data-suppress-fiscal') === '1') return name;
 		const dest = String(row?.sg_invoice_dest || '').toLowerCase();
 		if (dest === 'cuit') return `${name} · CUIT`;
 		if (dest === 'cf') return `${name} · CF`;
@@ -147,6 +186,11 @@ const {
 	function setPartnerFiscalWarn(row) {
 		const warn = root?.querySelector('[data-partner-fiscal-warn]');
 		if (!(warn instanceof HTMLElement)) return;
+		if (root?.getAttribute('data-suppress-fiscal') === '1') {
+			warn.hidden = true;
+			warn.textContent = '';
+			return;
+		}
 		if (!row) {
 			warn.hidden = true;
 			warn.textContent = '';
@@ -165,6 +209,15 @@ const {
 		warn.hidden = false;
 		warn.dataset.state = missingCuit ? 'warn' : 'info';
 		warn.textContent = parts.join(' ');
+	}
+
+	function readFileAsDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ''));
+			reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+			reader.readAsDataURL(file);
+		});
 	}
 
 	function labelProduct(row) {
@@ -418,6 +471,39 @@ const {
 					return line;
 				}),
 			};
+			const billSource = data.get('billSource');
+			if (typeof billSource === 'string' && billSource.trim()) {
+				values.billSource = billSource.trim();
+			}
+			if (root?.getAttribute('data-require-attachment') === '1') {
+				const fileInput = root.querySelector('[data-bill-attachment]');
+				const file =
+					fileInput instanceof HTMLInputElement && fileInput.files?.length
+						? fileInput.files[0]
+						: null;
+				if (!file) {
+					status.textContent = 'Adjuntá el PDF o la foto del comprobante';
+					status.dataset.state = 'error';
+					return;
+				}
+				if (file.size > 10 * 1024 * 1024) {
+					status.textContent = 'El archivo es demasiado grande (máx. 10 MB).';
+					status.dataset.state = 'error';
+					return;
+				}
+				try {
+					const content = await readFileAsDataUrl(file);
+					values.attachment = {
+						filename: file.name || 'comprobante',
+						mimetype: file.type || '',
+						content,
+					};
+				} catch {
+					status.textContent = 'No se pudo leer el archivo';
+					status.dataset.state = 'error';
+					return;
+				}
+			}
 			try {
 				const response = await fetch(apiPath, {
 					method: 'POST',
@@ -477,6 +563,7 @@ const {
 		color: var(--sg-text-muted-dark);
 	}
 	.sg-order-create-form input,
+	.sg-order-create-form select,
 	.sg-order-picker input[type='search'] {
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 0.75rem;
@@ -486,6 +573,10 @@ const {
 		font: inherit;
 		width: 100%;
 		box-sizing: border-box;
+	}
+	.sg-order-attachment input[type='file'],
+	.sg-order-bill-source select {
+		cursor: pointer;
 	}
 	.sg-order-picker {
 		display: grid;

@@ -18,3 +18,12 @@ class AccountMove(models.Model):
         string="N° Factura Web",
         help="Número de comprobante en Factura Web (opcional).",
     )
+    sg_bill_source = fields.Selection(
+        [
+            ("whatsapp", "WhatsApp"),
+            ("mail", "Mail"),
+            ("other", "Otro"),
+        ],
+        string="Origen del comprobante",
+        help="Canal por el que llegó la factura de proveedor (WhatsApp, mail u otro).",
+    )
