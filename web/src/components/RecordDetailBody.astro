@@ -7,9 +7,19 @@ interface Props {
 	eyebrow: string;
 	fallbackTitle: string;
 	fallbackListPath: string;
+	imageUploadApiPath?: string;
+	recordId?: number;
 }
 
-const { detail, error, eyebrow, fallbackTitle, fallbackListPath } = Astro.props;
+const {
+	detail,
+	error,
+	eyebrow,
+	fallbackTitle,
+	fallbackListPath,
+	imageUploadApiPath = '',
+	recordId,
+} = Astro.props;
 ---
 
 <main class="sg-list-page">
@@ -32,10 +42,43 @@ const { detail, error, eyebrow, fallbackTitle, fallbackListPath } = Astro.props;
 		</section>
 	) : detail ? (
 		<section class="sg-detail sg-glass">
-			{detail.imageUrl ? (
-				<img class="sg-detail-photo" src={detail.imageUrl} alt="" />
-			) : detail.imageUrl === null && detail.key.startsWith('inventory/') ? (
-				<div class="sg-detail-photo sg-detail-photo--empty">Sin foto</div>
+			{detail.imageUrl || (detail.imageUrl === null && detail.key.startsWith('inventory/')) ? (
+				<div class="sg-detail-photo-wrap">
+					{detail.imageUrl ? (
+						<img
+							class="sg-detail-photo"
+							src={detail.imageUrl}
+							alt=""
+							data-product-detail-photo
+						/>
+					) : (
+						<div
+							class="sg-detail-photo sg-detail-photo--empty"
+							data-product-detail-photo
+						>
+							Sin foto
+						</div>
+					)}
+					{imageUploadApiPath && recordId ? (
+						<button
+							type="button"
+							class="sg-detail-photo-upload sg-focus-ring"
+							data-product-image-trigger
+							data-record-id={String(recordId)}
+							data-api-path={imageUploadApiPath}
+							data-image-target="[data-product-detail-photo]"
+							aria-label={detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
+						>
+							<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+								<path
+									fill="currentColor"
+									d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
+								/>
+							</svg>
+							<span>{detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}</span>
+						</button>
+					) : null}
+				</div>
 			) : null}
 			<dl class="sg-detail-fields">
 				{detail.fields.map((field) => (

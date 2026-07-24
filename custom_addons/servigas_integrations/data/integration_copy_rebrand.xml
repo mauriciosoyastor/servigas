@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Force-update copy (noupdate records from integration_data.xml) -->
+    <data noupdate="0">
+        <record id="integration_factura_web" model="servigas.integration">
+            <field name="description">Puente manual entre Servigas y Factura Web para la facturación fiscal temporal.</field>
+            <field name="process_notes">Exportar ventas desde Servigas y completar la planilla puente en datos/import/planilla_puente_factura_web.xlsx antes de cargar en Factura Web.</field>
+        </record>
+    </data>
+</odoo>

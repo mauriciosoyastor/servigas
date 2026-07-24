@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- ADR 0015: sin chatter + ancla sg-form-no-chatter (sheet ancho completo vía SCSS). -->
+
+    <!-- Inventario P1 -->
+    <record id="sg_product_category_form_hide_chatter" model="ir.ui.view">
+        <field name="name">product.category.form.sg.hide.chatter</field>
+        <field name="model">product.category</field>
+        <field name="inherit_id" ref="product.product_category_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_stock_picking_form_hide_chatter" model="ir.ui.view">
+        <field name="name">stock.picking.form.sg.hide.chatter</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <!-- Ventas / Compras P1 -->
+    <record id="sg_sale_order_form_hide_chatter" model="ir.ui.view">
+        <field name="name">sale.order.form.sg.hide.chatter</field>
+        <field name="model">sale.order</field>
+        <field name="inherit_id" ref="sale.view_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_purchase_order_form_hide_chatter" model="ir.ui.view">
+        <field name="name">purchase.order.form.sg.hide.chatter</field>
+        <field name="model">purchase.order</field>
+        <field name="inherit_id" ref="purchase.purchase_order_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <!-- Facturación / contactos P1 -->
+    <record id="sg_account_move_form_hide_chatter" model="ir.ui.view">
+        <field name="name">account.move.form.sg.hide.chatter</field>
+        <field name="model">account.move</field>
+        <field name="inherit_id" ref="account.view_move_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_account_payment_form_hide_chatter" model="ir.ui.view">
+        <field name="name">account.payment.form.sg.hide.chatter</field>
+        <field name="model">account.payment</field>
+        <field name="inherit_id" ref="account.view_account_payment_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_res_partner_form_hide_chatter" model="ir.ui.view">
+        <field name="name">res.partner.form.sg.hide.chatter</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <!-- P2: config / POS backend -->
+    <record id="sg_product_pricelist_form_hide_chatter" model="ir.ui.view">
+        <field name="name">product.pricelist.form.sg.hide.chatter</field>
+        <field name="model">product.pricelist</field>
+        <field name="inherit_id" ref="product.product_pricelist_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_stock_lot_form_hide_chatter" model="ir.ui.view">
+        <field name="name">stock.lot.form.sg.hide.chatter</field>
+        <field name="model">stock.lot</field>
+        <field name="inherit_id" ref="stock.view_production_lot_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_stock_scrap_form_hide_chatter" model="ir.ui.view">
+        <field name="name">stock.scrap.form.sg.hide.chatter</field>
+        <field name="model">stock.scrap</field>
+        <field name="inherit_id" ref="stock.stock_scrap_form_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_account_journal_form_hide_chatter" model="ir.ui.view">
+        <field name="name">account.journal.form.sg.hide.chatter</field>
+        <field name="model">account.journal</field>
+        <field name="inherit_id" ref="account.view_account_journal_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_account_account_form_hide_chatter" model="ir.ui.view">
+        <field name="name">account.account.form.sg.hide.chatter</field>
+        <field name="model">account.account</field>
+        <field name="inherit_id" ref="account.view_account_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_account_tax_form_hide_chatter" model="ir.ui.view">
+        <field name="name">account.tax.form.sg.hide.chatter</field>
+        <field name="model">account.tax</field>
+        <field name="inherit_id" ref="account.view_tax_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_pos_order_form_hide_chatter" model="ir.ui.view">
+        <field name="name">pos.order.form.sg.hide.chatter</field>
+        <field name="model">pos.order</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_pos_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+
+    <record id="sg_pos_session_form_hide_chatter" model="ir.ui.view">
+        <field name="name">pos.session.form.sg.hide.chatter</field>
+        <field name="model">pos.session</field>
+        <field name="inherit_id" ref="point_of_sale.view_pos_session_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//form" position="attributes">
+                <attribute name="class" add="sg-form-no-chatter" separator=" "/>
+            </xpath>
+            <xpath expr="//chatter" position="replace"/>
+        </field>
+    </record>
+</odoo>

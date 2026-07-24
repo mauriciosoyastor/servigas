@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="action_servigas_app_launcher" model="ir.actions.client">
+        <field name="name">Inicio</field>
+        <field name="tag">servigas_app_launcher</field>
+        <field name="path">servigas_app_launcher</field>
+    </record>
+
+    <function model="sg.app.tile" name="setup_launcher_tile_accents"/>
+    <function model="sg.app.tile" name="setup_launcher_home_for_users"/>
+</odoo>

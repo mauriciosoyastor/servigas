@@ -1,0 +1,327 @@
+---
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
+
+let userName = '';
+try {
+	const { session } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Cargar lista de precios | Servigas" active="inventory" userName={userName}>
+	<main class="sg-import-page" data-price-import>
+		<header>
+			<p>Inventario · Productos</p>
+			<h1>Cargar lista de precios</h1>
+			<p class="sg-import-lead">
+				Subí un CSV para crear productos nuevos y actualizar precio de venta y costo.
+				PDF e imágenes no están soportados: convertí a CSV primero.
+			</p>
+		</header>
+
+		<section class="sg-import-card sg-glass" data-step="upload">
+			<strong>1. Archivo</strong>
+			<div class="sg-import-actions">
+				<button type="button" class="sg-focus-ring" data-download-template>Descargar plantilla</button>
+				<label class="sg-import-file sg-focus-ring">
+					<span>Elegir CSV</span>
+					<input type="file" accept=".csv,text/csv" data-file-input />
+				</label>
+			</div>
+			<p class="sg-import-status" data-status hidden></p>
+		</section>
+
+		<section class="sg-import-card sg-glass" data-step="preview" hidden>
+			<strong>2. Preview</strong>
+			<p class="sg-import-counts" data-counts></p>
+			<div class="sg-import-table-wrap">
+				<table class="sg-import-table">
+					<thead>
+						<tr>
+							<th>OK</th>
+							<th>#</th>
+							<th>Estado</th>
+							<th>Código</th>
+							<th>Nombre</th>
+							<th>Venta</th>
+							<th>Costo</th>
+							<th>Motivo</th>
+						</tr>
+					</thead>
+					<tbody data-preview-body></tbody>
+				</table>
+			</div>
+			<div class="sg-import-actions">
+				<button type="button" class="sg-focus-ring sg-import-primary" data-apply>
+					Confirmar e importar
+				</button>
+				<a class="sg-focus-ring" href="/lists/inventory/products">Cancelar</a>
+			</div>
+		</section>
+
+		<section class="sg-import-card sg-glass" data-step="done" hidden>
+			<strong>Listo</strong>
+			<p data-done-message></p>
+			<a class="sg-focus-ring sg-import-primary" href="/lists/inventory/products">Volver a productos</a>
+		</section>
+	</main>
+</ShellLayout>
+
+<script>
+	const root = document.querySelector('[data-price-import]');
+	if (!(root instanceof HTMLElement)) {
+		// no-op
+	} else {
+		const statusEl = root.querySelector('[data-status]');
+		const fileInput = root.querySelector('[data-file-input]');
+		const previewSection = root.querySelector('[data-step="preview"]');
+		const doneSection = root.querySelector('[data-step="done"]');
+		const uploadSection = root.querySelector('[data-step="upload"]');
+		const bodyEl = root.querySelector('[data-preview-body]');
+		const countsEl = root.querySelector('[data-counts]');
+		const doneMessage = root.querySelector('[data-done-message]');
+		const applyBtn = root.querySelector('[data-apply]');
+		const downloadBtn = root.querySelector('[data-download-template]');
+
+		/** @type {any[]} */
+		let lines = [];
+
+		function setStatus(text, state = 'pending') {
+			if (!(statusEl instanceof HTMLElement)) return;
+			statusEl.hidden = !text;
+			statusEl.textContent = text || '';
+			statusEl.dataset.state = state;
+		}
+
+		async function readFileAsText(file) {
+			return await file.text();
+		}
+
+		function renderPreview(preview) {
+			lines = preview.lines || [];
+			if (countsEl instanceof HTMLElement) {
+				countsEl.textContent = `Crear: ${preview.counts.create} · Actualizar: ${preview.counts.update} · Revisar: ${preview.counts.review} · Error: ${preview.counts.error}`;
+			}
+			if (!(bodyEl instanceof HTMLElement)) return;
+			bodyEl.innerHTML = '';
+			for (const line of lines) {
+				const tr = document.createElement('tr');
+				tr.dataset.status = line.status;
+				tr.innerHTML = `
+					<td><input type="checkbox" data-line="${line.lineNumber}" ${line.selected ? 'checked' : ''} ${line.status === 'error' ? 'disabled' : ''} /></td>
+					<td>${line.lineNumber}</td>
+					<td>${line.status}</td>
+					<td>${escapeHtml(line.default_code || line.barcode || '')}</td>
+					<td>${escapeHtml(line.name || '')}</td>
+					<td>${line.list_price ?? ''}</td>
+					<td>${line.standard_price ?? ''}</td>
+					<td>${escapeHtml(line.reason || '')}</td>
+				`;
+				bodyEl.appendChild(tr);
+			}
+			if (uploadSection instanceof HTMLElement) uploadSection.hidden = true;
+			if (previewSection instanceof HTMLElement) previewSection.hidden = false;
+			if (doneSection instanceof HTMLElement) doneSection.hidden = true;
+		}
+
+		function escapeHtml(value) {
+			return String(value)
+				.replaceAll('&', '&amp;')
+				.replaceAll('<', '&lt;')
+				.replaceAll('>', '&gt;')
+				.replaceAll('"', '&quot;');
+		}
+
+		downloadBtn?.addEventListener('click', async () => {
+			setStatus('Preparando plantilla…');
+			try {
+				const response = await fetch('/api/inventory/price-list-import', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'template' }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) throw new Error(payload?.error?.message || 'No se pudo descargar');
+				const blob = new Blob([payload.content || ''], { type: 'text/csv;charset=utf-8' });
+				const url = URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = payload.filename || 'plantilla.csv';
+				a.click();
+				URL.revokeObjectURL(url);
+				setStatus('Plantilla lista', 'ok');
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+			}
+		});
+
+		fileInput?.addEventListener('change', async () => {
+			if (!(fileInput instanceof HTMLInputElement) || !fileInput.files?.length) return;
+			const file = fileInput.files[0];
+			setStatus('Analizando archivo…');
+			try {
+				const content = await readFileAsText(file);
+				const response = await fetch('/api/inventory/price-list-import', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'preview',
+						filename: file.name,
+						content,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) throw new Error(payload?.error?.message || 'No se pudo analizar');
+				renderPreview(payload.preview);
+				setStatus('Preview listo. Revisá y confirmá.', 'ok');
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+			}
+		});
+
+		applyBtn?.addEventListener('click', async () => {
+			if (!(applyBtn instanceof HTMLButtonElement)) return;
+			applyBtn.disabled = true;
+			setStatus('Importando…');
+			try {
+				const selectedMap = new Map();
+				root.querySelectorAll('input[data-line]').forEach((input) => {
+					if (input instanceof HTMLInputElement) {
+						selectedMap.set(Number(input.dataset.line), input.checked);
+					}
+				});
+				const payloadLines = lines.map((line) => ({
+					...line,
+					selected: Boolean(selectedMap.get(line.lineNumber)),
+				}));
+				const response = await fetch('/api/inventory/price-list-import', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'apply', lines: payloadLines }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) throw new Error(payload?.error?.message || 'No se pudo importar');
+				if (previewSection instanceof HTMLElement) previewSection.hidden = true;
+				if (doneSection instanceof HTMLElement) doneSection.hidden = false;
+				if (doneMessage instanceof HTMLElement) {
+					doneMessage.textContent = `Creados: ${payload.created} · Actualizados: ${payload.updated} · Omitidos: ${payload.skipped}`;
+				}
+				setStatus('Importación finalizada', 'ok');
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+			} finally {
+				applyBtn.disabled = false;
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-import-page {
+		max-width: 78rem;
+		margin: 0 auto;
+		display: grid;
+		gap: 1.25rem;
+	}
+	.sg-import-page header p {
+		margin: 0 0 0.35rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-import-page header h1 {
+		margin: 0;
+		font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+		font-weight: 600;
+		letter-spacing: -0.04em;
+	}
+	.sg-import-lead {
+		max-width: 40rem;
+		margin: 0.75rem 0 0 !important;
+		font-size: 0.92rem !important;
+		line-height: 1.45;
+	}
+	.sg-import-card {
+		border-radius: var(--sg-radius-card);
+		padding: 1.25rem 1.35rem;
+		display: grid;
+		gap: 0.9rem;
+	}
+	.sg-import-card strong {
+		font-size: 1.05rem;
+	}
+	.sg-import-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.65rem;
+		align-items: center;
+	}
+	.sg-import-actions button,
+	.sg-import-actions a,
+	.sg-import-file {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	.sg-import-primary {
+		border-color: rgba(155, 231, 176, 0.45) !important;
+	}
+	.sg-import-file {
+		display: inline-flex;
+		align-items: center;
+	}
+	.sg-import-file input {
+		display: none;
+	}
+	.sg-import-status[data-state='error'] {
+		color: #ffb4a8;
+	}
+	.sg-import-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-import-counts {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.85rem;
+	}
+	.sg-import-table-wrap {
+		overflow: auto;
+		max-height: min(55vh, 36rem);
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.85rem;
+	}
+	.sg-import-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.8rem;
+	}
+	.sg-import-table th,
+	.sg-import-table td {
+		padding: 0.55rem 0.65rem;
+		border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+		text-align: left;
+		white-space: nowrap;
+	}
+	.sg-import-table tr[data-status='error'] {
+		opacity: 0.65;
+	}
+	.sg-import-table tr[data-status='review'] td:nth-child(3) {
+		color: #ffd28a;
+	}
+	.sg-import-table tr[data-status='create'] td:nth-child(3) {
+		color: #9be7b0;
+	}
+</style>

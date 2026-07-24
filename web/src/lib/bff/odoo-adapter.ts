@@ -8,12 +8,25 @@ import type {
   PosCheckoutOptions,
   PosCheckoutResult,
   PosPaymentMethod,
+  PriceListImportApplyLine,
+  PriceListImportApplyResult,
+  PriceListImportPreview,
   RecordDetailLines,
   RecordDetailPayload,
   RecordListPayload,
   RecordListRow,
+  RecordNote,
   SessionInfo,
 } from "./types.ts";
+import { localizePaymentMethodName } from "../pos/payment-methods.ts";
+import {
+  buildProductIndexes,
+  classifyRows,
+  parseTabularText,
+  resolveApplyStatus,
+  suggestMapping,
+  type PriceListMapping,
+} from "../shell/price-list-import.ts";
 import {
   buildDetailPath,
   buildSearchDomain,
@@ -36,6 +49,13 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../shell/record-writes.ts";
+import {
+  isAllowedNoteModel,
+  normalizeNoteBody,
+  odooHtmlFromPlainText,
+  plainTextFromOdooHtml,
+  resolveNoteTarget,
+} from "../shell/record-notes.ts";
 import { roundCents, splitAmount, summarizeTaxes } from "../pos/tax.ts";
 
 type DetailLineDef = {
@@ -489,6 +509,188 @@ export class OdooAdapter implements BackendClient {
     return { id: Number(id), detailPath };
   }
 
+  async previewPriceListImport(
+    odooSessionId: string,
+    input: {
+      filename: string;
+      content: string;
+      mapping?: PriceListMapping;
+    }
+  ): Promise<PriceListImportPreview> {
+    const parsed = parseTabularText(input.filename, input.content);
+    if (parsed.error) {
+      throw new BffError("validation_error", 400, parsed.error);
+    }
+    if (!parsed.rows.length) {
+      throw new BffError("validation_error", 400, "El archivo no tiene filas de datos.");
+    }
+
+    const mapping = {
+      ...suggestMapping(parsed.headers),
+      ...(input.mapping || {}),
+    };
+    if (!mapping.name) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Indicá qué columna es el nombre del producto."
+      );
+    }
+    if (!mapping.list_price && !mapping.standard_price) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Indicá al menos una columna de precio (venta o costo)."
+      );
+    }
+
+    const catalog = await this.#loadProductCatalog(odooSessionId);
+    const indexes = buildProductIndexes(catalog);
+    const classified = classifyRows(parsed.rows, mapping, indexes);
+    const lines = classified.map((row) => ({
+      lineNumber: row.lineNumber,
+      selected: row.status === "create" || row.status === "update",
+      status: row.status,
+      barcode: row.barcode,
+      default_code: row.default_code,
+      name: row.name,
+      list_price: row.list_price,
+      standard_price: row.standard_price,
+      productId: row.productId,
+      candidates: row.candidates,
+      reason: row.reason,
+    }));
+    const counts = {
+      create: lines.filter((l) => l.status === "create").length,
+      update: lines.filter((l) => l.status === "update").length,
+      review: lines.filter((l) => l.status === "review").length,
+      error: lines.filter((l) => l.status === "error").length,
+    };
+    return { headers: parsed.headers, mapping, lines, counts };
+  }
+
+  async applyPriceListImport(
+    odooSessionId: string,
+    lines: PriceListImportApplyLine[]
+  ): Promise<PriceListImportApplyResult> {
+    if (!Array.isArray(lines) || !lines.length) {
+      throw new BffError("validation_error", 400, "No hay filas para importar.");
+    }
+
+    let created = 0;
+    let updated = 0;
+    let skipped = 0;
+
+    for (const line of lines) {
+      const action = resolveApplyStatus(line);
+      if (action === "skip") {
+        skipped += 1;
+        continue;
+      }
+
+      if (action === "create") {
+        const name = (line.name || "").trim();
+        if (!name) {
+          skipped += 1;
+          continue;
+        }
+        const vals: Record<string, string | number | boolean> = {
+          name: name.slice(0, 512),
+          sale_ok: true,
+          purchase_ok: true,
+          is_storable: true,
+          available_in_pos: true,
+          type: "consu",
+        };
+        if (line.default_code) vals.default_code = String(line.default_code).slice(0, 128);
+        if (line.barcode) vals.barcode = String(line.barcode).slice(0, 128);
+        if (line.list_price != null && Number.isFinite(line.list_price)) {
+          vals.list_price = line.list_price;
+        }
+        if (line.standard_price != null && Number.isFinite(line.standard_price)) {
+          vals.standard_price = line.standard_price;
+        }
+        await this.#callKw(odooSessionId, "product.template", "create", [vals]);
+        created += 1;
+        continue;
+      }
+
+      const productId = Number(line.productId);
+      if (!Number.isFinite(productId) || productId <= 0) {
+        skipped += 1;
+        continue;
+      }
+      const [product] = await this.#searchRead(
+        odooSessionId,
+        "product.template",
+        [["id", "=", productId]],
+        ["id", "barcode", "default_code"],
+        1,
+        0,
+        "id"
+      );
+      if (!product) {
+        skipped += 1;
+        continue;
+      }
+      const writeVals: Record<string, string | number> = {};
+      if (line.list_price != null && Number.isFinite(line.list_price)) {
+        writeVals.list_price = line.list_price;
+      }
+      if (line.standard_price != null && Number.isFinite(line.standard_price)) {
+        writeVals.standard_price = line.standard_price;
+      }
+      if (line.barcode && !product.barcode) {
+        writeVals.barcode = String(line.barcode).slice(0, 128);
+      }
+      if (line.default_code && !product.default_code) {
+        writeVals.default_code = String(line.default_code).slice(0, 128);
+      }
+      if (Object.keys(writeVals).length) {
+        await this.#callKw(odooSessionId, "product.template", "write", [
+          [productId],
+          writeVals,
+        ]);
+      }
+      updated += 1;
+    }
+
+    return { created, updated, skipped };
+  }
+
+  async #loadProductCatalog(odooSessionId: string) {
+    const out: Array<{
+      id: number;
+      barcode: string | null;
+      default_code: string | null;
+      name: string | null;
+    }> = [];
+    const pageSize = 2000;
+    let offset = 0;
+    while (true) {
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "product.template",
+        [["active", "=", true]],
+        ["id", "name", "default_code", "barcode"],
+        pageSize,
+        offset,
+        "id"
+      );
+      for (const row of rows) {
+        out.push({
+          id: Number(row.id),
+          barcode: row.barcode ? String(row.barcode) : null,
+          default_code: row.default_code ? String(row.default_code) : null,
+          name: row.name ? String(row.name) : null,
+        });
+      }
+      if (rows.length < pageSize) break;
+      offset += pageSize;
+    }
+    return out;
+  }
+
   async #createMinimalOrder(
     odooSessionId: string,
     listKey: string,
@@ -549,6 +751,110 @@ export class OdooAdapter implements BackendClient {
       [id],
       { active: false },
     ]);
+  }
+
+  async listRecordNotes(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    viewerUid: number
+  ): Promise<RecordNote[]> {
+    const target = resolveNoteTarget(listKey);
+    if (!target || !Number.isFinite(recordId) || recordId <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "mail.message",
+      [
+        ["model", "=", target.model],
+        ["res_id", "=", recordId],
+        ["message_type", "=", "comment"],
+      ],
+      ["body", "author_id", "create_uid", "date"],
+      200,
+      0,
+      "id desc"
+    );
+    return rows.map((row) => this.#mapMailMessage(row, viewerUid));
+  }
+
+  async createRecordNote(
+    odooSessionId: string,
+    listKey: string,
+    recordId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote> {
+    const target = resolveNoteTarget(listKey);
+    if (!target || !Number.isFinite(recordId) || recordId <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+    const normalized = normalizeNoteBody(body);
+    if (!normalized.ok) {
+      throw new BffError("validation_error", 400, normalized.error);
+    }
+
+    const noteId = await this.#callKw<number>(
+      odooSessionId,
+      target.model,
+      "message_post",
+      [[recordId]],
+      {
+        body: odooHtmlFromPlainText(normalized.body),
+        message_type: "comment",
+        subtype_xmlid: "mail.mt_note",
+      }
+    );
+    return this.#readRecordNote(odooSessionId, Number(noteId), viewerUid);
+  }
+
+  async updateRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    body: string,
+    viewerUid: number
+  ): Promise<RecordNote> {
+    if (!Number.isFinite(noteId) || noteId <= 0) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    const normalized = normalizeNoteBody(body);
+    if (!normalized.ok) {
+      throw new BffError("validation_error", 400, normalized.error);
+    }
+
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
+    this.#assertNoteOwner(note, viewerUid);
+    await this.#callKw(odooSessionId, "mail.message", "write", [
+      [noteId],
+      { body: odooHtmlFromPlainText(normalized.body) },
+    ]);
+    return this.#readRecordNote(odooSessionId, noteId, viewerUid);
+  }
+
+  async deleteRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number
+  ): Promise<void> {
+    if (!Number.isFinite(noteId) || noteId <= 0) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+
+    const note = await this.#readRecordNote(
+      odooSessionId,
+      noteId,
+      viewerUid,
+      true
+    );
+    this.#assertNoteOwner(note, viewerUid);
+    await this.#callKw(odooSessionId, "mail.message", "unlink", [[noteId]]);
   }
 
   async confirmRecord(
@@ -716,7 +1022,7 @@ export class OdooAdapter implements BackendClient {
       );
       paymentMethods = rowsPm.map((row) => ({
         id: Number(row.id),
-        name: String(row.name || "Pago"),
+        name: localizePaymentMethodName(String(row.name || "Pago")),
         isCash: row.is_cash_count === true,
       }));
     } else {
@@ -731,7 +1037,7 @@ export class OdooAdapter implements BackendClient {
       );
       paymentMethods = rowsPm.map((row) => ({
         id: Number(row.id),
-        name: String(row.name || "Pago"),
+        name: localizePaymentMethodName(String(row.name || "Pago")),
         isCash: row.is_cash_count === true,
       }));
     }
@@ -1174,7 +1480,9 @@ export class OdooAdapter implements BackendClient {
       detailPath: `/lists/sales/ventas-caja/${orderId}`,
       channel: "pos.order",
       paymentMethodId,
-      paymentMethodName: String(cash?.name || "Pago"),
+      paymentMethodName: localizePaymentMethodName(
+        String(cash?.name || "Pago")
+      ),
       partnerId: partnerId === false ? null : partnerId,
       partnerName,
       amountUntaxed,
@@ -1273,6 +1581,64 @@ export class OdooAdapter implements BackendClient {
       [domain],
       { fields, limit, offset, order }
     );
+  }
+
+  async #readRecordNote(
+    odooSessionId: string,
+    noteId: number,
+    viewerUid: number,
+    requireAllowedModel = false
+  ): Promise<RecordNote> {
+    const rows = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "mail.message",
+      "read",
+      [[noteId], ["body", "model", "author_id", "create_uid", "date"]]
+    );
+    if (!rows[0]) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    if (requireAllowedModel && !isAllowedNoteModel(rows[0].model)) {
+      throw new BffError("not_found", 404, "Nota no encontrada");
+    }
+    return this.#mapMailMessage(rows[0], viewerUid);
+  }
+
+  #mapMailMessage(
+    row: Record<string, unknown>,
+    viewerUid: number
+  ): RecordNote {
+    const createUid = Array.isArray(row.create_uid) ? row.create_uid : [];
+    const author = Array.isArray(row.author_id) ? row.author_id : [];
+    const authorId = Number(createUid[0]) || 0;
+    const rawDate = String(row.date || "");
+    const normalizedDate = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(
+      rawDate
+    )
+      ? `${rawDate.replace(" ", "T")}Z`
+      : rawDate;
+    const parsedDate = new Date(normalizedDate);
+
+    return {
+      id: Number(row.id) || 0,
+      body: plainTextFromOdooHtml(String(row.body || "")),
+      authorName: author[1] ? String(author[1]) : "Usuario",
+      authorId,
+      createdAt: Number.isNaN(parsedDate.getTime())
+        ? rawDate
+        : parsedDate.toISOString(),
+      canEdit: authorId === viewerUid,
+    };
+  }
+
+  #assertNoteOwner(note: RecordNote, viewerUid: number): void {
+    if (note.authorId !== viewerUid) {
+      throw new BffError(
+        "forbidden",
+        403,
+        "Solo podés editar tus propias notas"
+      );
+    }
   }
 
   #cellValue(value: unknown): string | number | boolean | null {

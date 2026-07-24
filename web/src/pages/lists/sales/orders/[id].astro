@@ -1,5 +1,6 @@
 ---
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
@@ -25,4 +26,7 @@ const { userName, detail, error } = loaded;
 		fallbackTitle="Pedido"
 		fallbackListPath="/lists/sales/orders"
 	/>
+	{detail && !error ? (
+		<RecordNotes listKey="sales/orders" recordId={id} />
+	) : null}
 </ShellLayout>

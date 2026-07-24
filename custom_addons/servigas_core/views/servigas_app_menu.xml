@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <menuitem
+        id="menu_servigas_root"
+        name="Servigas"
+        web_icon="servigas_core,static/description/icon.png"
+        action="action_servigas_app_launcher"
+        sequence="1"
+    />
+</odoo>

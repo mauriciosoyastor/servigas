@@ -50,6 +50,56 @@
 
 ## Entradas
 
+### 2026-07-23 — Cargar lista de precios (shell Astro + Odoo)
+
+**Área:** datos | hubs | inventario | web  
+**Motivo:** upsert de productos (crear + actualizar venta/costo) desde CSV con preview; el botón vive en la lista Astro que usa el equipo (no solo hub Odoo).  
+**Archivos:**
+- `docs/superpowers/specs/2026-07-23-inventory-price-list-import-design.md`
+- `docs/superpowers/plans/2026-07-23-inventory-price-list-import.md`
+- `custom_addons/servigas_core/models/sg_price_list_import_*.py`
+- `custom_addons/servigas_core/views/sg_price_list_import_views.xml`
+- `web/src/lib/shell/price-list-import.ts`
+- `web/src/pages/lists/inventory/products/import.astro`
+- `web/src/pages/api/inventory/price-list-import.ts`
+- `web/src/pages/lists/[...slug].astro`
+- `web/src/lib/bff/odoo-adapter.ts`
+
+**Cambios:**
+- Botón **Cargar lista de precios** en `/lists/inventory/products` (Astro).
+- Página import + BFF preview/apply; match barcode → código → nombre.
+- Wizard Odoo residual (hub) + lógica Python testeada.
+
+**Verificación:**
+- `python custom_addons/servigas_core/tests/test_sg_price_list_import_logic.py -v`
+- `cd web; $env:NODE_ENV='test'; node --experimental-strip-types --test tests/price-list-import.test.mjs`
+- UI: lista productos → Cargar lista de precios → CSV
+
+**Automatización:** lógica pura TS/Python + plantilla CSV.
+
+---
+
+### 2026-07-23 — Listas Astro tabla glass
+
+**Área:** docs | web  
+**Motivo:** unificar look de listas operativas Astro en isla glass desktop + cards móvil, sin tocar BFF.  
+**Archivos:**
+- `docs/superpowers/specs/2026-07-23-astro-listas-tabla-glass-design.md`
+- `docs/superpowers/plans/2026-07-23-astro-listas-tabla-glass.md`
+- `web/src/styles/list.css`
+- `web/src/components/RecordTable.astro`
+- `web/tests/shell-ui.test.mjs`
+
+**Cambios:**
+- Spec + plan: híbrido C (tabla densa glass ≥768px; cards `<768px`; sin cambios BFF).
+- Desktop: isla `.sg-record-table-wrap` on-dark, sticky header, zebra/hover flame.
+- Móvil: `data-label` en celdas + reflow a cards; toolbar/pager apilados.
+
+**Verificación:** `cd web; $env:NODE_ENV='test'; node --experimental-strip-types --test tests/**/*.test.mjs` (175 pass). Visual: `/lists/inventory/products` (glass + imágenes), DevTools 390px (cards), `/lists/purchase/vendors` (sin imagen).  
+**Automatización:** contratos en `shell-ui.test.mjs`; checklist visual manual al cerrar features de lista.
+
+---
+
 ### 2026-07-23 — Corte autorizado (condicional) shell Astro
 
 **Área:** docs | web  

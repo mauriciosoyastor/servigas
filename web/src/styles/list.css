@@ -1,10 +1,13 @@
-/* Dense operative lists — port of servigas_list.scss (OWL) */
+/* Dense operative lists ÔÇö glass island on dark shell */
 
 .sg-record-table-wrap {
 	overflow: auto;
 	border: 1px solid var(--sg-glass-border);
 	border-radius: var(--sg-radius-card);
-	background: color-mix(in srgb, var(--sg-canvas) 92%, white);
+	background: var(--sg-glass-fill-strong);
+	backdrop-filter: blur(var(--sg-glass-blur));
+	-webkit-backdrop-filter: blur(var(--sg-glass-blur));
+	box-shadow: var(--sg-glass-rim);
 }
 
 .sg-record-table {
@@ -12,20 +15,22 @@
 	border-collapse: collapse;
 	font-family: var(--sg-font-family);
 	font-size: 0.875rem;
-	color: var(--sg-text-on-light);
+	color: var(--sg-text-on-dark);
 }
 
 .sg-record-table thead {
 	position: sticky;
 	top: 0;
 	z-index: 1;
-	background: var(--sg-canvas);
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 88%, transparent);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
 }
 
 .sg-record-table th {
 	padding: 0.7rem 0.9rem;
-	border-bottom: 2px solid color-mix(in srgb, var(--sg-flame-deep) 15%, transparent);
-	color: color-mix(in srgb, var(--sg-text-on-light) 72%, transparent);
+	border-bottom: 2px solid color-mix(in srgb, var(--sg-flame-deep) 35%, transparent);
+	color: var(--sg-text-muted-dark);
 	font-weight: 600;
 	letter-spacing: 0.02em;
 	text-align: left;
@@ -34,20 +39,24 @@
 
 .sg-record-table td {
 	padding: 0.45rem 0.9rem;
-	border-bottom: 1px solid color-mix(in srgb, var(--sg-text-on-light) 8%, transparent);
+	border-bottom: 1px solid color-mix(in srgb, var(--sg-text-on-dark) 10%, transparent);
 	vertical-align: middle;
 }
 
+.sg-record-table tbody tr:nth-child(even) {
+	background: color-mix(in srgb, var(--sg-text-on-dark) 4%, transparent);
+}
+
 .sg-record-table tbody tr {
-	background: transparent;
+	transition: background 120ms ease;
 }
 
 .sg-record-table tbody tr:hover {
-	background: color-mix(in srgb, var(--sg-flame-orange) 6%, transparent);
+	background: color-mix(in srgb, var(--sg-flame-orange) 12%, transparent);
 }
 
 .sg-record-table td[data-col="default_code"] {
-	color: var(--sg-flame-deep);
+	color: var(--sg-flame-yellow);
 	font-weight: 500;
 }
 
@@ -81,11 +90,12 @@
 	height: 2.5rem;
 	border-radius: 0.55rem;
 	object-fit: cover;
-	background: color-mix(in srgb, var(--sg-bg-charcoal) 12%, white);
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 55%, transparent);
+	border: 1px solid var(--sg-glass-border);
 }
 
 .sg-record-thumb--empty {
-	border: 1px dashed color-mix(in srgb, var(--sg-text-on-light) 18%, transparent);
+	border: 1px dashed color-mix(in srgb, var(--sg-text-on-dark) 28%, transparent);
 }
 
 .sg-record-link,
@@ -95,7 +105,7 @@
 }
 
 .sg-record-link:hover {
-	color: var(--sg-flame-deep);
+	color: var(--sg-flame-yellow);
 	text-decoration: underline;
 }
 
@@ -119,6 +129,10 @@
 	color: var(--sg-text-on-dark);
 	background: var(--sg-glass-fill);
 	font: inherit;
+}
+
+.sg-list-search input::placeholder {
+	color: color-mix(in srgb, var(--sg-text-on-dark) 45%, transparent);
 }
 
 .sg-list-search-btn,
@@ -206,8 +220,259 @@
 	}
 }
 
+@media (max-width: 767px) {
+	.sg-record-table thead {
+		display: none;
+	}
+
+	.sg-record-table,
+	.sg-record-table tbody,
+	.sg-record-table tr,
+	.sg-record-table td {
+		display: block;
+		width: 100%;
+	}
+
+	.sg-record-table tbody tr {
+		padding: 0.85rem 1rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+	}
+
+	.sg-record-table tbody tr:nth-child(even) {
+		background: color-mix(in srgb, var(--sg-text-on-dark) 3%, transparent);
+	}
+
+	.sg-record-table td {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+		padding: 0.35rem 0;
+		border-bottom: none;
+	}
+
+	.sg-record-table td[data-kind="image"] {
+		justify-content: flex-start;
+		width: auto;
+		padding: 0 0 0.5rem;
+	}
+
+	.sg-record-table td[data-kind="image"]::before {
+		content: none;
+	}
+
+	.sg-record-table td:not([data-kind="image"])::before {
+		content: attr(data-label);
+		flex: 0 0 auto;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+		font-weight: 600;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+
+	.sg-record-table td[data-col="name"] {
+		font-size: 1rem;
+		font-weight: 600;
+		padding-top: 0.15rem;
+	}
+
+	.sg-list-toolbar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.sg-list-pager {
+		margin-left: 0;
+		justify-content: space-between;
+	}
+}
+
 @media (prefers-reduced-motion: reduce) {
 	.sg-record-table tbody tr {
 		transition: none;
+	}
+}
+
+.sg-record-thumb-wrap {
+	position: relative;
+	width: 2.5rem;
+	height: 2.5rem;
+}
+
+.sg-record-thumb-upload {
+	position: absolute;
+	right: -0.35rem;
+	bottom: -0.35rem;
+	display: grid;
+	place-items: center;
+	width: 1.35rem;
+	height: 1.35rem;
+	padding: 0;
+	border: 1px solid var(--sg-glass-border);
+	border-radius: 999px;
+	background: color-mix(in srgb, var(--sg-bg-charcoal) 88%, white);
+	color: var(--sg-text-on-dark);
+	cursor: pointer;
+}
+
+.sg-record-thumb-upload:hover {
+	color: var(--sg-flame-yellow);
+}
+
+.sg-detail-photo-wrap {
+	display: grid;
+	gap: 0.65rem;
+}
+
+.sg-detail-photo-upload {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.4rem;
+	width: fit-content;
+	padding: 0.55rem 0.85rem;
+	border: 1px solid var(--sg-glass-border);
+	border-radius: var(--sg-radius-pill);
+	background: var(--sg-glass-fill);
+	color: var(--sg-text-on-dark);
+	font-size: 0.8rem;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+/* Record activity notes */
+.sg-record-notes {
+	display: grid;
+	gap: 1rem;
+	margin-top: 1.25rem;
+	padding: 1.2rem;
+	border-radius: var(--sg-radius-card);
+}
+
+.sg-record-notes h2 {
+	margin: 0;
+	font-size: 1rem;
+}
+
+.sg-record-notes-form,
+.sg-record-notes-editor {
+	display: grid;
+	gap: 0.55rem;
+}
+
+.sg-record-notes-form label {
+	color: var(--sg-text-muted-dark);
+	font-size: 0.75rem;
+	font-weight: 600;
+}
+
+.sg-record-notes textarea {
+	box-sizing: border-box;
+	width: 100%;
+	resize: vertical;
+	border: 1px solid var(--sg-glass-border);
+	border-radius: 0.75rem;
+	padding: 0.7rem 0.8rem;
+	color: var(--sg-text-on-dark);
+	background: rgba(0, 0, 0, 0.22);
+	font: inherit;
+	line-height: 1.45;
+}
+
+.sg-record-notes textarea:focus-visible {
+	outline: 2px solid var(--sg-flame-yellow);
+	outline-offset: 2px;
+}
+
+.sg-record-notes-form-actions,
+.sg-record-notes-footer,
+.sg-record-notes-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.sg-record-notes-footer {
+	justify-content: space-between;
+}
+
+.sg-record-notes button {
+	border: 0;
+	padding: 0.25rem 0;
+	color: var(--sg-flame-yellow);
+	background: transparent;
+	font: inherit;
+	font-size: 0.8rem;
+	font-weight: 650;
+	cursor: pointer;
+}
+
+.sg-record-notes button:disabled {
+	cursor: wait;
+	opacity: 0.55;
+}
+
+.sg-record-notes .sg-record-notes-primary {
+	border: 1px solid var(--sg-glass-border);
+	border-radius: var(--sg-radius-pill);
+	padding: 0.55rem 0.9rem;
+	color: var(--sg-text-on-dark);
+	background: var(--sg-glass-fill);
+}
+
+.sg-record-notes .sg-record-notes-delete {
+	color: #ffb4a2;
+}
+
+.sg-record-notes-list {
+	display: grid;
+	gap: 0;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.sg-record-notes-item {
+	display: grid;
+	gap: 0.55rem;
+	padding: 0.9rem 0;
+	border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-record-notes-body {
+	margin: 0;
+	color: var(--sg-text-on-dark);
+	line-height: 1.55;
+	white-space: pre-wrap;
+	overflow-wrap: anywhere;
+}
+
+.sg-record-notes-meta,
+.sg-record-notes-empty,
+.sg-record-notes-status,
+.sg-record-notes-item-status {
+	color: var(--sg-text-muted-dark);
+	font-size: 0.78rem;
+}
+
+.sg-record-notes-empty {
+	padding: 0.9rem 0;
+	border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-record-notes-status[data-state="ok"] {
+	color: #9be7b0;
+}
+
+.sg-record-notes-status[data-state="error"],
+.sg-record-notes-item-status[data-state="error"] {
+	color: #ffb4a2;
+}
+
+@media (max-width: 520px) {
+	.sg-record-notes-footer {
+		align-items: flex-start;
+		flex-direction: column;
 	}
 }

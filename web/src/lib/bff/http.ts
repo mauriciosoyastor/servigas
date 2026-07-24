@@ -13,9 +13,12 @@ export const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
   odoo_unavailable: "No se pudo conectar con el servidor",
   not_found: "No encontrado",
   validation_error: "Revisá los datos e intentá de nuevo",
+  forbidden: "Solo podés editar tus propias notas",
   checkout_failed: "No se pudo registrar la venta en caja",
   action_failed: "No se pudo completar la acción",
 };
+
+const PASSTHROUGH_CODES: BffErrorCode[] = ["validation_error", "forbidden"];
 
 export function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {
@@ -40,7 +43,15 @@ export function bffErrorResponse(
       invalidateBffSession(cookies);
     }
     return json(
-      { error: { code: err.code, message: USER_ERROR_MESSAGES[err.code] } },
+      {
+        error: {
+          code: err.code,
+          message:
+            PASSTHROUGH_CODES.includes(err.code) && err.message
+              ? err.message
+              : USER_ERROR_MESSAGES[err.code],
+        },
+      },
       { status: err.status }
     );
   }

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<templates xml:space="preserve">
+
+    <t t-name="servigas_core.SgHubSectionBody">
+        <div class="sg-hub-section-body sg-launcher-body">
+            <t t-if="props.groups.length">
+                <t t-foreach="props.groups" t-as="group" t-key="group.code">
+                    <section t-attf-class="sg-hub-group {{ group_index === 0 ? 'sg-hub-group--first' : '' }}">
+                        <header class="sg-hub-group__header">
+                            <i t-attf-class="fa {{ group.icon }} sg-hub-group__icon" aria-hidden="true"/>
+                            <h2 class="sg-hub-group__title" t-esc="group.name"/>
+                        </header>
+                        <div t-attf-class="sg-launcher-grid sg-stagger-list sg-view-enter {{ props.loading ? 'sg-launcher-grid--loading' : '' }}">
+                            <t t-foreach="group.cards" t-as="card" t-key="card.id">
+                                <SgLauncherTile
+                                    tile="card"
+                                    loading="props.loading"
+                                    onClick.bind="onTileClick"
+                                />
+                            </t>
+                        </div>
+                    </section>
+                </t>
+            </t>
+            <t t-elif="props.cards.length">
+                <div t-attf-class="sg-launcher-grid sg-stagger-list sg-view-enter {{ props.loading ? 'sg-launcher-grid--loading' : '' }}">
+                    <t t-foreach="props.cards" t-as="card" t-key="card.id">
+                        <SgLauncherTile
+                            tile="card"
+                            loading="props.loading"
+                            onClick.bind="onTileClick"
+                        />
+                    </t>
+                </div>
+            </t>
+            <t t-else="">
+                <div class="sg-hub-empty">
+                    <t t-if="props.loading">Cargando accesos…</t>
+                    <t t-else="">No hay accesos en esta sección.</t>
+                </div>
+            </t>
+        </div>
+    </t>
+
+</templates>
+

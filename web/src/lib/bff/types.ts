@@ -95,6 +95,15 @@ export type RecordDetailPayload = {
   lines?: RecordDetailLines | null;
 };
 
+export type RecordNote = {
+  id: number;
+  body: string;
+  authorName: string;
+  authorId: number;
+  createdAt: string;
+  canEdit: boolean;
+};
+
 export type PosCatalogProduct = {
   id: number;
   name: string;
@@ -145,4 +154,53 @@ export type PosCheckoutResult = {
   amountUntaxed: number;
   amountTax: number;
   amountTotal: number;
+};
+
+export type PriceListImportPreviewLine = {
+  lineNumber: number;
+  selected: boolean;
+  status: "create" | "update" | "review" | "error";
+  barcode: string;
+  default_code: string;
+  name: string;
+  list_price: number | null;
+  standard_price: number | null;
+  productId: number | null;
+  candidates: number[];
+  reason: string;
+};
+
+export type PriceListImportPreview = {
+  headers: string[];
+  mapping: {
+    barcode?: string;
+    default_code?: string;
+    name?: string;
+    list_price?: string;
+    standard_price?: string;
+  };
+  lines: PriceListImportPreviewLine[];
+  counts: {
+    create: number;
+    update: number;
+    review: number;
+    error: number;
+  };
+};
+
+export type PriceListImportApplyLine = {
+  selected: boolean;
+  status: "create" | "update" | "review" | "error";
+  productId?: number | null;
+  barcode?: string;
+  default_code?: string;
+  name?: string;
+  list_price?: number | null;
+  standard_price?: number | null;
+};
+
+export type PriceListImportApplyResult = {
+  created: number;
+  updated: number;
+  skipped: number;
 };

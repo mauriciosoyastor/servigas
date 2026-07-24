@@ -195,6 +195,32 @@ describe("shell UI contracts", () => {
     assert.match(page, /RecordDetailBody/);
   });
 
+  it("provides record notes bitácora component", async () => {
+    const notes = await source("components/RecordNotes.astro");
+    assert.match(notes, /data-record-notes/);
+    assert.match(notes, /\/api\/notes/);
+    assert.match(notes, /Agregar/);
+    assert.match(notes, /Todavía no hay notas en esta ficha/);
+    assert.match(notes, /canEdit/);
+    assert.match(notes, /¿Borrar esta nota\?/);
+  });
+
+  it("wires RecordNotes into v1 detail pages", async () => {
+    const pages = [
+      "pages/lists/sales/customers/[id].astro",
+      "pages/lists/purchase/vendors/[id].astro",
+      "pages/lists/inventory/products/[id].astro",
+      "pages/lists/sales/quotations/[id].astro",
+      "pages/lists/sales/orders/[id].astro",
+      "pages/lists/purchase/orders/[id].astro",
+    ];
+    for (const path of pages) {
+      const src = await source(path);
+      assert.match(src, /RecordNotes/, path);
+      assert.match(src, /listKey=/, path);
+    }
+  });
+
   it("renders customer detail with allowlisted edit form", async () => {
     const page = await source("pages/lists/sales/customers/[id].astro");
     assert.match(page, /RecordEditForm|data-record-edit/);
@@ -222,9 +248,14 @@ describe("shell UI contracts", () => {
   it("renders product create/archive and quotation confirm", async () => {
     const productNew = await source("pages/lists/inventory/products/new.astro");
     const productDetail = await source("pages/lists/inventory/products/[id].astro");
+    const productImport = await source("pages/lists/inventory/products/import.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
     const quote = await source("pages/lists/sales/quotations/[id].astro");
     const po = await source("pages/lists/purchase/orders/[id].astro");
     assert.match(productNew, /inventory\/products/);
+    assert.match(productImport, /Cargar lista de precios/);
+    assert.match(productImport, /\/api\/inventory\/price-list-import/);
+    assert.match(listPage, /\/lists\/inventory\/products\/import/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
     assert.match(po, /Confirmar OC|purchase\/solicitudes/);
@@ -259,5 +290,80 @@ describe("shell UI contracts", () => {
     await assert.rejects(() => source("pages/work.astro"));
     await assert.rejects(() => source("pages/odoo-proxy/[...path].ts"));
     await assert.rejects(() => source("lib/bff/odoo-proxy.ts"));
+  });
+
+  it("marks list cells with data-label for mobile cards", async () => {
+    const table = await source("components/RecordTable.astro");
+    assert.match(table, /data-label=\{column\.label\}/);
+  });
+
+  it("styles record lists as glass panel with mobile card reflow", async () => {
+    const css = await source("styles/list.css");
+
+    // Contenedor: isla glass, no papel canvas
+    assert.match(css, /\.sg-record-table-wrap\s*\{[^}]*backdrop-filter:/s);
+    assert.match(css, /\.sg-record-table-wrap\s*\{[^}]*--sg-glass-fill/s);
+    assert.doesNotMatch(
+      css,
+      /\.sg-record-table-wrap\s*\{[^}]*background:\s*color-mix\(in srgb,\s*var\(--sg-canvas\)/s
+    );
+
+    // Tabla on-dark
+    assert.match(css, /\.sg-record-table\s*\{[^}]*--sg-text-on-dark/s);
+
+    // Header sticky charcoal / flame
+    assert.match(css, /\.sg-record-table thead\s*\{[^}]*sticky/s);
+    assert.match(css, /\.sg-record-table thead\s*\{[^}]*--sg-bg-charcoal|--sg-glass-fill/s);
+
+    // Móvil: reflow a cards
+    assert.match(css, /@media\s*\(max-width:\s*767px\)/);
+    assert.match(css, /@media\s*\(max-width:\s*767px\)[\s\S]*display:\s*block/);
+
+    // Reduced motion
+    assert.match(
+      css,
+      /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.sg-record-table tbody tr/
+    );
+  });
+
+  it("provides product image upload host with gallery picker and preview", async () => {
+    const host = await source("components/ProductImageUploadHost.astro");
+    assert.match(host, /data-product-image-host/);
+    assert.match(host, /type=["']file["']/);
+    assert.match(host, /accept=["']image\/\*["']/);
+    assert.doesNotMatch(host, /\bcapture=/);
+    assert.match(host, /data-product-image-preview/);
+    assert.match(host, /Guardar/);
+    assert.match(host, /Cancelar/);
+    assert.match(host, /fetch\(/);
+    assert.match(host, /image_1920/);
+    assert.match(host, /let\s+readGeneration\s*=\s*0/);
+    assert.match(
+      host,
+      /const file = fileInput\.files && fileInput\.files\[0\];\s+const generation = \+\+readGeneration;\s+pending\.dataUrl = null;\s+btnSave\.disabled = true;/s
+    );
+    assert.match(host, /if\s*\(\s*generation\s*!==\s*readGeneration\s*\)\s*return/);
+    assert.match(host, /location\.reload\(\)/);
+  });
+
+  it("does not cache product media so uploads survive reload", async () => {
+    const media = await source("pages/api/media/[model]/[id]/[field].ts");
+    assert.match(media, /"cache-control":\s*"private, no-store"/);
+  });
+
+  it("wires product image upload triggers on table and detail", async () => {
+    const table = await source("components/RecordTable.astro");
+    const detail = await source("components/RecordDetailBody.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
+    const productDetail = await source("pages/lists/inventory/products/[id].astro");
+
+    assert.match(table, /imageUploadApiPath/);
+    assert.match(table, /data-product-image-trigger/);
+    assert.match(detail, /imageUploadApiPath/);
+    assert.match(detail, /data-product-image-trigger/);
+    assert.match(listPage, /ProductImageUploadHost/);
+    assert.match(listPage, /imageUploadApiPath/);
+    assert.match(productDetail, /ProductImageUploadHost/);
+    assert.match(productDetail, /imageUploadApiPath/);
   });
 });

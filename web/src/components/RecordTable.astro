@@ -5,9 +5,10 @@ interface Props {
 	columns: RecordListColumn[];
 	rows: RecordListRow[];
 	caption?: string;
+	imageUploadApiPath?: string;
 }
 
-const { columns, rows, caption = 'Registros' } = Astro.props;
+const { columns, rows, caption = 'Registros', imageUploadApiPath = '' } = Astro.props;
 
 function formatCell(key: string, value: string | number | boolean | null): string {
 	if (value === null || value === undefined || value === '') return '—';
@@ -37,11 +38,12 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 				return (
 					<tr data-row-id={row.id}>
 						{columns.map((column) => (
-							<td data-col={column.key} data-kind={column.kind || 'text'}>
+							<td data-col={column.key} data-kind={column.kind || 'text'} data-label={column.label}>
 								{column.kind === 'image' ? (
-									href ? (
-										<a class="sg-record-thumb-link" href={href}>
-											{row.image_url ? (
+									<div class="sg-record-thumb-wrap">
+										{row.image_url ? (
+											href ? (
+												<a class="sg-record-thumb-link" href={href}>
 												<img
 													class="sg-record-thumb"
 													src={String(row.image_url)}
@@ -49,23 +51,46 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 													loading="lazy"
 													width="40"
 													height="40"
+													data-product-thumb={row.id}
 												/>
+												</a>
 											) : (
-												<span class="sg-record-thumb sg-record-thumb--empty" aria-hidden="true" />
-											)}
-										</a>
-									) : row.image_url ? (
-										<img
-											class="sg-record-thumb"
-											src={String(row.image_url)}
-											alt=""
-											loading="lazy"
-											width="40"
-											height="40"
-										/>
-									) : (
-										<span class="sg-record-thumb sg-record-thumb--empty" aria-hidden="true" />
-									)
+												<img
+													class="sg-record-thumb"
+													src={String(row.image_url)}
+													alt=""
+													loading="lazy"
+													width="40"
+													height="40"
+													data-product-thumb={row.id}
+												/>
+											)
+										) : (
+											<span
+												class="sg-record-thumb sg-record-thumb--empty"
+												data-product-thumb={row.id}
+												aria-hidden="true"
+											/>
+										)}
+										{imageUploadApiPath ? (
+											<button
+												type="button"
+												class="sg-record-thumb-upload sg-focus-ring"
+												data-product-image-trigger
+												data-record-id={String(row.id)}
+												data-api-path={imageUploadApiPath}
+												data-image-target={`[data-product-thumb="${row.id}"]`}
+												aria-label={row.image_url ? 'Cambiar foto' : 'Agregar foto'}
+											>
+												<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+													<path
+														fill="currentColor"
+														d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
+													/>
+												</svg>
+											</button>
+										) : null}
+									</div>
 								) : href && column.key !== 'active' ? (
 									<a class="sg-record-link" href={href}>
 										{formatCell(column.key, row[column.key] ?? null)}

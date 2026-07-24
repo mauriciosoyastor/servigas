@@ -2,6 +2,7 @@
 import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordEditForm from '../../../../components/RecordEditForm.astro';
+import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
@@ -54,6 +55,7 @@ function fieldValue(key: string): string {
 				listPath="/lists/sales/customers"
 				label="Archivar cliente"
 			/>
+			<RecordNotes listKey="sales/customers" recordId={id} />
 		</>
 	) : null}
 </ShellLayout>
