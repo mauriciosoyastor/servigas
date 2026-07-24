@@ -9,8 +9,10 @@ import {
 import { canConfirmRecord } from "../../../lib/shell/record-actions.ts";
 import { canCreateInvoice } from "../../../lib/shell/invoice-creates.ts";
 import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
+import { canCreateInvoiceFromPos } from "../../../lib/shell/pos-invoice.ts";
 import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import { canRegisterPayment } from "../../../lib/shell/payment-registers.ts";
+import { canMarkFwLoaded } from "../../../lib/shell/fw-bridge.ts";
 import {
   canArchiveRecord,
   canCreateRecord,
@@ -23,7 +25,8 @@ type RecordAction =
   | "archive"
   | "confirm"
   | "create_invoice"
-  | "register_payment";
+  | "register_payment"
+  | "mark_fw_loaded";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -60,6 +63,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         "confirm",
         "create_invoice",
         "register_payment",
+        "mark_fw_loaded",
       ].includes(body.action)
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
@@ -69,8 +73,10 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     const canAct =
       Boolean(writes) ||
       (action === "confirm" && canConfirmRecord(slug)) ||
-      (action === "create_invoice" && canCreateInvoiceFromOrder(slug)) ||
+      (action === "create_invoice" &&
+        (canCreateInvoiceFromOrder(slug) || canCreateInvoiceFromPos(slug))) ||
       (action === "register_payment" && canRegisterPayment(slug)) ||
+      (action === "mark_fw_loaded" && canMarkFwLoaded(slug)) ||
       (action === "create" &&
         (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
@@ -114,6 +120,14 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     }
 
     if (action === "create_invoice") {
+      if (canCreateInvoiceFromPos(slug)) {
+        const result = await getBackend().createInvoiceFromPos(
+          odooSessionId,
+          slug,
+          id
+        );
+        return json(result);
+      }
       if (!canCreateInvoiceFromOrder(slug)) {
         throw new BffError("not_found", 404, "Facturación no permitida");
       }
@@ -130,6 +144,19 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         throw new BffError("not_found", 404, "Pago no permitido");
       }
       const result = await getBackend().registerPayment(
+        odooSessionId,
+        slug,
+        id,
+        values
+      );
+      return json(result);
+    }
+
+    if (action === "mark_fw_loaded") {
+      if (!canMarkFwLoaded(slug)) {
+        throw new BffError("not_found", 404, "Marcado Factura Web no permitido");
+      }
+      const result = await getBackend().markFwLoaded(
         odooSessionId,
         slug,
         id,

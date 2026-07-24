@@ -99,12 +99,28 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<{ ok: true; id: number; detailPath: string }>;
+  createInvoiceFromPos(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; id: number; detailPath: string }>;
   registerPayment(
     odooSessionId: string,
     listKey: string,
     id: number,
     values?: Record<string, unknown>
   ): Promise<{ ok: true; paymentState: string | null; residual: number }>;
+  markFwLoaded(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    values?: Record<string, unknown>
+  ): Promise<{ ok: true; sg_fw_loaded: true; sg_fw_number: string | null }>;
+  exportFwPendingCsv(odooSessionId: string): Promise<{
+    filename: string;
+    csv: string;
+    count: number;
+  }>;
   getPosCatalog(
     odooSessionId: string,
     query?: { q?: string; limit?: number }

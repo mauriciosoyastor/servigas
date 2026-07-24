@@ -1154,6 +1154,141 @@ describe("OdooAdapter.createRecord", () => {
   });
 });
 
+describe("OdooAdapter.createInvoiceFromPos", () => {
+  it("creates FC from paid pos.order lines", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "pos.order" && method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 12,
+              name: "POS/00012",
+              partner_id: [6, "Cliente"],
+              state: "paid",
+              amount_total: 200,
+              account_move: false,
+            },
+          ],
+        });
+      }
+      if (model === "pos.order.line" && method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 1,
+              product_id: [42, "Repuesto"],
+              qty: 2,
+              price_unit: 100,
+              discount: 0,
+            },
+          ],
+        });
+      }
+      if (model === "account.move" && method === "create") {
+        return Response.json({ result: 88 });
+      }
+      if (model === "pos.order" && method === "write") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createInvoiceFromPos(
+      "sess",
+      "sales/ventas-caja",
+      12
+    );
+    assert.equal(result.id, 88);
+    assert.equal(result.detailPath, "/lists/accounting/customer-invoices/88");
+    const createBody = fetchImpl.mock.calls
+      .map((call) => JSON.parse(call.arguments[1].body))
+      .find(
+        (body) =>
+          body.params?.model === "account.move" &&
+          body.params?.method === "create"
+      );
+    assert.equal(createBody.params.args[0].move_type, "out_invoice");
+    assert.equal(createBody.params.args[0].partner_id, 6);
+    assert.equal(createBody.params.args[0].invoice_origin, "POS/00012");
+  });
+
+  it("rejects pos.order without partner", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 12,
+            name: "POS/00012",
+            partner_id: false,
+            state: "paid",
+            account_move: false,
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () => adapter.createInvoiceFromPos("sess", "sales/ventas-caja", 12),
+      (err) =>
+        err?.code === "validation_error" &&
+        /cliente/.test(String(err?.message || ""))
+    );
+  });
+});
+
+describe("OdooAdapter.markFwLoaded", () => {
+  it("marks posted FC as loaded in Factura Web", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const method = body.params?.method;
+      if (method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 55,
+              state: "posted",
+              move_type: "out_invoice",
+              sg_fw_loaded: false,
+              name: "FC/001",
+            },
+          ],
+        });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.markFwLoaded(
+      "sess",
+      "accounting/customer-invoices",
+      55,
+      { fwNumber: "0001-1" }
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.sg_fw_number, "0001-1");
+    const writeBody = fetchImpl.mock.calls
+      .map((call) => JSON.parse(call.arguments[1].body))
+      .find((body) => body.params?.method === "write");
+    assert.equal(writeBody.params.args[1].sg_fw_loaded, true);
+    assert.equal(writeBody.params.args[1].sg_fw_number, "0001-1");
+  });
+});
+
 describe("OdooAdapter.registerPayment", () => {
   it("registers a partial payment via account.payment.register", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {

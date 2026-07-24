@@ -45,7 +45,11 @@ const createLabel =
 								? 'Nueva nota de crédito'
 								: listKey === 'accounting/vendor-bills'
 									? 'Nueva factura de proveedor'
-									: 'Nuevo';
+									: listKey === 'accounting/vendor-refunds'
+										? 'Nueva NC proveedor'
+										: 'Nuevo';
+
+const showFwExport = listKey === 'accounting/factura-web-pending';
 
 let userName = '';
 let listError = '';
@@ -98,6 +102,23 @@ if (!def) {
 					{listKey === 'inventory/products' ? (
 						<a class="sg-list-create sg-focus-ring" href="/lists/inventory/products/import">
 							Cargar lista de precios/Productos
+						</a>
+					) : null}
+					{showFwExport ? (
+						<a
+							class="sg-list-create sg-focus-ring"
+							href="/api/accounting/factura-web-export"
+							download
+						>
+							Exportar CSV
+						</a>
+					) : null}
+					{listKey === 'accounting/factura-web' ? (
+						<a
+							class="sg-list-create sg-focus-ring"
+							href="/lists/accounting/factura-web-pending"
+						>
+							Ver pendientes
 						</a>
 					) : null}
 					<a class="sg-list-back sg-focus-ring" href={def.hubBack}>← Volver</a>

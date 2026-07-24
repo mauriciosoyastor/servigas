@@ -36,6 +36,14 @@ describe("invoice-creates allowlist", () => {
     assert.equal(canCreateRecord("accounting/vendor-bills"), true);
   });
 
+  it("defines vendor credit note create", () => {
+    const def = getInvoiceCreateDef("accounting/vendor-refunds");
+    assert.ok(def);
+    assert.equal(def.moveType, "in_refund");
+    assert.equal(canCreateInvoice("accounting/vendor-refunds"), true);
+    assert.equal(canCreateRecord("accounting/vendor-refunds"), true);
+  });
+
   it("filters partner + multi-line payload", () => {
     assert.deepEqual(
       filterInvoiceCreateValues("accounting/customer-invoices", {
