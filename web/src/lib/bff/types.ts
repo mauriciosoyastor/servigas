@@ -3,6 +3,10 @@ export type AccentKey =
   | "flame-orange"
   | "flame-deep"
   | "flame-rust"
+  | "ember-amber"
+  | "ember-coral"
+  | "ember-scarlet"
+  | "ember-wine"
   | "bg-mid"
   | "bg-charcoal"
   | "bg-deep";

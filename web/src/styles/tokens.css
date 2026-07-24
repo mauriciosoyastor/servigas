@@ -11,6 +11,10 @@
 	--sg-flame-orange: #f57c00;
 	--sg-flame-deep: #e64a19;
 	--sg-flame-rust: #bf360c;
+	--sg-ember-amber: #ffb300;
+	--sg-ember-coral: #ff7043;
+	--sg-ember-scarlet: #ef5350;
+	--sg-ember-wine: #c62828;
 	--sg-primary: var(--sg-flame-orange);
 	--sg-accent: var(--sg-flame-yellow);
 	--sg-accent-alt: var(--sg-flame-deep);

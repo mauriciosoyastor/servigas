@@ -25,8 +25,10 @@ const { userName, detail, error } = loaded;
 		eyebrow="Ficha de pedido"
 		fallbackTitle="Pedido"
 		fallbackListPath="/lists/sales/orders"
-	/>
-	{detail && !error ? (
-		<RecordNotes listKey="sales/orders" recordId={id} />
-	) : null}
+		recordId={id}
+	>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="sales/orders" recordId={id} />
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>

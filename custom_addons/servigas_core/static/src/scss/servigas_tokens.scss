@@ -10,6 +10,12 @@ $sg-flame-orange: #f57c00;
 $sg-flame-deep: #e64a19;
 $sg-flame-rust: #bf360c;
 
+// --- Acentos ember (tiles secundarias del launcher; cálidos, distintos de flame-*) ---
+$sg-ember-amber: #ffb300;
+$sg-ember-coral: #ff7043;
+$sg-ember-scarlet: #ef5350;
+$sg-ember-wine: #c62828;
+
 $sg-bg-deep: #1a1a1a;
 $sg-bg-charcoal: #2b2b2b;
 $sg-bg-mid: #333333;
@@ -103,6 +109,11 @@ $sg-bg-ambient: radial-gradient(
     --sg-flame-orange: #{$sg-flame-orange};
     --sg-flame-deep: #{$sg-flame-deep};
     --sg-flame-rust: #{$sg-flame-rust};
+
+    --sg-ember-amber: #{$sg-ember-amber};
+    --sg-ember-coral: #{$sg-ember-coral};
+    --sg-ember-scarlet: #{$sg-ember-scarlet};
+    --sg-ember-wine: #{$sg-ember-wine};
 
     --sg-paper: #{$sg-paper};
     --sg-canvas: #{$sg-canvas};

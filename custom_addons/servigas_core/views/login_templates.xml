@@ -35,8 +35,13 @@
             <div class="sg-login-frame d-flex align-items-center justify-content-center min-vh-100 py-4 px-3">
                 <div t-attf-class="sg-login-glass-panel sg-view-enter mx-auto w-100 {{login_card_classes or ''}} o_database_list" style="max-width: 420px;">
                     <div class="sg-login-body p-4 p-md-5">
-                        <div class="text-center pb-4 mb-2">
-                            <img src="/servigas_core/static/src/img/servigas_logo.png" alt="Servigas" class="sg-login-logo"/>
+                        <div class="text-center pb-4 mb-2 sg-login-brand">
+                            <img
+                                src="/servigas_core/static/src/img/servigas_mark.png"
+                                alt=""
+                                class="sg-login-mark"
+                            />
+                            <span class="sg-login-brand-name">Servigas</span>
                         </div>
                         <t t-out="0"/>
                         <div class="text-center small mt-4 pt-3 sg-login-footer" t-if="not disable_footer and not disable_database_manager">

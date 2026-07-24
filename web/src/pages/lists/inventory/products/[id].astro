@@ -1,7 +1,6 @@
 ---
 import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
-import RecordEditForm from '../../../../components/RecordEditForm.astro';
 import ProductImageUploadHost from '../../../../components/ProductImageUploadHost.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
@@ -36,27 +35,30 @@ function fieldValue(key: string): string {
 		fallbackListPath="/lists/inventory/products"
 		imageUploadApiPath="/api/records/inventory/products"
 		recordId={id}
-	/>
-	{detail && !error ? <ProductImageUploadHost /> : null}
-	{detail && !error ? (
-		<>
-			<RecordEditForm
-				listKey="inventory/products"
-				recordId={id}
-				apiPath="/api/records/inventory/products"
-				fields={[
-					{ key: 'default_code', label: 'Referencia', value: fieldValue('default_code') },
-					{ key: 'list_price', label: 'Precio', value: fieldValue('list_price') },
-				]}
-			/>
+		listKey="inventory/products"
+		editApiPath="/api/records/inventory/products"
+		editFields={
+			detail && !error
+				? [
+						{ key: 'default_code', label: 'Referencia', value: fieldValue('default_code') },
+						{ key: 'list_price', label: 'Precio', value: fieldValue('list_price') },
+					]
+				: []
+		}
+	>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="inventory/products" recordId={id} />
+		) : null}
+		{detail && !error ? (
 			<RecordArchiveControl
+				slot="secondary"
 				listKey="inventory/products"
 				recordId={id}
 				apiPath="/api/records/inventory/products"
 				listPath="/lists/inventory/products"
 				label="Archivar producto"
 			/>
-			<RecordNotes listKey="inventory/products" recordId={id} />
-		</>
-	) : null}
+		) : null}
+	</RecordDetailBody>
+	{detail && !error ? <ProductImageUploadHost /> : null}
 </ShellLayout>

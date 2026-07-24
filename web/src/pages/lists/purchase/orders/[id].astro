@@ -37,16 +37,19 @@ const showConfirm = isConfirmableState('purchase/solicitudes', state);
 		eyebrow="Ficha de compra"
 		fallbackTitle="Orden de compra"
 		fallbackListPath="/lists/purchase/orders"
-	/>
-	{detail && !error && showConfirm ? (
-		<RecordConfirmControl
-			listKey="purchase/solicitudes"
-			recordId={id}
-			apiPath="/api/records/purchase/solicitudes"
-			label="Confirmar OC"
-		/>
-	) : null}
-	{detail && !error ? (
-		<RecordNotes listKey="purchase/orders" recordId={id} />
-	) : null}
+		recordId={id}
+	>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="purchase/orders" recordId={id} />
+		) : null}
+		{detail && !error && showConfirm ? (
+			<RecordConfirmControl
+				slot="secondary"
+				listKey="purchase/solicitudes"
+				recordId={id}
+				apiPath="/api/records/purchase/solicitudes"
+				label="Confirmar OC"
+			/>
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>

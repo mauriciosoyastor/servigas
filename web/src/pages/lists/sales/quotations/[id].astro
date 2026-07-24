@@ -36,16 +36,19 @@ const showConfirm = isConfirmableState('sales/quotations', state);
 		eyebrow="Ficha de cotización"
 		fallbackTitle="Cotización"
 		fallbackListPath="/lists/sales/quotations"
-	/>
-	{detail && !error && showConfirm ? (
-		<RecordConfirmControl
-			listKey="sales/quotations"
-			recordId={id}
-			apiPath="/api/records/sales/quotations"
-			label="Confirmar pedido"
-		/>
-	) : null}
-	{detail && !error ? (
-		<RecordNotes listKey="sales/quotations" recordId={id} />
-	) : null}
+		recordId={id}
+	>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="sales/quotations" recordId={id} />
+		) : null}
+		{detail && !error && showConfirm ? (
+			<RecordConfirmControl
+				slot="secondary"
+				listKey="sales/quotations"
+				recordId={id}
+				apiPath="/api/records/sales/quotations"
+				label="Confirmar pedido"
+			/>
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>

@@ -48,6 +48,10 @@ class SgAppTile(models.Model):
             ("flame-orange", "Naranja llama"),
             ("flame-deep", "Naranja profundo"),
             ("flame-rust", "Óxido"),
+            ("ember-amber", "Ámbar"),
+            ("ember-coral", "Coral"),
+            ("ember-scarlet", "Escarlata"),
+            ("ember-wine", "Vino"),
             ("bg-mid", "Gris medio"),
             ("bg-charcoal", "Carbón"),
             ("bg-deep", "Carbón profundo"),
@@ -261,10 +265,10 @@ class SgAppTile(models.Model):
             "servigas_core.launcher_tile_inventory": "flame-orange",
             "servigas_core.launcher_tile_purchase": "flame-deep",
             "servigas_core.launcher_tile_accounting": "flame-rust",
-            "servigas_core.launcher_tile_pos": "bg-mid",
-            "servigas_core.launcher_tile_apps": "bg-deep",
-            "servigas_core.launcher_tile_settings": "bg-deep",
-            "servigas_integrations.launcher_tile_integrations": "bg-charcoal",
+            "servigas_core.launcher_tile_pos": "ember-coral",
+            "servigas_core.launcher_tile_apps": "ember-scarlet",
+            "servigas_core.launcher_tile_settings": "ember-wine",
+            "servigas_integrations.launcher_tile_integrations": "ember-amber",
         }
         for xmlid, accent in mapping.items():
             tile = self.env.ref(xmlid, raise_if_not_found=False)

@@ -1,6 +1,12 @@
 ---
 import type { RecordDetailPayload } from '../lib/bff/types.ts';
 
+interface EditField {
+	key: string;
+	label: string;
+	value: string;
+}
+
 interface Props {
 	detail: RecordDetailPayload | null;
 	error: string;
@@ -9,6 +15,10 @@ interface Props {
 	fallbackListPath: string;
 	imageUploadApiPath?: string;
 	recordId?: number;
+	/** Allowlisted editable fields — enables Editar in the panel toolbar */
+	editFields?: EditField[];
+	editApiPath?: string;
+	listKey?: string;
 }
 
 const {
@@ -19,7 +29,22 @@ const {
 	fallbackListPath,
 	imageUploadApiPath = '',
 	recordId,
+	editFields = [],
+	editApiPath = '',
+	listKey = '',
 } = Astro.props;
+
+const canEdit = Boolean(editFields.length && editApiPath && recordId);
+const editKeySet = new Set(editFields.map((field) => field.key));
+const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field]));
+const detailFieldKeys = new Set((detail?.fields ?? []).map((field) => field.key));
+const extraEditFields = editFields.filter((field) => !detailFieldKeys.has(field.key));
+
+function displayValue(value: string | number | boolean | null): string {
+	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
+	if (value === null || value === '') return '—';
+	return String(value);
+}
 ---
 
 <main class="sg-list-page">
@@ -41,95 +66,260 @@ const {
 			<p>{error}</p>
 		</section>
 	) : detail ? (
-		<section class="sg-detail sg-glass">
-			{detail.imageUrl || (detail.imageUrl === null && detail.key.startsWith('inventory/')) ? (
-				<div class="sg-detail-photo-wrap">
-					{detail.imageUrl ? (
-						<img
-							class="sg-detail-photo"
-							src={detail.imageUrl}
-							alt=""
-							data-product-detail-photo
-						/>
-					) : (
-						<div
-							class="sg-detail-photo sg-detail-photo--empty"
-							data-product-detail-photo
-						>
-							Sin foto
-						</div>
-					)}
-					{imageUploadApiPath && recordId ? (
-						<button
-							type="button"
-							class="sg-detail-photo-upload sg-focus-ring"
-							data-product-image-trigger
-							data-record-id={String(recordId)}
-							data-api-path={imageUploadApiPath}
-							data-image-target="[data-product-detail-photo]"
-							aria-label={detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
-						>
-							<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-								<path
-									fill="currentColor"
-									d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
-								/>
-							</svg>
-							<span>{detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}</span>
-						</button>
-					) : null}
-				</div>
-			) : null}
-			<dl class="sg-detail-fields">
-				{detail.fields.map((field) => (
-					<div>
-						<dt>{field.label}</dt>
-						<dd>
-							{typeof field.value === 'boolean'
-								? field.value
-									? 'Sí'
-									: 'No'
-								: field.value === null || field.value === ''
-									? '—'
-									: String(field.value)}
-						</dd>
+		<div class="sg-ficha-layout">
+			<div class="sg-ficha-main">
+				<section
+					class="sg-detail sg-glass"
+					data-record-ficha
+					data-editing="false"
+					data-list-key={listKey || undefined}
+				>
+					<div class="sg-detail-toolbar">
+						{canEdit ? (
+							<button
+								type="button"
+								class="sg-detail-edit-btn sg-focus-ring"
+								data-edit-open
+							>
+								Editar
+							</button>
+						) : null}
 					</div>
-				))}
-			</dl>
-			{detail.lines ? (
-				<section class="sg-detail-lines" aria-label={detail.lines.title}>
-					<strong>{detail.lines.title}</strong>
-					{detail.lines.rows.length ? (
-						<table class="sg-record-table">
-							<thead>
-								<tr>
-									{detail.lines.columns.map((column) => (
-										<th scope="col">{column.label}</th>
-									))}
-								</tr>
-							</thead>
-							<tbody>
-								{detail.lines.rows.map((row) => (
-									<tr>
-										{detail.lines!.columns.map((column) => (
-											<td>
-												{row[column.key] === null || row[column.key] === ''
-													? '—'
-													: String(row[column.key])}
-											</td>
-										))}
-									</tr>
+
+					<div class="sg-detail-body">
+						{detail.imageUrl ||
+						(detail.imageUrl === null && detail.key.startsWith('inventory/')) ? (
+							<div class="sg-detail-photo-wrap">
+								{detail.imageUrl ? (
+									<img
+										class="sg-detail-photo"
+										src={detail.imageUrl}
+										alt=""
+										data-product-detail-photo
+									/>
+								) : (
+									<div
+										class="sg-detail-photo sg-detail-photo--empty"
+										data-product-detail-photo
+									>
+										Sin foto
+									</div>
+								)}
+								{imageUploadApiPath && recordId ? (
+									<button
+										type="button"
+										class="sg-detail-photo-upload sg-focus-ring"
+										data-product-image-trigger
+										data-record-id={String(recordId)}
+										data-api-path={imageUploadApiPath}
+										data-image-target="[data-product-detail-photo]"
+										aria-label={detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
+									>
+										<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+											<path
+												fill="currentColor"
+												d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
+											/>
+										</svg>
+										<span>{detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}</span>
+									</button>
+								) : null}
+							</div>
+						) : null}
+
+						<form
+							class="sg-detail-fields-form"
+							data-record-edit
+							data-record-edit-form
+							data-editing="false"
+						>
+							{canEdit ? (
+								<input type="hidden" name="id" value={String(recordId)} />
+							) : null}
+							<dl class="sg-detail-fields">
+								{detail.fields.map((field) => {
+									const editable = canEdit && editKeySet.has(field.key);
+									const editDef = editByKey[field.key];
+									return (
+										<div data-field-key={field.key}>
+											<dt>{field.label}</dt>
+											<dd class="sg-detail-field-read" data-field-read>
+												{displayValue(field.value)}
+											</dd>
+											{editable && editDef ? (
+												<label class="sg-detail-field-edit" data-field-edit hidden>
+													<span class="sr-only">{editDef.label}</span>
+													<input
+														class="sg-focus-ring"
+														type={editDef.key === 'email' ? 'email' : 'text'}
+														name={editDef.key}
+														value={editDef.value}
+														autocomplete="off"
+													/>
+												</label>
+											) : null}
+										</div>
+									);
+								})}
+								{extraEditFields.map((editDef) => (
+									<div data-field-key={editDef.key}>
+										<dt>{editDef.label}</dt>
+										<dd class="sg-detail-field-read" data-field-read>
+											{editDef.value || '—'}
+										</dd>
+										<label class="sg-detail-field-edit" data-field-edit hidden>
+											<span class="sr-only">{editDef.label}</span>
+											<input
+												class="sg-focus-ring"
+												type={editDef.key === 'email' ? 'email' : 'text'}
+												name={editDef.key}
+												value={editDef.value}
+												autocomplete="off"
+											/>
+										</label>
+									</div>
 								))}
-							</tbody>
-						</table>
-					) : (
-						<p class="sg-detail-lines-empty">Sin líneas</p>
-					)}
+							</dl>
+							{canEdit ? (
+								<div class="sg-detail-edit-actions" data-edit-actions hidden>
+									<button class="sg-focus-ring" type="submit">Guardar</button>
+									<button
+										class="sg-focus-ring sg-detail-edit-cancel"
+										type="button"
+										data-edit-cancel
+									>
+										Cancelar
+									</button>
+									<span
+										class="sg-detail-edit-status"
+										data-record-edit-status
+										hidden
+									></span>
+								</div>
+							) : null}
+						</form>
+					</div>
+
+					{detail.lines ? (
+						<section class="sg-detail-lines" aria-label={detail.lines.title}>
+							<strong>{detail.lines.title}</strong>
+							{detail.lines.rows.length ? (
+								<table class="sg-record-table">
+									<thead>
+										<tr>
+											{detail.lines.columns.map((column) => (
+												<th scope="col">{column.label}</th>
+											))}
+										</tr>
+									</thead>
+									<tbody>
+										{detail.lines.rows.map((row) => (
+											<tr>
+												{detail.lines!.columns.map((column) => (
+													<td>
+														{row[column.key] === null || row[column.key] === ''
+															? '—'
+															: String(row[column.key])}
+													</td>
+												))}
+											</tr>
+										))}
+									</tbody>
+								</table>
+							) : (
+								<p class="sg-detail-lines-empty">Sin líneas</p>
+							)}
+						</section>
+					) : null}
 				</section>
-			) : null}
-		</section>
+
+				<slot name="secondary" />
+			</div>
+
+			{
+				Astro.slots.has('notes') ? (
+					<aside class="sg-ficha-aside">
+						<slot name="notes" />
+					</aside>
+				) : null
+			}
+		</div>
 	) : null}
 </main>
+
+{canEdit ? (
+	<script define:vars={{ editApiPath }}>
+		const ficha = document.querySelector('[data-record-ficha]');
+		const form = ficha?.querySelector('[data-record-edit-form]');
+		const openBtn = ficha?.querySelector('[data-edit-open]');
+		const cancelBtn = ficha?.querySelector('[data-edit-cancel]');
+		const actions = ficha?.querySelector('[data-edit-actions]');
+		const status = ficha?.querySelector('[data-record-edit-status]');
+
+		function setEditing(on) {
+			if (!(ficha instanceof HTMLElement) || !(form instanceof HTMLFormElement)) return;
+			ficha.dataset.editing = on ? 'true' : 'false';
+			form.dataset.editing = on ? 'true' : 'false';
+			if (openBtn instanceof HTMLElement) openBtn.hidden = on;
+			if (actions instanceof HTMLElement) actions.hidden = !on;
+			ficha.querySelectorAll('[data-field-read]').forEach((el) => {
+				if (el instanceof HTMLElement) {
+					const row = el.closest('[data-field-key]');
+					const hasEdit = row?.querySelector('[data-field-edit]');
+					if (hasEdit) el.hidden = on;
+				}
+			});
+			ficha.querySelectorAll('[data-field-edit]').forEach((el) => {
+				if (el instanceof HTMLElement) el.hidden = !on;
+			});
+			if (!on && status instanceof HTMLElement) {
+				status.hidden = true;
+				status.textContent = '';
+				status.dataset.state = '';
+			}
+		}
+
+		openBtn?.addEventListener('click', () => setEditing(true));
+		cancelBtn?.addEventListener('click', () => setEditing(false));
+
+		if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
+			form.addEventListener('submit', async (event) => {
+				event.preventDefault();
+				status.hidden = false;
+				status.textContent = 'Guardando…';
+				status.dataset.state = 'pending';
+
+				const data = new FormData(form);
+				const id = Number(data.get('id'));
+				const values = {};
+				for (const [key, value] of data.entries()) {
+					if (key === 'id') continue;
+					values[key] = String(value);
+				}
+
+				try {
+					const response = await fetch(editApiPath, {
+						method: 'POST',
+						credentials: 'same-origin',
+						headers: { 'content-type': 'application/json' },
+						body: JSON.stringify({ id, values }),
+					});
+					const payload = await response.json().catch(() => ({}));
+					if (!response.ok) {
+						throw new Error(payload?.error?.message || 'No se pudo guardar');
+					}
+					status.textContent = 'Guardado';
+					status.dataset.state = 'ok';
+					window.setTimeout(() => window.location.reload(), 400);
+				} catch (error) {
+					status.textContent =
+						error instanceof Error ? error.message : 'No se pudo guardar';
+					status.dataset.state = 'error';
+				}
+			});
+		}
+	</script>
+) : null}
 
 <style>
 	.sg-list-page {
@@ -174,12 +364,6 @@ const {
 	.sg-list-state {
 		border-radius: var(--sg-radius-card);
 		padding: 2rem;
-	}
-	.sg-detail {
-		display: grid;
-		gap: 1.25rem;
-		border-radius: var(--sg-radius-card);
-		padding: 1.25rem;
 	}
 	.sg-detail-lines {
 		display: grid;

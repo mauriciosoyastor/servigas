@@ -1,7 +1,6 @@
 ---
 import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
-import RecordEditForm from '../../../../components/RecordEditForm.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
@@ -33,29 +32,33 @@ function fieldValue(key: string): string {
 		eyebrow="Ficha de cliente"
 		fallbackTitle="Cliente"
 		fallbackListPath="/lists/sales/customers"
-	/>
-	{detail && !error ? (
-		<>
-			<RecordEditForm
-				listKey="sales/customers"
-				recordId={id}
-				apiPath="/api/records/sales/customers"
-				fields={[
-					{ key: 'vat', label: 'CUIT', value: fieldValue('vat') },
-					{ key: 'phone', label: 'Teléfono', value: fieldValue('phone') },
-					{ key: 'email', label: 'Email', value: fieldValue('email') },
-					{ key: 'street', label: 'Calle', value: fieldValue('street') },
-					{ key: 'city', label: 'Ciudad', value: fieldValue('city') },
-				]}
-			/>
+		recordId={id}
+		listKey="sales/customers"
+		editApiPath="/api/records/sales/customers"
+		editFields={
+			detail && !error
+				? [
+						{ key: 'vat', label: 'CUIT', value: fieldValue('vat') },
+						{ key: 'phone', label: 'Teléfono', value: fieldValue('phone') },
+						{ key: 'email', label: 'Email', value: fieldValue('email') },
+						{ key: 'street', label: 'Calle', value: fieldValue('street') },
+						{ key: 'city', label: 'Ciudad', value: fieldValue('city') },
+					]
+				: []
+		}
+	>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="sales/customers" recordId={id} />
+		) : null}
+		{detail && !error ? (
 			<RecordArchiveControl
+				slot="secondary"
 				listKey="sales/customers"
 				recordId={id}
 				apiPath="/api/records/sales/customers"
 				listPath="/lists/sales/customers"
 				label="Archivar cliente"
 			/>
-			<RecordNotes listKey="sales/customers" recordId={id} />
-		</>
-	) : null}
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>

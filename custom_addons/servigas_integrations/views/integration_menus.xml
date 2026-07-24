@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <!-- Soft-hide: name required if xmlid is missing and Odoo creates the row. -->
     <record id="menu_servigas_integrations_root" model="ir.ui.menu">
+        <field name="name">Integraciones</field>
         <field name="active" eval="False"/>
     </record>
 </odoo>

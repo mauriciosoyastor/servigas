@@ -37,6 +37,30 @@
     padding: 0;
 }
 
+.sg-login-brand {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.65rem;
+}
+
+.sg-login-mark {
+    display: block;
+    width: 72px;
+    height: auto;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+.sg-login-brand-name {
+    color: $sg-text-on-dark;
+    font-family: $sg-font-family;
+    font-size: 1.65rem;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    line-height: 1.1;
+}
+
 .sg-login-logo {
     max-height: 120px;
     max-width: 100%;

@@ -21,13 +21,14 @@ const items = [
 		data-tour="rail-home"
 	>
 		<img
-			class="sg-brand-logo"
-			src="/servigas-logo.png?v=1"
+			class="sg-brand-mark"
+			src="/servigas-mark.png?v=2"
 			alt=""
-			width="72"
-			height="72"
+			width="56"
+			height="56"
 			decoding="async"
 		/>
+		<span class="sg-brand-name">Servigas</span>
 	</a>
 
 	<nav class="sg-rail-nav">
@@ -63,14 +64,22 @@ const items = [
 	.sg-brand {
 		display: grid;
 		justify-items: center;
+		gap: 0.35rem;
 		color: white;
 		text-decoration: none;
 	}
-	.sg-brand-logo {
+	.sg-brand-mark {
 		display: block;
-		width: 4.5rem;
+		width: 2.75rem;
 		height: auto;
 		object-fit: contain;
+	}
+	.sg-brand-name {
+		font-size: 0.62rem;
+		font-weight: 600;
+		letter-spacing: 0.02em;
+		line-height: 1.1;
+		text-align: center;
 	}
 	.sg-rail-nav {
 		display: grid;

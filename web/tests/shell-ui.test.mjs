@@ -16,6 +16,10 @@ describe("shell UI contracts", () => {
     assert.match(tokens, /--sg-primary:/);
     assert.match(tokens, /--sg-flame-gradient:/);
     assert.match(tokens, /--sg-radius-card:\s*12px/);
+    assert.match(tokens, /--sg-ember-amber:\s*#ffb300/);
+    assert.match(tokens, /--sg-ember-coral:\s*#ff7043/);
+    assert.match(tokens, /--sg-ember-scarlet:\s*#ef5350/);
+    assert.match(tokens, /--sg-ember-wine:\s*#c62828/);
   });
 
   it("provides the requested shell components", async () => {
@@ -35,9 +39,14 @@ describe("shell UI contracts", () => {
     assert.match(rail, /\/hubs\/inventory/);
     assert.match(rail, /\/hubs\/sales/);
     assert.match(rail, /data-tour=\{`rail-\$\{item\.app\}`\}/);
+    assert.match(rail, /servigas-mark\.png/);
+    assert.match(rail, /sg-brand-name/);
+    assert.match(rail, />Servigas</);
     assert.match(tile, /data-tile/);
     assert.match(tile, /data-kpi|sg-tile-kpi/);
     assert.match(tile, /tourTarget|data-tour=\{tourTarget\}/);
+    assert.match(tile, /ember-amber/);
+    assert.match(tile, /ember-wine/);
     assert.match(note, /Próximamente/);
     assert.match(note, /data-coming-soon-detail/);
     assert.match(note, /todavía no está disponible/);
@@ -55,6 +64,9 @@ describe("shell UI contracts", () => {
 
     assert.match(login, /fetch\(["']\/api\/auth\/login["']/);
     assert.match(login, /location\.(?:assign|href)/);
+    assert.match(login, /servigas-mark\.png/);
+    assert.match(login, /sg-login-brand-name/);
+    assert.match(login, />Servigas</);
   });
 
   it("protects and renders the launcher using tile navigation", async () => {
@@ -225,12 +237,17 @@ describe("shell UI contracts", () => {
 
   it("renders customer detail with allowlisted edit form", async () => {
     const page = await source("pages/lists/sales/customers/[id].astro");
-    assert.match(page, /RecordEditForm|data-record-edit/);
+    const body = await source("components/RecordDetailBody.astro");
+    assert.match(page, /editFields|editApiPath/);
     assert.match(page, /\/api\/records\/sales\/customers/);
     assert.match(page, /phone|email/);
     assert.match(page, /vat|CUIT/);
     assert.match(page, /street|city/);
     assert.match(page, /RecordArchiveControl|data-record-archive/);
+    assert.match(page, /slot=["']notes["']/);
+    assert.match(body, /data-record-ficha/);
+    assert.match(body, /data-edit-open/);
+    assert.match(body, /sg-ficha-layout/);
   });
 
   it("renders partner create pages and list create CTA", async () => {
