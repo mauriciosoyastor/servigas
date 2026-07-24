@@ -1,0 +1,178 @@
+---
+interface Props {
+	listKey: string;
+	recordId: number;
+	apiPath: string;
+	/** Saldo residual sugerido (default del input). */
+	defaultAmount?: number | string;
+	label?: string;
+	directionLabel?: string;
+}
+
+const {
+	listKey,
+	recordId,
+	apiPath,
+	defaultAmount = '',
+	label = 'Registrar pago',
+	directionLabel = 'pago',
+} = Astro.props;
+
+const residualHint =
+	defaultAmount === '' || defaultAmount == null
+		? ''
+		: String(defaultAmount);
+---
+
+<section
+	class="sg-record-pay"
+	data-record-register-payment
+	data-list-key={listKey}
+>
+	<label class="sg-record-pay-amount">
+		<span>Monto ({directionLabel})</span>
+		<input
+			class="sg-focus-ring"
+			type="number"
+			min="0"
+			step="0.01"
+			inputmode="decimal"
+			data-pay-amount
+			value={residualHint}
+			placeholder="Saldo completo"
+		/>
+	</label>
+	<button
+		class="sg-focus-ring"
+		type="button"
+		data-pay-btn
+		data-id={recordId}
+		data-api={apiPath}
+		data-direction={directionLabel}
+	>
+		{label}
+	</button>
+	<span class="sg-record-pay-status" data-pay-status hidden></span>
+	<p class="sg-record-pay-hint">
+		Dejá el monto vacío o igual al saldo para pagar el total. Un monto menor registra un pago parcial.
+	</p>
+</section>
+
+<script>
+	const root = document.querySelector('[data-record-register-payment]');
+	const btn = root?.querySelector('[data-pay-btn]');
+	const amountInput = root?.querySelector('[data-pay-amount]');
+	const status = root?.querySelector('[data-pay-status]');
+	if (
+		btn instanceof HTMLButtonElement &&
+		amountInput instanceof HTMLInputElement &&
+		status instanceof HTMLElement
+	) {
+		btn.addEventListener('click', async () => {
+			const direction = btn.dataset.direction || 'pago';
+			const raw = amountInput.value.trim();
+			const values: Record<string, unknown> = {};
+			if (raw !== '') {
+				const amount = Number(raw);
+				if (!Number.isFinite(amount) || amount <= 0) {
+					status.hidden = false;
+					status.textContent = 'Ingresá un monto válido mayor a 0.';
+					status.dataset.state = 'error';
+					return;
+				}
+				values.amount = amount;
+			}
+			if (
+				!window.confirm(
+					raw
+						? `¿Registrar ${direction} por ${raw}?`
+						: `¿Registrar ${direction} por el saldo completo?`
+				)
+			) {
+				return;
+			}
+			status.hidden = false;
+			status.textContent = 'Registrando…';
+			status.dataset.state = 'pending';
+			btn.disabled = true;
+			try {
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'register_payment',
+						id: Number(btn.dataset.id),
+						values,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo registrar el pago');
+				}
+				status.textContent = `Registrado (${payload.paymentState || 'ok'})`;
+				status.dataset.state = 'ok';
+				window.setTimeout(() => window.location.reload(), 450);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo registrar el pago';
+				status.dataset.state = 'error';
+				btn.disabled = false;
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-record-pay {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 1rem;
+		max-width: 22rem;
+	}
+	.sg-record-pay-amount {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-pay-amount input {
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		border-radius: 0.65rem;
+		padding: 0.55rem 0.75rem;
+		background: rgba(0, 0, 0, 0.25);
+		color: var(--sg-text-dark, #f4f1ea);
+		font-size: 0.95rem;
+	}
+	.sg-record-pay button {
+		justify-self: start;
+		border: 1px solid rgba(155, 231, 176, 0.5);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: #9be7b0;
+		background: rgba(20, 60, 35, 0.4);
+		font-size: 0.82rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-record-pay button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+	.sg-record-pay-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-pay-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-record-pay-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+	.sg-record-pay-hint {
+		margin: 0;
+		font-size: 0.72rem;
+		color: var(--sg-text-muted-dark);
+		line-height: 1.35;
+	}
+</style>

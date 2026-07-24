@@ -67,6 +67,9 @@ class SgHubCard(models.Model):
         [
             ("none", "Sin filtro fecha"),
             ("today", "Hoy"),
+            ("due_today", "Vence hoy"),
+            ("due_week", "Vence esta semana"),
+            ("overdue", "Vencidas"),
         ],
         string="Alcance fecha métrica",
         default="none",
@@ -75,15 +78,30 @@ class SgHubCard(models.Model):
     def _metric_domain_resolved(self):
         self.ensure_one()
         domain = list(self._eval_domain(self.metric_domain))
-        if self.metric_date_scope == "today" and self.metric_date_field:
-            today = fields.Date.context_today(self)
+        if not self.metric_date_field or self.metric_date_scope in (False, "none"):
+            return domain
+        today = fields.Date.context_today(self)
+        field = self.metric_date_field
+        if self.metric_date_scope == "today":
             tomorrow = today + timedelta(days=1)
             domain.extend(
                 [
-                    (self.metric_date_field, ">=", today),
-                    (self.metric_date_field, "<", tomorrow),
+                    (field, ">=", today),
+                    (field, "<", tomorrow),
                 ]
             )
+        elif self.metric_date_scope == "due_today":
+            domain.append((field, "=", today))
+        elif self.metric_date_scope == "due_week":
+            week_end = today + timedelta(days=7)
+            domain.extend(
+                [
+                    (field, ">=", today),
+                    (field, "<=", week_end),
+                ]
+            )
+        elif self.metric_date_scope == "overdue":
+            domain.append((field, "<", today))
         return domain
 
     def _eval_domain(self, domain_str):

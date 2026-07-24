@@ -2,6 +2,8 @@
  * Allowlisted Astro record lists (no arbitrary model from the browser).
  */
 
+import { agingDateParts, agingDueClauses } from "./aging.ts";
+
 export type OdooAction = Record<string, unknown> | false | null | undefined;
 
 export type RecordListKey =
@@ -47,7 +49,13 @@ export type RecordListKey =
   | "purchase/uom"
   | "purchase/analysis"
   | "accounting/receivable"
+  | "accounting/receivable-overdue"
+  | "accounting/receivable-due-today"
+  | "accounting/receivable-due-week"
   | "accounting/payable"
+  | "accounting/payable-overdue"
+  | "accounting/payable-due-today"
+  | "accounting/payable-due-week"
   | "accounting/drafts"
   | "accounting/customer-invoices"
   | "accounting/vendor-bills"
@@ -69,6 +77,8 @@ export type RecordListColumnDef = {
   kind?: "text" | "image";
 };
 
+export type RecordListAgingBucket = "due_today" | "due_week" | "overdue";
+
 export type RecordListDef = {
   key: RecordListKey;
   path: string;
@@ -85,6 +95,8 @@ export type RecordListDef = {
   imageField?: string;
   detailPath?: string;
   searchFields?: string[];
+  /** Si está set, buildSearchDomain agrega cláusulas de invoice_date_due. */
+  agingBucket?: RecordListAgingBucket;
 };
 
 function productCols(
@@ -110,7 +122,10 @@ function orderCols(): RecordListColumnDef[] {
   ];
 }
 
-function moveCols(includeInvoiceDest = false): RecordListColumnDef[] {
+function moveCols(
+  includeInvoiceDest = false,
+  opts?: { due?: boolean; residual?: boolean }
+): RecordListColumnDef[] {
   const cols: RecordListColumnDef[] = [
     { key: "name", label: "Número" },
     { key: "partner_id", label: "Contacto" },
@@ -118,13 +133,34 @@ function moveCols(includeInvoiceDest = false): RecordListColumnDef[] {
   if (includeInvoiceDest) {
     cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
   }
+  cols.push({ key: "invoice_date", label: "Fecha" });
+  if (opts?.due) {
+    cols.push({ key: "invoice_date_due", label: "Vence" });
+  }
+  cols.push({ key: "amount_total", label: "Total" });
+  if (opts?.residual) {
+    cols.push({ key: "amount_residual", label: "Saldo" });
+  }
   cols.push(
-    { key: "invoice_date", label: "Fecha" },
-    { key: "amount_total", label: "Total" },
     { key: "payment_state", label: "Pago" },
     { key: "state", label: "Estado" }
   );
   return cols;
+}
+
+function unpaidMoveFields(includeInvoiceDest = false): string[] {
+  const fields = [
+    "name",
+    "partner_id",
+    ...(includeInvoiceDest ? ["sg_invoice_dest"] : []),
+    "invoice_date",
+    "invoice_date_due",
+    "amount_total",
+    "amount_residual",
+    "payment_state",
+    "state",
+  ];
+  return fields;
 }
 
 function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
@@ -1069,22 +1105,77 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["state", "=", "posted"],
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
-    fields: [
-      "name",
-      "partner_id",
-      "sg_invoice_dest",
-      "invoice_date",
-      "amount_total",
-      "payment_state",
-      "state",
-    ],
-    columns: moveCols(true),
+    fields: unpaidMoveFields(true),
+    columns: moveCols(true, { due: true, residual: true }),
     limit: 50,
-    order: "invoice_date desc",
+    order: "invoice_date_due asc, invoice_date desc",
     hubBack: "/hubs/accounting",
     railApp: "accounting",
     searchFields: ["name", "ref"],
     detailPath: "/lists/accounting/customer-invoices/:id",
+  },
+  "accounting/receivable-overdue": {
+    key: "accounting/receivable-overdue",
+    path: "/lists/accounting/receivable-overdue",
+    title: "Vencidas por cobrar",
+    hint: "FC con vencimiento pasado",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "out_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(true),
+    columns: moveCols(true, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/customer-invoices/:id",
+    agingBucket: "overdue",
+  },
+  "accounting/receivable-due-today": {
+    key: "accounting/receivable-due-today",
+    path: "/lists/accounting/receivable-due-today",
+    title: "Vence hoy por cobrar",
+    hint: "FC que vencen hoy",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "out_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(true),
+    columns: moveCols(true, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/customer-invoices/:id",
+    agingBucket: "due_today",
+  },
+  "accounting/receivable-due-week": {
+    key: "accounting/receivable-due-week",
+    path: "/lists/accounting/receivable-due-week",
+    title: "Vence esta semana por cobrar",
+    hint: "FC con vencimiento en los próximos 7 días",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "out_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(true),
+    columns: moveCols(true, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/customer-invoices/:id",
+    agingBucket: "due_week",
   },
   "accounting/payable": {
     key: "accounting/payable",
@@ -1097,21 +1188,77 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["state", "=", "posted"],
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
-    fields: [
-      "name",
-      "partner_id",
-      "invoice_date",
-      "amount_total",
-      "payment_state",
-      "state",
-    ],
-    columns: moveCols(),
+    fields: unpaidMoveFields(),
+    columns: moveCols(false, { due: true, residual: true }),
     limit: 50,
-    order: "invoice_date desc",
+    order: "invoice_date_due asc, invoice_date desc",
     hubBack: "/hubs/accounting",
     railApp: "accounting",
     searchFields: ["name", "ref"],
     detailPath: "/lists/accounting/vendor-bills/:id",
+  },
+  "accounting/payable-overdue": {
+    key: "accounting/payable-overdue",
+    path: "/lists/accounting/payable-overdue",
+    title: "Vencidas por pagar",
+    hint: "FP con vencimiento pasado",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "in_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(),
+    columns: moveCols(false, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/vendor-bills/:id",
+    agingBucket: "overdue",
+  },
+  "accounting/payable-due-today": {
+    key: "accounting/payable-due-today",
+    path: "/lists/accounting/payable-due-today",
+    title: "Vence hoy por pagar",
+    hint: "FP que vencen hoy",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "in_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(),
+    columns: moveCols(false, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/vendor-bills/:id",
+    agingBucket: "due_today",
+  },
+  "accounting/payable-due-week": {
+    key: "accounting/payable-due-week",
+    path: "/lists/accounting/payable-due-week",
+    title: "Vence esta semana por pagar",
+    hint: "FP con vencimiento en los próximos 7 días",
+    model: "account.move",
+    domain: [
+      ["move_type", "=", "in_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ],
+    fields: unpaidMoveFields(),
+    columns: moveCols(false, { due: true, residual: true }),
+    limit: 50,
+    order: "invoice_date_due asc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/vendor-bills/:id",
+    agingBucket: "due_week",
   },
   "accounting/drafts": {
     key: "accounting/drafts",
@@ -1121,7 +1268,11 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     model: "account.move",
     domain: [
       ["state", "=", "draft"],
-      ["move_type", "in", ["out_invoice", "in_invoice"]],
+      [
+        "move_type",
+        "in",
+        ["out_invoice", "in_invoice", "out_refund", "in_refund"],
+      ],
     ],
     fields: [
       "name",
@@ -1156,11 +1307,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "partner_id",
       "sg_invoice_dest",
       "invoice_date",
+      "invoice_date_due",
       "amount_total",
+      "amount_residual",
       "payment_state",
       "state",
     ],
-    columns: moveCols(true),
+    columns: moveCols(true, { due: true, residual: true }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1179,11 +1332,13 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "name",
       "partner_id",
       "invoice_date",
+      "invoice_date_due",
       "amount_total",
+      "amount_residual",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(false, { due: true, residual: true }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1201,12 +1356,14 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     fields: [
       "name",
       "partner_id",
+      "sg_invoice_dest",
       "invoice_date",
       "amount_total",
+      "amount_residual",
       "payment_state",
       "state",
     ],
-    columns: moveCols(),
+    columns: moveCols(true, { residual: true }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1716,6 +1873,36 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "account.move",
+    patterns: [/vencidas por pagar/i],
+    path: "/lists/accounting/payable-overdue",
+  },
+  {
+    model: "account.move",
+    patterns: [/vence hoy por pagar/i],
+    path: "/lists/accounting/payable-due-today",
+  },
+  {
+    model: "account.move",
+    patterns: [/vence esta semana por pagar/i],
+    path: "/lists/accounting/payable-due-week",
+  },
+  {
+    model: "account.move",
+    patterns: [/vencidas por cobrar/i],
+    path: "/lists/accounting/receivable-overdue",
+  },
+  {
+    model: "account.move",
+    patterns: [/vence hoy por cobrar/i],
+    path: "/lists/accounting/receivable-due-today",
+  },
+  {
+    model: "account.move",
+    patterns: [/vence esta semana por cobrar/i],
+    path: "/lists/accounting/receivable-due-week",
+  },
+  {
+    model: "account.move",
     patterns: [/por pagar/i],
     path: "/lists/accounting/payable",
   },
@@ -2122,9 +2309,13 @@ export type RecordListQuery = {
 
 export function buildSearchDomain(
   def: RecordListDef,
-  q: string | undefined
+  q: string | undefined,
+  now: Date = new Date()
 ): unknown[] {
   const base = [...def.domain];
+  if (def.agingBucket) {
+    base.push(...agingDueClauses(def.agingBucket, agingDateParts(now)));
+  }
   const term = (q || "").trim();
   if (!term || !def.searchFields?.length) return base;
 

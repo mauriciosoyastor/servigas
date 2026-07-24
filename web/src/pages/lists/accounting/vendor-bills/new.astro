@@ -1,0 +1,56 @@
+---
+import OrderCreateForm from '../../../../components/OrderCreateForm.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
+
+let userName = '';
+
+try {
+	const { session } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Nueva factura de proveedor | Servigas" active="accounting" userName={userName}>
+	<main class="sg-create-page">
+		<header>
+			<p>Contabilidad</p>
+			<h1>Nueva factura de proveedor</h1>
+		</header>
+		<OrderCreateForm
+			apiPath="/api/records/accounting/vendor-bills"
+			listPath="/lists/accounting/vendor-bills"
+			partnerListKey="purchase/vendors"
+			productListKey="inventory/variants"
+			title="Alta de factura de proveedor"
+			hint="Elegí proveedor y líneas. Queda en borrador; publicá desde la ficha para dejarla por pagar."
+			partnerLabel="Proveedor"
+			partnerPlaceholder="Buscar proveedor…"
+			submitLabel="Crear borrador"
+		/>
+	</main>
+</ShellLayout>
+
+<style>
+	.sg-create-page {
+		max-width: 40rem;
+		margin: 0 auto;
+		display: grid;
+		gap: 1.25rem;
+	}
+	.sg-create-page header p {
+		margin: 0 0 0.35rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-create-page header h1 {
+		margin: 0;
+		font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+		font-weight: 600;
+		letter-spacing: -0.04em;
+	}
+</style>

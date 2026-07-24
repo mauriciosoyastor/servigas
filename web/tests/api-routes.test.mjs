@@ -339,6 +339,56 @@ describe("BFF API routes", () => {
     sessionStore.destroy(bffSid);
   });
 
+  it("registers a payment on an allowlisted invoice list", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      registerPayment: async (sessionId, listKey, id, values) => {
+        called = { sessionId, listKey, id, values };
+        return { ok: true, paymentState: "paid", residual: 0 };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: ["accounting", "customer-invoices"] },
+        request: new Request(
+          "http://localhost/api/records/accounting/customer-invoices",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "register_payment",
+              id: 55,
+              values: { amount: 200 },
+            }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        paymentState: "paid",
+        residual: 0,
+      });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "accounting/customer-invoices",
+        id: 55,
+        values: { amount: 200 },
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
   it("returns 401 when listing notes without a session", async () => {
     const response = await getNotes({
       cookies: new FakeCookies(),

@@ -1,6 +1,6 @@
 /**
- * Allowlisted customer invoice creates (FC), multi-line.
- * Spec: docs/superpowers/specs/2026-07-24-fc-create-publish-destino-design.md
+ * Allowlisted account.move creates (FC / NC / FP), multi-line.
+ * Specs: fc-create-publish-destino + accounting-ops-prioridad-alta
  */
 
 import {
@@ -10,10 +10,12 @@ import {
 } from "./order-creates.ts";
 import { resolveRecordListKey } from "./record-lists.ts";
 
+export type InvoiceMoveType = "out_invoice" | "out_refund" | "in_invoice";
+
 export type InvoiceCreateDef = {
   listKey: string;
   model: "account.move";
-  moveType: "out_invoice";
+  moveType: InvoiceMoveType;
 };
 
 const INVOICE_CREATES: Record<string, InvoiceCreateDef> = {
@@ -21,6 +23,16 @@ const INVOICE_CREATES: Record<string, InvoiceCreateDef> = {
     listKey: "accounting/customer-invoices",
     model: "account.move",
     moveType: "out_invoice",
+  },
+  "accounting/credit-notes": {
+    listKey: "accounting/credit-notes",
+    model: "account.move",
+    moveType: "out_refund",
+  },
+  "accounting/vendor-bills": {
+    listKey: "accounting/vendor-bills",
+    model: "account.move",
+    moveType: "in_invoice",
   },
 };
 
@@ -39,7 +51,7 @@ export function canCreateInvoice(listKey: string): boolean {
 export type InvoiceCreateValues = OrderCreateValues;
 export type InvoiceCreateLine = OrderCreateLine;
 
-/** Same partner+lines shape as order-creates; keyed for FC list. */
+/** Same partner+lines shape as order-creates; keyed for invoice lists. */
 export function filterInvoiceCreateValues(
   listKey: string,
   values: Record<string, unknown>

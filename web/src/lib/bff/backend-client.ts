@@ -99,6 +99,12 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<{ ok: true; id: number; detailPath: string }>;
+  registerPayment(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    values?: Record<string, unknown>
+  ): Promise<{ ok: true; paymentState: string | null; residual: number }>;
   getPosCatalog(
     odooSessionId: string,
     query?: { q?: string; limit?: number }

@@ -58,6 +58,11 @@ import {
   getOrderCreateDef,
 } from "../shell/order-creates.ts";
 import {
+  filterPaymentRegisterValues,
+  getPaymentRegisterDef,
+  isPaymentRegisterableState,
+} from "../shell/payment-registers.ts";
+import {
   canArchiveRecord,
   customerInvoiceDestError,
   filterCreateValues,
@@ -656,6 +661,10 @@ export class OdooAdapter implements BackendClient {
       sg_invoice_dest: "Destino fiscal",
       sg_doc_type_short: "Tipo sug.",
       invoice_status: "Estado factura",
+      invoice_date_due: "Vence",
+      amount_residual: "Saldo",
+      amount_total: "Total",
+      payment_state: "Pago",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;
@@ -990,6 +999,136 @@ export class OdooAdapter implements BackendClient {
       (list && buildDetailPath(list, Number(id))) ||
       `/lists/${listKey}/${id}`;
     return { id: Number(id), detailPath };
+  }
+
+  async registerPayment(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    values: Record<string, unknown> = {}
+  ): Promise<{ ok: true; paymentState: string | null; residual: number }> {
+    const paymentDef = getPaymentRegisterDef(listKey);
+    if (!paymentDef) {
+      throw new BffError("not_found", 404, "Pago no permitido");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+
+    const filtered = filterPaymentRegisterValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("validation_error", 400, "Monto de pago inválido");
+    }
+
+    const [move] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [
+        [id],
+        [
+          "state",
+          "payment_state",
+          "move_type",
+          "amount_residual",
+          "name",
+          "partner_id",
+        ],
+      ]
+    );
+    if (!move) {
+      throw new BffError("not_found", 404, "Comprobante no encontrado");
+    }
+
+    const moveType = move.move_type == null ? "" : String(move.move_type);
+    if (!paymentDef.expectedMoveTypes.includes(moveType)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Este comprobante no admite este tipo de pago"
+      );
+    }
+
+    const state = move.state == null ? null : String(move.state);
+    const paymentState =
+      move.payment_state == null ? null : String(move.payment_state);
+    if (!isPaymentRegisterableState(state, paymentState)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Solo se pueden registrar pagos en facturas publicadas con saldo"
+      );
+    }
+
+    const residual = Number(move.amount_residual);
+    if (!Number.isFinite(residual) || residual <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Esta factura no tiene saldo pendiente"
+      );
+    }
+
+    if (filtered.amount !== undefined && filtered.amount > residual + 0.0001) {
+      throw new BffError(
+        "validation_error",
+        400,
+        `El monto no puede superar el saldo (${residual})`
+      );
+    }
+
+    const wizardVals: Record<string, unknown> = {};
+    if (filtered.amount !== undefined) {
+      wizardVals.amount = filtered.amount;
+    }
+
+    const ctx = {
+      active_model: "account.move",
+      active_ids: [id],
+      active_id: id,
+    };
+
+    try {
+      const wizardId = await this.#callKw<number>(
+        odooSessionId,
+        "account.payment.register",
+        "create",
+        [wizardVals],
+        { context: ctx }
+      );
+      await this.#callKw(
+        odooSessionId,
+        "account.payment.register",
+        "action_create_payments",
+        [[wizardId]],
+        { context: ctx }
+      );
+    } catch (cause) {
+      if (cause instanceof BffError && cause.code === "unauthorized") {
+        throw cause;
+      }
+      if (cause instanceof BffError && cause.code === "validation_error") {
+        throw cause;
+      }
+      throw new BffError(
+        "action_failed",
+        502,
+        "No se pudo registrar el pago"
+      );
+    }
+
+    const [after] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [[id], ["payment_state", "amount_residual"]]
+    );
+    return {
+      ok: true,
+      paymentState:
+        after?.payment_state == null ? null : String(after.payment_state),
+      residual: Number(after?.amount_residual) || 0,
+    };
   }
 
   async #enrichRowsWithPartnerInvoiceDest(

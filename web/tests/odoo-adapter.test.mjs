@@ -1128,6 +1128,135 @@ describe("OdooAdapter.createRecord", () => {
       ],
     });
   });
+
+  it("creates credit note and vendor bill drafts", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 66 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.createRecord("sess", "accounting/credit-notes", {
+      partnerId: 6,
+      lines: [{ productId: 1, qty: 1 }],
+    });
+    let body = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
+    assert.equal(body.params.args[0].move_type, "out_refund");
+
+    await adapter.createRecord("sess", "accounting/vendor-bills", {
+      partnerId: 9,
+      lines: [{ productId: 2, qty: 3, price: 50 }],
+    });
+    body = JSON.parse(fetchImpl.mock.calls[1].arguments[1].body);
+    assert.equal(body.params.args[0].move_type, "in_invoice");
+    assert.equal(body.params.args[0].partner_id, 9);
+  });
+});
+
+describe("OdooAdapter.registerPayment", () => {
+  it("registers a partial payment via account.payment.register", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "account.move" && method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("amount_residual") && fields.includes("move_type")) {
+          return Response.json({
+            result: [
+              {
+                id: 55,
+                state: "posted",
+                payment_state: "not_paid",
+                move_type: "out_invoice",
+                amount_residual: 1000,
+                name: "FC/001",
+                partner_id: [6, "Cliente"],
+              },
+            ],
+          });
+        }
+        return Response.json({
+          result: [
+            {
+              id: 55,
+              payment_state: "partial",
+              amount_residual: 600,
+            },
+          ],
+        });
+      }
+      if (model === "account.payment.register" && method === "create") {
+        return Response.json({ result: 77 });
+      }
+      if (
+        model === "account.payment.register" &&
+        method === "action_create_payments"
+      ) {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.registerPayment(
+      "sess",
+      "accounting/customer-invoices",
+      55,
+      { amount: 400 }
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.paymentState, "partial");
+    assert.equal(result.residual, 600);
+
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    const createWizard = bodies.find(
+      (body) =>
+        body.params?.model === "account.payment.register" &&
+        body.params?.method === "create"
+    );
+    assert.ok(createWizard);
+    assert.deepEqual(createWizard.params.args[0], { amount: 400 });
+    assert.deepEqual(createWizard.params.kwargs.context.active_ids, [55]);
+  });
+
+  it("rejects amount above residual", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 55,
+            state: "posted",
+            payment_state: "not_paid",
+            move_type: "out_invoice",
+            amount_residual: 100,
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.registerPayment("sess", "accounting/customer-invoices", 55, {
+          amount: 150,
+        }),
+      (err) =>
+        err?.code === "validation_error" &&
+        /no puede superar el saldo/.test(String(err?.message || ""))
+    );
+  });
 });
 
 describe("OdooAdapter.archiveRecord", () => {

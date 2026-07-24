@@ -321,6 +321,39 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Nueva factura/);
   });
 
+  it("wires NC/FP create-publish and register payment UI", async () => {
+    const creditNew = await source(
+      "pages/lists/accounting/credit-notes/new.astro"
+    );
+    const creditDetail = await source(
+      "pages/lists/accounting/credit-notes/[id].astro"
+    );
+    const vendorNew = await source(
+      "pages/lists/accounting/vendor-bills/new.astro"
+    );
+    const vendorDetail = await source(
+      "pages/lists/accounting/vendor-bills/[id].astro"
+    );
+    const invoiceDetail = await source(
+      "pages/lists/accounting/customer-invoices/[id].astro"
+    );
+    const payControl = await source(
+      "components/RecordRegisterPaymentControl.astro"
+    );
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(creditNew, /OrderCreateForm/);
+    assert.match(creditNew, /accounting\/credit-notes/);
+    assert.match(creditDetail, /RecordConfirmControl/);
+    assert.match(creditDetail, /Publicar/);
+    assert.match(vendorNew, /purchase\/vendors/);
+    assert.match(vendorDetail, /RecordConfirmControl/);
+    assert.match(vendorDetail, /RecordRegisterPaymentControl/);
+    assert.match(invoiceDetail, /RecordRegisterPaymentControl/);
+    assert.match(payControl, /register_payment/);
+    assert.match(listPage, /Nueva nota de crédito/);
+    assert.match(listPage, /Nueva factura de proveedor/);
+  });
+
   it("wires Crear FC on sale order detail when to invoice", async () => {
     const orderDetail = await source("pages/lists/sales/orders/[id].astro");
     const control = await source("components/RecordCreateInvoiceControl.astro");

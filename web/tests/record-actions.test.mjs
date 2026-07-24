@@ -50,6 +50,19 @@ describe("record-actions allowlist", () => {
     );
   });
 
+  it("allows publishing draft credit notes and vendor bills", () => {
+    assert.equal(canConfirmRecord("accounting/credit-notes"), true);
+    assert.equal(canConfirmRecord("accounting/vendor-bills"), true);
+    assert.equal(
+      getRecordActionDef("accounting/credit-notes")?.method,
+      "action_post"
+    );
+    assert.equal(
+      getRecordActionDef("accounting/vendor-bills")?.method,
+      "action_post"
+    );
+  });
+
   it("gates confirm by state", () => {
     assert.equal(isConfirmableState("sales/quotations", "draft"), true);
     assert.equal(isConfirmableState("sales/quotations", "sent"), true);

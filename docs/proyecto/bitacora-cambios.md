@@ -31,6 +31,25 @@
 
 ---
 
+### 2026-07-24 — Contabilidad ops: pagos, NC, FP, vencimientos
+
+**Área:** contabilidad | web | BFF | hubs  
+**Motivo:** cerrar circuito operativo día a día en Astro (cobrar/pagar, NC, FP, mora).  
+**Archivos:**  
+- `web/src/lib/shell/{invoice-creates,payment-registers,aging,record-actions,record-lists}.ts`  
+- `web/src/lib/bff/{odoo-adapter,backend-client}.ts` + API `register_payment`  
+- UI: NC/FP `new` + Publicar; `RecordRegisterPaymentControl`; FC/FP cobro/pago  
+- Hub aging cards + `sg.hub.card` scopes `due_today|due_week|overdue`  
+- Spec: `docs/superpowers/specs/2026-07-24-accounting-ops-prioridad-alta-design.md`  
+**Cambios:**  
+- Crear/publicar NC (`out_refund`) y FP (`in_invoice`) con mismo patrón multi-línea que FC  
+- Registrar cobro/pago parcial o total vía `account.payment.register`  
+- Listas + cards: vencidas / vence hoy / vence esta semana (por cobrar y por pagar)  
+**Verificación:** `cd web && npm test`  
+**Automatización:** patrón allowlist + control UI reutilizable para próximas acciones contables.
+
+---
+
 ## Resumen ejecutivo (estado al 2026-07-23)
 
 | Área | Estado | Notas |
