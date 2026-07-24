@@ -121,14 +121,20 @@ function moveCols(): RecordListColumnDef[] {
   ];
 }
 
-function partnerCols(): RecordListColumnDef[] {
-  return [
+function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
+  const cols: RecordListColumnDef[] = [
     { key: "name", label: "Nombre" },
+  ];
+  if (includeInvoiceDest) {
+    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+  }
+  cols.push(
     { key: "vat", label: "CUIT" },
     { key: "email", label: "Email" },
     { key: "phone", label: "Teléfono" },
-    { key: "city", label: "Ciudad" },
-  ];
+    { key: "city", label: "Ciudad" }
+  );
+  return cols;
 }
 
 function integrationCols(): RecordListColumnDef[] {
@@ -542,8 +548,16 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Agenda de clientes",
     model: "res.partner",
     domain: [["customer_rank", ">", 0]],
-    fields: ["name", "vat", "email", "phone", "street", "city"],
-    columns: partnerCols(),
+    fields: [
+      "name",
+      "sg_invoice_dest",
+      "vat",
+      "email",
+      "phone",
+      "street",
+      "city",
+    ],
+    columns: partnerCols(true),
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
@@ -558,9 +572,18 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Contactos con al menos un pedido de venta",
     model: "res.partner",
     domain: [["sale_order_count", ">", 0]],
-    fields: ["name", "vat", "email", "phone", "street", "city", "sale_order_count"],
+    fields: [
+      "name",
+      "sg_invoice_dest",
+      "vat",
+      "email",
+      "phone",
+      "street",
+      "city",
+      "sale_order_count",
+    ],
     columns: [
-      ...partnerCols(),
+      ...partnerCols(true),
       { key: "sale_order_count", label: "Pedidos" },
     ],
     limit: 50,

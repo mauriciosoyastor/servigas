@@ -1,8 +1,15 @@
 ---
+interface FieldOption {
+	value: string;
+	label: string;
+}
+
 interface FieldDef {
 	key: string;
 	label: string;
 	required?: boolean;
+	type?: 'text' | 'email' | 'select';
+	options?: FieldOption[];
 }
 
 interface Props {
@@ -27,13 +34,25 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 					{field.label}
 					{field.required ? ' *' : ''}
 				</span>
-				<input
-					class="sg-focus-ring"
-					type={field.key === 'email' ? 'email' : 'text'}
-					name={field.key}
-					required={field.required}
-					autocomplete="off"
-				/>
+				{field.type === 'select' && field.options?.length ? (
+					<select
+						class="sg-focus-ring"
+						name={field.key}
+						required={field.required}
+					>
+						{field.options.map((option) => (
+							<option value={option.value}>{option.label}</option>
+						))}
+					</select>
+				) : (
+					<input
+						class="sg-focus-ring"
+						type={field.type === 'email' || field.key === 'email' ? 'email' : 'text'}
+						name={field.key}
+						required={field.required}
+						autocomplete="off"
+					/>
+				)}
 			</label>
 		))}
 		<div class="sg-record-create-actions">
@@ -114,7 +133,8 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 		font-weight: 600;
 		color: var(--sg-text-muted-dark);
 	}
-	.sg-record-create-form input {
+	.sg-record-create-form input,
+	.sg-record-create-form select {
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 0.75rem;
 		padding: 0.65rem 0.8rem;

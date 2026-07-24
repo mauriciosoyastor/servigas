@@ -1070,7 +1070,30 @@ describe("OdooAdapter.createRecord", () => {
       street: "Av. Demo 100",
       city: "CABA",
       customer_rank: 1,
+      sg_invoice_dest: "cf",
     });
+  });
+
+  it("rejects customer create with cuit dest and empty vat", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 1 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "sales/customers", {
+          name: "Empresa",
+          sg_invoice_dest: "cuit",
+          vat: "",
+        }),
+      (err) =>
+        err?.code === "validation_error" &&
+        /Con CUIT/.test(String(err?.message || ""))
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
   });
 });
 

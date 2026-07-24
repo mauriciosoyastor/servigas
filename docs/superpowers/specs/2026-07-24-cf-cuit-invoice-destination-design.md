@@ -1,7 +1,7 @@
 # Design: Destino fiscal CF vs CUIT (arco facturación)
 
 **Fecha:** 2026-07-24  
-**Estado:** draft (pendiente revisión humana post-brainstorm)  
+**Estado:** approved (fase 1 en implementación)  
 **Repo:** servigas (`custom_addons/servigas_core`, `web/`)  
 **Usuario día a día:** administrativo de mostrador  
 **Relacionado:** [astro-partner-vat-create](./2026-07-23-astro-partner-vat-create-design.md) · `CONTEXT.md` (contabilidad operativa → Factura Web → AFIP)

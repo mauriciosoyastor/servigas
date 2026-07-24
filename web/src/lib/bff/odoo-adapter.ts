@@ -45,6 +45,7 @@ import {
 } from "../shell/order-creates.ts";
 import {
   canArchiveRecord,
+  customerInvoiceDestError,
   filterCreateValues,
   filterWritableValues,
   getRecordWriteDef,
@@ -473,6 +474,11 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Sin campos editables");
     }
 
+    const fiscalError = customerInvoiceDestError(listKey, filtered);
+    if (fiscalError) {
+      throw new BffError("validation_error", 400, fiscalError);
+    }
+
     await this.#callKw(odooSessionId, writeDef.model, "write", [
       [id],
       filtered,
@@ -495,6 +501,11 @@ export class OdooAdapter implements BackendClient {
     const filtered = filterCreateValues(listKey, values);
     if (!filtered) {
       throw new BffError("not_found", 404, "Datos de alta inválidos");
+    }
+
+    const fiscalError = customerInvoiceDestError(listKey, filtered);
+    if (fiscalError) {
+      throw new BffError("validation_error", 400, fiscalError);
     }
 
     const id = await this.#callKw<number>(

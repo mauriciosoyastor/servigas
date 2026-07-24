@@ -242,12 +242,14 @@ describe("shell UI contracts", () => {
     assert.match(page, /\/api\/records\/sales\/customers/);
     assert.match(page, /phone|email/);
     assert.match(page, /vat|CUIT/);
+    assert.match(page, /sg_invoice_dest|Destino fiscal/);
     assert.match(page, /street|city/);
     assert.match(page, /RecordArchiveControl|data-record-archive/);
     assert.match(page, /slot=["']notes["']/);
     assert.match(body, /data-record-ficha/);
     assert.match(body, /data-edit-open/);
     assert.match(body, /sg-ficha-layout/);
+    assert.match(body, /select/);
   });
 
   it("renders partner create pages and list create CTA", async () => {
@@ -257,11 +259,22 @@ describe("shell UI contracts", () => {
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(customerNew, /RecordCreateForm/);
     assert.match(customerNew, /vat|CUIT/);
+    assert.match(customerNew, /sg_invoice_dest|Destino fiscal/);
+    assert.match(customerNew, /Consumidor final|Con CUIT/);
     assert.match(createForm, /action:\s*['"]create['"]/);
+    assert.match(createForm, /select/);
     assert.match(vendorNew, /purchase\/vendors/);
     assert.match(vendorNew, /vat|CUIT/);
     assert.match(listPage, /canCreateRecord/);
     assert.match(listPage, /sg-list-create|Nuevo cliente/);
+  });
+
+  it("wires CF/CUIT badge and non-blocking warn in POS customer picker", async () => {
+    const pos = await source("pages/pos.astro");
+    assert.match(pos, /data-pos-customer-warn/);
+    assert.match(pos, /Falta CUIT; completá la ficha antes de facturar/);
+    assert.match(pos, /sg_invoice_dest/);
+    assert.match(pos, /invoiceDestBadge|CUIT/);
   });
 
   it("renders product create/archive and quotation confirm", async () => {

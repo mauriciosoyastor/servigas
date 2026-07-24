@@ -50,6 +50,24 @@
 
 ## Entradas
 
+### 2026-07-24 — Destino fiscal CF vs CUIT (fase 1)
+
+**Área:** contabilidad | partners | POS | web | core  
+**Motivo:** clasificar clientes Consumidor final / Con CUIT antes de FC Astro y AFIP.  
+**Archivos:**
+- `custom_addons/servigas_core/models/res_partner.py` (`sg_invoice_dest`)
+- `web/src/lib/shell/invoice-dest.ts`, `record-writes.ts`, `record-lists.ts`
+- `web/src/pages/lists/sales/customers/*`, `pos.astro`, forms create/detail
+- Spec/plan: `docs/superpowers/specs/2026-07-24-cf-cuit-invoice-destination-design.md`
+
+**Cambios:**
+- Campo `sg_invoice_dest` (`cf`|`cuit`) + constraint Odoo si CUIT sin `vat`.
+- Alta/edición Astro con selector; lista badge CF/CUIT; POS badge + aviso no bloqueante.
+- BFF valida destino CUIT sin CUIT (400). Módulo `19.0.1.20.34`.
+
+**Verificación:** `cd web && npm test`  
+**Automatización:** helper `invoice-dest.ts` reutilizable para fase 2 FC.
+
 ### 2026-07-23 — Día D: apagar UI OWL de negocio para operativos
 
 **Área:** core | gobernanza | shell  

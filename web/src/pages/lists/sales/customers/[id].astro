@@ -3,6 +3,11 @@ import RecordArchiveControl from '../../../../components/RecordArchiveControl.as
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import {
+	INVOICE_DEST_CF,
+	INVOICE_DEST_OPTIONS,
+	normalizeInvoiceDest,
+} from '../../../../lib/shell/invoice-dest.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
 const id = Number(Astro.params.id);
@@ -38,6 +43,15 @@ function fieldValue(key: string): string {
 		editFields={
 			detail && !error
 				? [
+						{
+							key: 'sg_invoice_dest',
+							label: 'Destino fiscal',
+							value: normalizeInvoiceDest(
+								fieldValue('sg_invoice_dest') || INVOICE_DEST_CF
+							),
+							type: 'select',
+							options: [...INVOICE_DEST_OPTIONS],
+						},
 						{ key: 'vat', label: 'CUIT', value: fieldValue('vat') },
 						{ key: 'phone', label: 'Teléfono', value: fieldValue('phone') },
 						{ key: 'email', label: 'Email', value: fieldValue('email') },
