@@ -115,6 +115,11 @@ describe("shell UI contracts", () => {
     assert.match(page, /getRecordList\(odooSessionId,\s*listKey/);
     assert.match(page, /<RecordTable/);
     assert.match(page, /<ListToolbar/);
+    const toolbar = await source("components/ListToolbar.astro");
+    assert.match(toolbar, /showJump/);
+    assert.match(toolbar, /\+10/);
+    assert.match(toolbar, /−10/);
+    assert.match(toolbar, /Avanzar 10 páginas/);
     assert.match(page, /Sin resultados/);
     assert.match(page, /active=\{def\.railApp\}/);
   });

@@ -11,6 +11,9 @@ const { action, q, page, pageSize, total } = Astro.props;
 const totalPages = Math.max(1, Math.ceil(total / pageSize));
 const prev = page > 1 ? page - 1 : null;
 const next = page < totalPages ? page + 1 : null;
+const showJump = totalPages > 10;
+const jumpBack = showJump && page > 1 ? Math.max(1, page - 10) : null;
+const jumpFwd = showJump && page < totalPages ? Math.min(totalPages, page + 10) : null;
 
 function hrefFor(p: number) {
 	const params = new URLSearchParams();
@@ -34,6 +37,14 @@ function hrefFor(p: number) {
 	</label>
 	<button class="sg-list-search-btn sg-focus-ring" type="submit">Buscar</button>
 	<nav class="sg-list-pager" aria-label="Paginación">
+		{showJump &&
+			(jumpBack ? (
+				<a class="sg-focus-ring" href={hrefFor(jumpBack)} aria-label="Retroceder 10 páginas">
+					−10
+				</a>
+			) : (
+				<span class="is-disabled" aria-disabled="true">−10</span>
+			))}
 		{prev ? (
 			<a class="sg-focus-ring" href={hrefFor(prev)}>← Anterior</a>
 		) : (
@@ -47,5 +58,13 @@ function hrefFor(p: number) {
 		) : (
 			<span class="is-disabled">Siguiente →</span>
 		)}
+		{showJump &&
+			(jumpFwd ? (
+				<a class="sg-focus-ring" href={hrefFor(jumpFwd)} aria-label="Avanzar 10 páginas">
+					+10
+				</a>
+			) : (
+				<span class="is-disabled" aria-disabled="true">+10</span>
+			))}
 	</nav>
 </form>
