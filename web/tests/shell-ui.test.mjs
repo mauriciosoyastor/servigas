@@ -67,6 +67,8 @@ describe("shell UI contracts", () => {
     assert.match(login, /servigas-mark\.png/);
     assert.match(login, /sg-login-brand-name/);
     assert.match(login, />Servigas</);
+    assert.match(login, /changed/);
+    assert.match(login, /Contraseña actualizada/);
   });
 
   it("protects and renders the launcher using tile navigation", async () => {
