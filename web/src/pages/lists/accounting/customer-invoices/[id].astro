@@ -1,8 +1,10 @@
 ---
 import RecordConfirmControl from '../../../../components/RecordConfirmControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordRegisterPaymentControl from '../../../../components/RecordRegisterPaymentControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+import { isPaymentRegisterableState } from '../../../../lib/shell/payment-registers.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
 
 const id = Number(Astro.params.id);
@@ -25,7 +27,10 @@ function fieldValue(key: string): string {
 }
 
 const state = fieldValue('state');
+const paymentState = fieldValue('payment_state');
+const residual = fieldValue('amount_residual');
 const showPublish = isConfirmableState('accounting/customer-invoices', state);
+const showPay = isPaymentRegisterableState(state, paymentState);
 ---
 
 <ShellLayout title={`${detail?.title || 'Factura'} | Servigas`} active="accounting" userName={userName}>
@@ -47,6 +52,17 @@ const showPublish = isConfirmableState('accounting/customer-invoices', state);
 				confirmMessage="¿Publicar esta factura de cliente?"
 				pendingLabel="Publicando…"
 				okLabel="Publicada"
+			/>
+		) : null}
+		{detail && !error && showPay ? (
+			<RecordRegisterPaymentControl
+				slot="secondary"
+				listKey="accounting/customer-invoices"
+				recordId={id}
+				apiPath="/api/records/accounting/customer-invoices"
+				defaultAmount={residual}
+				label="Registrar cobro"
+				directionLabel="cobro"
 			/>
 		) : null}
 	</RecordDetailBody>

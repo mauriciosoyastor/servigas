@@ -136,6 +136,57 @@
         </record>
 
         <!-- Cards — Clientes (cuentas por cobrar) -->
+        <record id="hub_card_acc_recv_overdue" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">receivables</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">5</field>
+            <field name="label">Vencidas por cobrar</field>
+            <field name="hint">FC con fecha de vencimiento pasada</field>
+            <field name="icon">fa-exclamation-triangle</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver vencidas →</field>
+            <field name="action_id" ref="account.action_move_out_invoice"/>
+            <field name="domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">overdue</field>
+        </record>
+        <record id="hub_card_acc_recv_due_today" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">receivables</field>
+            <field name="sequence">6</field>
+            <field name="label">Vence hoy por cobrar</field>
+            <field name="hint">FC que vencen hoy</field>
+            <field name="icon">fa-calendar-check-o</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver →</field>
+            <field name="action_id" ref="account.action_move_out_invoice"/>
+            <field name="domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">due_today</field>
+        </record>
+        <record id="hub_card_acc_recv_due_week" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">receivables</field>
+            <field name="sequence">7</field>
+            <field name="label">Vence esta semana por cobrar</field>
+            <field name="hint">FC con vencimiento en los próximos 7 días</field>
+            <field name="icon">fa-calendar</field>
+            <field name="enter_label">Ver →</field>
+            <field name="action_id" ref="account.action_move_out_invoice"/>
+            <field name="domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">due_week</field>
+        </record>
         <record id="hub_card_acc_recv_invoices" model="sg.hub.card">
             <field name="app">accounting</field>
             <field name="section">receivables</field>
@@ -195,6 +246,57 @@
         </record>
 
         <!-- Cards — Proveedores (cuentas por pagar) -->
+        <record id="hub_card_acc_pay_overdue" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">payables</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">5</field>
+            <field name="label">Vencidas por pagar</field>
+            <field name="hint">FP con fecha de vencimiento pasada</field>
+            <field name="icon">fa-exclamation-triangle</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver vencidas →</field>
+            <field name="action_id" ref="account.action_move_in_invoice"/>
+            <field name="domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">overdue</field>
+        </record>
+        <record id="hub_card_acc_pay_due_today" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">payables</field>
+            <field name="sequence">6</field>
+            <field name="label">Vence hoy por pagar</field>
+            <field name="hint">FP que vencen hoy</field>
+            <field name="icon">fa-calendar-check-o</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver →</field>
+            <field name="action_id" ref="account.action_move_in_invoice"/>
+            <field name="domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">due_today</field>
+        </record>
+        <record id="hub_card_acc_pay_due_week" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">payables</field>
+            <field name="sequence">7</field>
+            <field name="label">Vence esta semana por pagar</field>
+            <field name="hint">FP con vencimiento en los próximos 7 días</field>
+            <field name="icon">fa-calendar</field>
+            <field name="enter_label">Ver →</field>
+            <field name="action_id" ref="account.action_move_in_invoice"/>
+            <field name="domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'in_invoice'), ('state', '=', 'posted'), ('payment_state', 'in', ('not_paid', 'partial', 'in_payment'))]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="metric_date_field">invoice_date_due</field>
+            <field name="metric_date_scope">due_week</field>
+        </record>
         <record id="hub_card_acc_pay_bills" model="sg.hub.card">
             <field name="app">accounting</field>
             <field name="section">payables</field>

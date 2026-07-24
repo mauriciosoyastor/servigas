@@ -10,6 +10,7 @@ import { canConfirmRecord } from "../../../lib/shell/record-actions.ts";
 import { canCreateInvoice } from "../../../lib/shell/invoice-creates.ts";
 import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
+import { canRegisterPayment } from "../../../lib/shell/payment-registers.ts";
 import {
   canArchiveRecord,
   canCreateRecord,
@@ -21,7 +22,8 @@ type RecordAction =
   | "update"
   | "archive"
   | "confirm"
-  | "create_invoice";
+  | "create_invoice"
+  | "register_payment";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -51,9 +53,14 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     }
     if (
       body.action &&
-      !["create", "update", "archive", "confirm", "create_invoice"].includes(
-        body.action
-      )
+      ![
+        "create",
+        "update",
+        "archive",
+        "confirm",
+        "create_invoice",
+        "register_payment",
+      ].includes(body.action)
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
     }
@@ -63,6 +70,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       Boolean(writes) ||
       (action === "confirm" && canConfirmRecord(slug)) ||
       (action === "create_invoice" && canCreateInvoiceFromOrder(slug)) ||
+      (action === "register_payment" && canRegisterPayment(slug)) ||
       (action === "create" &&
         (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
@@ -113,6 +121,19 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         odooSessionId,
         slug,
         id
+      );
+      return json(result);
+    }
+
+    if (action === "register_payment") {
+      if (!canRegisterPayment(slug)) {
+        throw new BffError("not_found", 404, "Pago no permitido");
+      }
+      const result = await getBackend().registerPayment(
+        odooSessionId,
+        slug,
+        id,
+        values
       );
       return json(result);
     }
