@@ -1,0 +1,61 @@
+---
+import type { HubSection } from '../lib/bff/types.ts';
+
+interface Props {
+	app: string;
+	sections: HubSection[];
+	active: string;
+}
+
+const { app, sections, active } = Astro.props;
+---
+
+{sections.length > 1 ? (
+	<nav class="sg-hub-subnav" aria-label="Secciones">
+		<div class="sg-hub-subnav-track" role="tablist">
+			{sections.map((section) => {
+				const href =
+					section.code === 'summary'
+						? `/hubs/${app}`
+						: `/hubs/${app}?section=${encodeURIComponent(section.code)}`;
+				const isActive = section.code === active;
+				return (
+					<a
+						class:list={['sg-hub-subnav-pill', 'sg-focus-ring', { 'is-active': isActive }]}
+						href={href}
+						role="tab"
+						aria-selected={isActive ? 'true' : 'false'}
+					>
+						{section.name}
+					</a>
+				);
+			})}
+		</div>
+	</nav>
+) : null}
+
+<style>
+	.sg-hub-subnav {
+		margin: 0 0 1.5rem;
+	}
+	.sg-hub-subnav-track {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+	}
+	.sg-hub-subnav-pill {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: var(--sg-text-muted-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.78rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-hub-subnav-pill.is-active {
+		color: var(--sg-text-on-dark);
+		border-color: color-mix(in srgb, var(--sg-flame-orange), white 20%);
+		background: color-mix(in srgb, var(--sg-flame-orange) 28%, transparent);
+	}
+</style>

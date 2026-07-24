@@ -1,0 +1,147 @@
+---
+interface FieldDef {
+	key: string;
+	label: string;
+	value: string;
+}
+
+interface Props {
+	listKey: string;
+	recordId: number;
+	fields: FieldDef[];
+	apiPath: string;
+}
+
+const { listKey, recordId, fields, apiPath } = Astro.props;
+---
+
+<section class="sg-record-edit sg-glass" data-record-edit data-list-key={listKey}>
+	<strong>Editar</strong>
+	<p>Los cambios se guardan al tocar Guardar.</p>
+	<form class="sg-record-edit-form" data-record-edit-form>
+		<input type="hidden" name="id" value={String(recordId)} />
+		{fields.map((field) => (
+			<label>
+				<span>{field.label}</span>
+				<input
+					class="sg-focus-ring"
+					type={field.key === 'email' ? 'email' : 'text'}
+					name={field.key}
+					value={field.value}
+					autocomplete="off"
+				/>
+			</label>
+		))}
+		<div class="sg-record-edit-actions">
+			<button class="sg-focus-ring" type="submit">Guardar</button>
+			<span class="sg-record-edit-status" data-record-edit-status hidden></span>
+		</div>
+	</form>
+</section>
+
+<script define:vars={{ apiPath }}>
+	const root = document.querySelector('[data-record-edit]');
+	const form = root?.querySelector('[data-record-edit-form]');
+	const status = root?.querySelector('[data-record-edit-status]');
+	if (!(form instanceof HTMLFormElement) || !(status instanceof HTMLElement)) {
+		// no-op
+	} else {
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			status.hidden = false;
+			status.textContent = 'Guardando…';
+			status.dataset.state = 'pending';
+
+			const data = new FormData(form);
+			const id = Number(data.get('id'));
+			const values = {};
+			for (const [key, value] of data.entries()) {
+				if (key === 'id') continue;
+				values[key] = String(value);
+			}
+
+			try {
+				const response = await fetch(apiPath, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ id, values }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo guardar');
+				}
+				status.textContent = 'Guardado';
+				status.dataset.state = 'ok';
+				window.setTimeout(() => window.location.reload(), 400);
+			} catch (error) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo guardar';
+				status.dataset.state = 'error';
+			}
+		});
+	}
+</script>
+
+<style>
+	.sg-record-edit {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 1.25rem;
+		border-radius: var(--sg-radius-card);
+		padding: 1.2rem;
+	}
+	.sg-record-edit p {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.82rem;
+		line-height: 1.45;
+	}
+	.sg-record-edit-form {
+		display: grid;
+		gap: 0.85rem;
+		margin-top: 0.35rem;
+	}
+	.sg-record-edit-form label {
+		display: grid;
+		gap: 0.35rem;
+	}
+	.sg-record-edit-form span {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-edit-form input {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font: inherit;
+	}
+	.sg-record-edit-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+	}
+	.sg-record-edit-actions button {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.6rem 1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.85rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-record-edit-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-record-edit-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-record-edit-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

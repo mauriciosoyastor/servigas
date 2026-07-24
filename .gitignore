@@ -5,14 +5,16 @@ __pycache__/
 
 # Odoo local config (never commit secrets)
 odoo.conf
+!docker/odoo.conf
 *.sql
 *.dump
 
-# Node / frontends
-node_modules/
-dist/
-.astro/
-.vite/
+# Playwright
+e2e/node_modules/
+e2e/test-results/
+e2e/playwright-report/
+e2e/blob-report/
+e2e/playwright/.cache/
 
 # Environment variables
 .env
@@ -28,6 +30,17 @@ Thumbs.db
 
 # Build caches
 *.tsbuildinfo
+
+# Brainstorm / agent local artifacts
+.superpowers/
+
+# Git worktrees (local checkouts)
+.worktrees/
+
+# Node (web / Astro)
+node_modules/
+dist/
+.astro/
 
 # Import: imágenes descargadas y caché web (regenerables)
 datos/import/imagenes/*.webp

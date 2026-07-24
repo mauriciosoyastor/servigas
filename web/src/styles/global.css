@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "./tokens.css";
+@import "./shell.css";
+@import "./list.css";
+@import "./onboarding.css";
 
 @theme {
 	--font-sans: "Montserrat", "Segoe UI", system-ui, sans-serif;
@@ -15,22 +19,4 @@
 
 	--radius-sg-card: 12px;
 	--radius-sg-pill: 999px;
-}
-
-:root {
-	--sg-glass-fill: rgba(255, 255, 255, 0.55);
-	--sg-glass-fill-strong: rgba(255, 255, 255, 0.72);
-	--sg-glass-border: rgba(230, 74, 25, 0.12);
-	--sg-glass-rim: inset 0 1px 0 rgba(255, 255, 255, 0.6);
-	--sg-glass-blur: 16px;
-}
-
-@media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-	}
 }

@@ -1,0 +1,28 @@
+---
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'accounting/payments',
+	id,
+	'No encontramos este pago.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+---
+
+<ShellLayout title={`${detail?.title || 'Pago'} | Servigas`} active="accounting" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha de pago"
+		fallbackTitle="Pago"
+		fallbackListPath="/lists/accounting/payments"
+	/>
+</ShellLayout>

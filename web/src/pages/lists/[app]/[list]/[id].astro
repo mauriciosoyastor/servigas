@@ -1,0 +1,55 @@
+---
+/**
+ * Generic read-only detail for allowlisted lists under /lists/:app/:list/:id
+ * More specific pages (e.g. inventory/products/[id]) take precedence.
+ */
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import {
+	getRecordListDef,
+	resolveRecordListKey,
+} from '../../../../lib/shell/record-lists.ts';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const app = String(Astro.params.app || '');
+const list = String(Astro.params.list || '');
+const rawListKey = `${app}/${list}`;
+const resolvedKey = resolveRecordListKey(rawListKey);
+if (resolvedKey && resolvedKey !== rawListKey) {
+	return Astro.redirect(
+		`/lists/${resolvedKey}/${Astro.params.id || ''}${Astro.url.search}`
+	);
+}
+
+const listKey = resolvedKey || rawListKey;
+const def = getRecordListDef(listKey);
+const listSegment = listKey.split('/')[1] || list;
+
+if (!def?.detailPath || !def.detailPath.includes(`/${listSegment}/:id`)) {
+	return Astro.redirect(def?.path || '/');
+}
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	listKey,
+	id,
+	'No encontramos este registro.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+const active = def.railApp;
+---
+
+<ShellLayout title={`${detail?.title || def.title} | Servigas`} active={active} userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow={`Ficha — ${def.title}`}
+		fallbackTitle={def.title}
+		fallbackListPath={def.path}
+	/>
+</ShellLayout>

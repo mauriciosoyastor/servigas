@@ -151,7 +151,7 @@ class SgHubCard(models.Model):
             "view_mode": action.view_mode,
             "domain": self._eval_domain(self.domain),
             "context": merged_context,
-            "target": "current",
+            "target": action.target or "current",
         }
         if action.views:
             payload["views"] = action.views

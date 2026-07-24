@@ -1,0 +1,32 @@
+---
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordNotes from '../../../../components/RecordNotes.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'sales/orders',
+	id,
+	'No encontramos este pedido.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+---
+
+<ShellLayout title={`${detail?.title || 'Pedido'} | Servigas`} active="sales" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha de pedido"
+		fallbackTitle="Pedido"
+		fallbackListPath="/lists/sales/orders"
+	/>
+	{detail && !error ? (
+		<RecordNotes listKey="sales/orders" recordId={id} />
+	) : null}
+</ShellLayout>

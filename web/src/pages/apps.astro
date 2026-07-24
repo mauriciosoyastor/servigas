@@ -1,0 +1,81 @@
+---
+import ShellLayout from '../layouts/ShellLayout.astro';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
+
+let userName = '';
+try {
+	const { session } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Aplicaciones | Servigas" active="home" userName={userName}>
+	<main class="sg-landing">
+		<header>
+			<p>Inicio</p>
+			<h1>Aplicaciones</h1>
+			<p class="sg-landing-lead">
+				Esta pantalla todavía no está disponible. Las apps de Servigas están en el inicio y en
+				Inventario, Ventas, Compras y Contabilidad.
+			</p>
+		</header>
+		<section class="sg-landing-card sg-glass">
+			<strong>Centro de operaciones</strong>
+			<p>Inventario, ventas, compras, facturación e integraciones.</p>
+			<a class="sg-landing-cta sg-focus-ring" href="/">Ir al inicio →</a>
+		</section>
+	</main>
+</ShellLayout>
+
+<style>
+	.sg-landing {
+		max-width: 42rem;
+		margin: 0 auto;
+	}
+	.sg-landing p {
+		margin: 0 0 0.5rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-landing h1 {
+		margin: 0 0 0.75rem;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		font-weight: 600;
+		letter-spacing: -0.045em;
+		line-height: 1.05;
+	}
+	.sg-landing-lead {
+		font-size: 0.95rem !important;
+		font-weight: 400 !important;
+		line-height: 1.55;
+	}
+	.sg-landing-card {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 1.75rem;
+		border-radius: var(--sg-radius-card);
+		padding: 1.35rem;
+	}
+	.sg-landing-card p {
+		margin: 0;
+		font-size: 0.9rem;
+		font-weight: 400;
+		line-height: 1.5;
+	}
+	.sg-landing-cta {
+		justify-self: start;
+		margin-top: 0.35rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.65rem 1rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.85rem;
+		font-weight: 650;
+		text-decoration: none;
+	}
+</style>

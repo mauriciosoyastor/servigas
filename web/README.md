@@ -1,43 +1,109 @@
-# Astro Starter Kit: Minimal
+# Servigas Astro BFF Shell
 
-```sh
-npm create astro@latest -- --template minimal
-```
-
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
-
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
+Spike experimental de un shell operativo Astro 7 con SSR y BFF. Implementa
+login, launcher, rail y un hub de inventario contra Odoo 19 sin exponer la
+sesión de Odoo al navegador.
 
 ```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+Browser → Astro BFF → BackendClient → OdooAdapter → Odoo
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+`web/` es el **shell operativo oficial** tras el **corte autorizado
+(condicional)** de ADR 0016 (2026-07-23). OWL queda como fallback. Deuda
+pre-prod: smoke real contra Odoo (`npm run smoke:shell`).
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Requisitos
 
-Any static assets, like images, can be placed in the `public/` directory.
+- Node.js 22.12 o posterior.
+- Odoo de desarrollo accesible, con los modelos `sg.app.tile` y `sg.hub.card`.
+- Una base con un usuario válido; en Servigas se usa `servigas_dev`.
 
-## 🧞 Commands
+## Ejecutar el spike
 
-All commands are run from the root of the project, from a terminal:
+Desde `web/`:
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+```powershell
+npm install
+@"
+ODOO_URL=http://127.0.0.1:8069
+ODOO_DB=servigas_dev
+"@ | Set-Content .env
+npm test
+npm run astro -- dev --background
+```
 
-## 👀 Want to learn more?
+Abrir `http://localhost:4321`, iniciar sesión con un usuario de Odoo y recorrer
+Inicio → hubs Inventario / Ventas / Compras / Contabilidad → cards de resumen
+abren listas nativas Astro (allowlist BFF: productos, stock, pedidos, clientes,
+OC, facturas, pagos, integraciones, etc.). Detalle de producto en
+`/lists/inventory/products/:id`. Para administrar el servidor en segundo plano:
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```powershell
+npm run astro -- dev status
+npm run astro -- dev logs
+npm run astro -- dev stop
+```
+
+Verificación sin levantar el servidor:
+
+```powershell
+npm test
+npm run build
+```
+
+No commitear `.env` ni credenciales. `ODOO_URL` y `ODOO_DB` se leen solo en el
+servidor desde `src/lib/bff/get-backend.ts`.
+
+## Qué es reutilizable
+
+- `src/lib/bff/backend-client.ts`: puerto neutral para autenticación, sesión,
+  launcher y hubs.
+- `src/lib/bff/errors.ts` y `http.ts`: errores y respuestas seguras del BFF.
+- `src/lib/bff/session-store.ts`: forma de asociar una cookie BFF opaca con la
+  sesión upstream. Su implementación en memoria es solo para el spike.
+- `src/pages/api/`: forma de las rutas de auth, launcher y hub.
+- `src/lib/shell/`, layouts y componentes: responsabilidades de navegación y
+  presentación, una vez removidos nombres y estilos propios del proyecto.
+
+## Qué pertenece a Odoo o Servigas
+
+- `src/lib/bff/odoo-adapter.ts`: JSON-RPC, cookie `session_id`, modelos
+  `sg.app.tile` / `sg.hub.card` y métodos Odoo.
+- `src/lib/bff/get-backend.ts`: factory actual configurada con
+  `ODOO_URL` / `ODOO_DB`.
+- Contratos y mappings con campos, apps o `client_tag` de Servigas.
+- Tokens `--sg-*`, marca, copy, iconos y apariencia Liquid Glass.
+
+Para otro backend, conservar `BackendClient` y reemplazar `OdooAdapter` y su
+factory. El sistema visual también es pluggable: mantener los límites de
+`ShellLayout`, rail, tile, card y estados, pero inyectar tokens y estilos del
+nuevo producto.
+
+Sesiones BFF: por defecto `FileSessionStore` (JSON bajo `.data/bff-sessions`,
+TTL 12h absoluto). En tests usa memoria (`NODE_ENV=test`). Vars:
+`BFF_SESSION_STORE`, `BFF_SESSION_TTL_SECONDS`, `BFF_SESSION_DIR`. Redis queda
+para multi-instancia.
+
+Timeout / logout: cada RPC a Odoo usa `ODOO_RPC_TIMEOUT_MS` (default 15s).
+`GET /api/auth/session` revalida contra Odoo; si la sesión murió, el BFF borra
+la cookie local. Los 401 `unauthorized` en APIs también invalidan la sesión BFF.
+Errores al cliente usan códigos fijos (`checkout_failed`, `action_failed`, …)
+sin filtrar mensajes crudos de Odoo.
+
+Smoke camino feliz (requiere Astro + Odoo). Por default solo GET
+(login → launcher → hubs → productos → cotizaciones/RFQ → catálogo POS → `/pos`).
+Checkout real opcional con `SMOKE_MUTATE=1`:
+
+```powershell
+npm run smoke:shell
+$env:SMOKE_MUTATE=1; npm run smoke:shell
+```
+
+También: `SMOKE_BASE_URL`, `SMOKE_LOGIN`, `SMOKE_PASSWORD`.
+
+## Referencias
+
+- [Diseño aprobado](../docs/superpowers/specs/2026-07-22-astro-bff-shell-design.md)
+- [Plan del spike](../docs/superpowers/plans/2026-07-22-astro-bff-shell-spike.md)
+- Skill personal: `C:/Users/mauri/.agents/skills/astro-bff-shell/SKILL.md`
+- Checklist reusable: `C:/Users/mauri/.agents/skills/astro-bff-shell/checklist.md`

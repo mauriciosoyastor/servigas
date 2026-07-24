@@ -3,9 +3,13 @@ import '../styles/global.css';
 
 interface Props {
 	title?: string;
+	bodyClass?: string;
 }
 
-const { title = 'Servigas' } = Astro.props;
+const {
+	title = 'Servigas',
+	bodyClass = 'min-h-dvh bg-sg-paper font-sans text-sg-text antialiased',
+} = Astro.props;
 ---
 
 <!doctype html>
@@ -24,7 +28,7 @@ const { title = 'Servigas' } = Astro.props;
 		/>
 		<title>{title}</title>
 	</head>
-	<body class="min-h-dvh bg-sg-paper font-sans text-sg-text antialiased">
+	<body class={bodyClass}>
 		<slot />
 	</body>
 </html>

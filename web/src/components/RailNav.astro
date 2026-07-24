@@ -1,0 +1,136 @@
+---
+interface Props {
+	active?: string;
+}
+
+const { active = 'home' } = Astro.props;
+const items = [
+	{ href: '/', label: 'Inicio', app: 'home', icon: 'M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z' },
+	{ href: '/hubs/inventory', label: 'Inventario', app: 'inventory', icon: 'm4 7 8-4 8 4-8 4zm0 4 8 4 8-4M4 15l8 4 8-4' },
+	{ href: '/hubs/sales', label: 'Ventas', app: 'sales', icon: 'M5 6h16l-2 8H8L5 3H2m7 16h.01M18 19h.01' },
+	{ href: '/hubs/purchase', label: 'Compras', app: 'purchase', icon: 'M6 8h12l1 12H5zm3 0V6a3 3 0 0 1 6 0v2' },
+	{ href: '/hubs/accounting', label: 'Contabilidad', app: 'accounting', icon: 'M4 19V9m5 10V5m6 14v-7m5 7V3' },
+];
+---
+
+<aside class="sg-rail sg-glass" aria-label="Navegación principal">
+	<a
+		class="sg-brand sg-focus-ring"
+		href="/"
+		aria-label="Servigas, inicio"
+		data-tour="rail-home"
+	>
+		<img
+			class="sg-brand-logo"
+			src="/servigas-logo.png?v=1"
+			alt=""
+			width="72"
+			height="72"
+			decoding="async"
+		/>
+	</a>
+
+	<nav class="sg-rail-nav">
+		{items.map((item) => (
+			<a
+				href={item.href}
+				class:list={['sg-rail-link', 'sg-focus-ring', { 'is-active': active === item.app }]}
+				aria-current={active === item.app ? 'page' : undefined}
+				title={item.label}
+				data-tour={`rail-${item.app}`}
+			>
+				<svg viewBox="0 0 24 24" aria-hidden="true">
+					<path d={item.icon}></path>
+				</svg>
+				<span>{item.label}</span>
+			</a>
+		))}
+	</nav>
+</aside>
+
+<style>
+	.sg-rail {
+		position: fixed;
+		z-index: 20;
+		inset: 1rem auto 1rem 1rem;
+		display: flex;
+		width: 5.25rem;
+		flex-direction: column;
+		align-items: center;
+		border-radius: 1.75rem;
+		padding: 1rem 0.65rem;
+	}
+	.sg-brand {
+		display: grid;
+		justify-items: center;
+		color: white;
+		text-decoration: none;
+	}
+	.sg-brand-logo {
+		display: block;
+		width: 4.5rem;
+		height: auto;
+		object-fit: contain;
+	}
+	.sg-rail-nav {
+		display: grid;
+		width: 100%;
+		gap: 0.45rem;
+		margin-top: auto;
+		margin-bottom: auto;
+	}
+	.sg-rail-link {
+		display: grid;
+		justify-items: center;
+		gap: 0.25rem;
+		border-radius: 1rem;
+		padding: 0.75rem 0.2rem;
+		color: var(--sg-text-muted-dark);
+		text-decoration: none;
+		transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
+	}
+	.sg-rail-link:hover {
+		color: white;
+		background: rgba(255, 255, 255, 0.08);
+		transform: translateY(-1px);
+	}
+	.sg-rail-link.is-active {
+		color: white;
+		background: var(--sg-glass-fill-strong);
+		box-shadow: inset 3px 0 var(--sg-flame-orange);
+	}
+	.sg-rail-link svg {
+		width: 1.25rem;
+		fill: none;
+		stroke: currentColor;
+		stroke-linecap: round;
+		stroke-linejoin: round;
+		stroke-width: 1.8;
+	}
+	.sg-rail-link span {
+		font-size: 0.58rem;
+		font-weight: 500;
+	}
+	@media (max-width: 720px) {
+		.sg-rail {
+			inset: auto 0.75rem 0.75rem;
+			width: auto;
+			flex-direction: row;
+			border-radius: 1.25rem;
+			padding: 0.45rem;
+		}
+		.sg-brand {
+			display: none;
+		}
+		.sg-rail-nav {
+			grid-template-columns: repeat(5, 1fr);
+			margin: 0;
+		}
+		.sg-rail-link {
+			padding: 0.55rem 0.1rem;
+		}
+		.sg-rail-link.is-active {
+			box-shadow: inset 0 -3px var(--sg-flame-orange);
+		}
+	}
+</style>

@@ -1,0 +1,198 @@
+---
+import type { RecordDetailPayload } from '../lib/bff/types.ts';
+
+interface Props {
+	detail: RecordDetailPayload | null;
+	error: string;
+	eyebrow: string;
+	fallbackTitle: string;
+	fallbackListPath: string;
+	imageUploadApiPath?: string;
+	recordId?: number;
+}
+
+const {
+	detail,
+	error,
+	eyebrow,
+	fallbackTitle,
+	fallbackListPath,
+	imageUploadApiPath = '',
+	recordId,
+} = Astro.props;
+---
+
+<main class="sg-list-page">
+	<header class="sg-list-heading">
+		<div>
+			<p>{eyebrow}</p>
+			<h1>{detail?.title || fallbackTitle}</h1>
+		</div>
+		<div class="sg-list-heading-meta">
+			<a class="sg-list-back sg-focus-ring" href={detail?.listPath || fallbackListPath}>
+				← Volver al listado
+			</a>
+		</div>
+	</header>
+
+	{error ? (
+		<section class="sg-list-state sg-glass" role="alert">
+			<strong>No se pudo abrir la ficha</strong>
+			<p>{error}</p>
+		</section>
+	) : detail ? (
+		<section class="sg-detail sg-glass">
+			{detail.imageUrl || (detail.imageUrl === null && detail.key.startsWith('inventory/')) ? (
+				<div class="sg-detail-photo-wrap">
+					{detail.imageUrl ? (
+						<img
+							class="sg-detail-photo"
+							src={detail.imageUrl}
+							alt=""
+							data-product-detail-photo
+						/>
+					) : (
+						<div
+							class="sg-detail-photo sg-detail-photo--empty"
+							data-product-detail-photo
+						>
+							Sin foto
+						</div>
+					)}
+					{imageUploadApiPath && recordId ? (
+						<button
+							type="button"
+							class="sg-detail-photo-upload sg-focus-ring"
+							data-product-image-trigger
+							data-record-id={String(recordId)}
+							data-api-path={imageUploadApiPath}
+							data-image-target="[data-product-detail-photo]"
+							aria-label={detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}
+						>
+							<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+								<path
+									fill="currentColor"
+									d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
+								/>
+							</svg>
+							<span>{detail.imageUrl ? 'Cambiar foto' : 'Agregar foto'}</span>
+						</button>
+					) : null}
+				</div>
+			) : null}
+			<dl class="sg-detail-fields">
+				{detail.fields.map((field) => (
+					<div>
+						<dt>{field.label}</dt>
+						<dd>
+							{typeof field.value === 'boolean'
+								? field.value
+									? 'Sí'
+									: 'No'
+								: field.value === null || field.value === ''
+									? '—'
+									: String(field.value)}
+						</dd>
+					</div>
+				))}
+			</dl>
+			{detail.lines ? (
+				<section class="sg-detail-lines" aria-label={detail.lines.title}>
+					<strong>{detail.lines.title}</strong>
+					{detail.lines.rows.length ? (
+						<table class="sg-record-table">
+							<thead>
+								<tr>
+									{detail.lines.columns.map((column) => (
+										<th scope="col">{column.label}</th>
+									))}
+								</tr>
+							</thead>
+							<tbody>
+								{detail.lines.rows.map((row) => (
+									<tr>
+										{detail.lines!.columns.map((column) => (
+											<td>
+												{row[column.key] === null || row[column.key] === ''
+													? '—'
+													: String(row[column.key])}
+											</td>
+										))}
+									</tr>
+								))}
+							</tbody>
+						</table>
+					) : (
+						<p class="sg-detail-lines-empty">Sin líneas</p>
+					)}
+				</section>
+			) : null}
+		</section>
+	) : null}
+</main>
+
+<style>
+	.sg-list-page {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-list-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.5rem;
+		flex-wrap: wrap;
+	}
+	.sg-list-heading p {
+		margin: 0 0 0.5rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-list-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		font-weight: 600;
+		letter-spacing: -0.045em;
+		line-height: 1.05;
+	}
+	.sg-list-heading-meta {
+		display: flex;
+		gap: 0.75rem;
+	}
+	.sg-list-back {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.8rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-list-state {
+		border-radius: var(--sg-radius-card);
+		padding: 2rem;
+	}
+	.sg-detail {
+		display: grid;
+		gap: 1.25rem;
+		border-radius: var(--sg-radius-card);
+		padding: 1.25rem;
+	}
+	.sg-detail-lines {
+		display: grid;
+		gap: 0.75rem;
+		padding-top: 0.5rem;
+		border-top: 1px solid var(--sg-glass-border);
+	}
+	.sg-detail-lines strong {
+		font-size: 0.95rem;
+	}
+	.sg-detail-lines-empty {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.85rem;
+	}
+</style>

@@ -1,0 +1,61 @@
+---
+import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordEditForm from '../../../../components/RecordEditForm.astro';
+import RecordNotes from '../../../../components/RecordNotes.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'sales/customers',
+	id,
+	'No encontramos este cliente.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined) return '';
+	return String(hit.value);
+}
+---
+
+<ShellLayout title={`${detail?.title || 'Cliente'} | Servigas`} active="sales" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha de cliente"
+		fallbackTitle="Cliente"
+		fallbackListPath="/lists/sales/customers"
+	/>
+	{detail && !error ? (
+		<>
+			<RecordEditForm
+				listKey="sales/customers"
+				recordId={id}
+				apiPath="/api/records/sales/customers"
+				fields={[
+					{ key: 'vat', label: 'CUIT', value: fieldValue('vat') },
+					{ key: 'phone', label: 'Teléfono', value: fieldValue('phone') },
+					{ key: 'email', label: 'Email', value: fieldValue('email') },
+					{ key: 'street', label: 'Calle', value: fieldValue('street') },
+					{ key: 'city', label: 'Ciudad', value: fieldValue('city') },
+				]}
+			/>
+			<RecordArchiveControl
+				listKey="sales/customers"
+				recordId={id}
+				apiPath="/api/records/sales/customers"
+				listPath="/lists/sales/customers"
+				label="Archivar cliente"
+			/>
+			<RecordNotes listKey="sales/customers" recordId={id} />
+		</>
+	) : null}
+</ShellLayout>

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <!-- Facturación → Resumen -->
+        <record id="hub_card_acc_summary_factura_web" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">55</field>
+            <field name="accent_key">bg-charcoal</field>
+            <field name="label">Factura Web</field>
+            <field name="hint">Puente manual de facturación fiscal</field>
+            <field name="icon">fa-exchange</field>
+            <field name="enter_label">Ver procedimiento →</field>
+            <field name="action_id" ref="action_servigas_integrations_factura_web"/>
+            <field name="metric_model">servigas.integration</field>
+            <field name="metric_domain">[('integration_type', '=', 'factura_web'), ('status', '=', 'active')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <!-- Compras → Resumen -->
+        <record id="hub_card_purchase_summary_supplier_portals" model="sg.hub.card">
+            <field name="app">purchase</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">55</field>
+            <field name="accent_key">bg-charcoal</field>
+            <field name="label">Portales proveedores</field>
+            <field name="hint">Sync manual con marcas de repuestos</field>
+            <field name="icon">fa-cloud-download</field>
+            <field name="enter_label">Ver portales →</field>
+            <field name="action_id" ref="action_servigas_integrations_supplier_portals"/>
+            <field name="metric_model">servigas.integration</field>
+            <field name="metric_domain">[('integration_type', '=', 'supplier_portal'), ('status', '=', 'active')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+    </data>
+</odoo>

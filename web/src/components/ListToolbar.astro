@@ -1,0 +1,51 @@
+---
+interface Props {
+	action: string;
+	q: string;
+	page: number;
+	pageSize: number;
+	total: number;
+}
+
+const { action, q, page, pageSize, total } = Astro.props;
+const totalPages = Math.max(1, Math.ceil(total / pageSize));
+const prev = page > 1 ? page - 1 : null;
+const next = page < totalPages ? page + 1 : null;
+
+function hrefFor(p: number) {
+	const params = new URLSearchParams();
+	if (q) params.set('q', q);
+	if (p > 1) params.set('page', String(p));
+	const qs = params.toString();
+	return qs ? `${action}?${qs}` : action;
+}
+---
+
+<form class="sg-list-toolbar" method="get" action={action}>
+	<label class="sg-list-search">
+		<span class="sr-only">Buscar</span>
+		<input
+			class="sg-focus-ring"
+			type="search"
+			name="q"
+			value={q}
+			placeholder="Buscar por nombre o referencia…"
+		/>
+	</label>
+	<button class="sg-list-search-btn sg-focus-ring" type="submit">Buscar</button>
+	<nav class="sg-list-pager" aria-label="Paginación">
+		{prev ? (
+			<a class="sg-focus-ring" href={hrefFor(prev)}>← Anterior</a>
+		) : (
+			<span class="is-disabled">← Anterior</span>
+		)}
+		<span>
+			Página {page} de {totalPages}
+		</span>
+		{next ? (
+			<a class="sg-focus-ring" href={hrefFor(next)}>Siguiente →</a>
+		) : (
+			<span class="is-disabled">Siguiente →</span>
+		)}
+	</nav>
+</form>

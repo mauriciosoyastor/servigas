@@ -1,0 +1,47 @@
+html {
+	background: var(--sg-bg-deep);
+}
+
+body {
+	margin: 0;
+	min-width: 320px;
+	font-family: var(--sg-font-family);
+}
+
+button,
+input {
+	font: inherit;
+}
+
+.sg-shell-canvas {
+	min-height: 100dvh;
+	color: var(--sg-text-on-dark);
+	background:
+		radial-gradient(circle at 72% 12%, rgba(245, 124, 0, 0.2), transparent 30rem),
+		radial-gradient(circle at 25% 90%, rgba(230, 74, 25, 0.1), transparent 26rem),
+		linear-gradient(145deg, #303030, var(--sg-bg-deep) 58%);
+}
+
+.sg-glass {
+	border: 1px solid var(--sg-glass-border);
+	background: var(--sg-glass-fill);
+	box-shadow: var(--sg-glass-rim);
+	backdrop-filter: blur(var(--sg-glass-blur));
+	-webkit-backdrop-filter: blur(var(--sg-glass-blur));
+}
+
+.sg-focus-ring:focus-visible {
+	outline: 3px solid color-mix(in srgb, var(--sg-flame-yellow), transparent 25%);
+	outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		scroll-behavior: auto !important;
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}
