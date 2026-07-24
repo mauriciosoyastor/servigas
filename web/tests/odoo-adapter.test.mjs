@@ -782,6 +782,12 @@ describe("OdooAdapter.checkoutPosCart", () => {
         return Response.json({ result: true });
       }
       if (model === "pos.order" && method === "read") {
+        const fields = body?.params?.args?.[1] || [];
+        if (Array.isArray(fields) && fields.includes("amount_total")) {
+          return Response.json({
+            result: [{ id: 55, amount_total: 217.8, amount_tax: 37.8 }],
+          });
+        }
         return Response.json({
           result: [{ id: 55, name: "Mostrador Servigas - 000099" }],
         });
@@ -825,6 +831,7 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(createCall.params.args[0].lines[0][2].discount, 10);
     assert.equal(createCall.params.args[0].lines[0][2].price_subtotal, 180);
     assert.equal(createCall.params.args[0].lines[0][2].price_subtotal_incl, 217.8);
+    assert.deepEqual(createCall.params.args[0].lines[0][2].tax_ids, [[6, 0, [3]]]);
     assert.equal(createCall.params.args[0].amount_tax, 37.8);
     assert.equal(createCall.params.args[0].amount_total, 217.8);
     const writeCall = bodies.find(
@@ -939,6 +946,12 @@ describe("OdooAdapter.checkoutPosCart", () => {
         return Response.json({ result: true });
       }
       if (model === "pos.order" && method === "read") {
+        const fields = body?.params?.args?.[1] || [];
+        if (Array.isArray(fields) && fields.includes("amount_total")) {
+          return Response.json({
+            result: [{ id: 56, amount_total: 50, amount_tax: 0 }],
+          });
+        }
         return Response.json({
           result: [{ id: 56, name: "Mostrador - 000100" }],
         });

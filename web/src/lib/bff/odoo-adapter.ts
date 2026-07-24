@@ -1183,12 +1183,16 @@ export class OdooAdapter implements BackendClient {
       if (cause instanceof BffError && cause.code === "checkout_failed") {
         throw cause;
       }
+      const detail =
+        cause instanceof BffError
+          ? cause.message
+          : cause instanceof Error
+            ? cause.message
+            : String(cause || "");
       throw new BffError(
         "checkout_failed",
         503,
-        cause instanceof BffError
-          ? cause.message
-          : "No se pudo registrar la venta en caja"
+        detail || "No se pudo registrar la venta en caja"
       );
     }
   }
@@ -1259,10 +1263,15 @@ export class OdooAdapter implements BackendClient {
     odooSessionId: string,
     productIds: number[],
     productRows?: Record<string, unknown>[]
-  ): Promise<Map<number, { taxRate: number; priceIncludesTax: boolean }>> {
+  ): Promise<
+    Map<
+      number,
+      { taxRate: number; priceIncludesTax: boolean; taxIds: number[] }
+    >
+  > {
     const result = new Map<
       number,
-      { taxRate: number; priceIncludesTax: boolean }
+      { taxRate: number; priceIncludesTax: boolean; taxIds: number[] }
     >();
     const ids = [...new Set(productIds.filter((id) => id > 0))];
     if (!ids.length) return result;
@@ -1318,14 +1327,17 @@ export class OdooAdapter implements BackendClient {
     for (const row of rows) {
       const productId = Number(row.id);
       const raw = Array.isArray(row.taxes_id) ? row.taxes_id : [];
-      const taxes = raw
-        .map((taxId) => taxById.get(Number(taxId)))
+      const lineTaxIds = raw
+        .map((taxId) => Number(taxId))
+        .filter((taxId) => taxId > 0 && taxById.has(taxId));
+      const taxes = lineTaxIds
+        .map((taxId) => taxById.get(taxId))
         .filter(Boolean) as {
         amount?: number;
         amount_type?: string;
         price_include?: boolean;
       }[];
-      result.set(productId, summarizeTaxes(taxes));
+      result.set(productId, { ...summarizeTaxes(taxes), taxIds: lineTaxIds });
     }
     return result;
   }
@@ -1354,9 +1366,10 @@ export class OdooAdapter implements BackendClient {
       const tax = taxByProduct.get(line.productId) || {
         taxRate: 0,
         priceIncludesTax: false,
+        taxIds: [] as number[],
       };
       const amounts = splitAmount(base, tax.taxRate, tax.priceIncludesTax);
-      return { line, ...amounts };
+      return { line, taxIds: tax.taxIds, ...amounts };
     });
 
     const amountUntaxed = roundCents(
@@ -1428,7 +1441,7 @@ export class OdooAdapter implements BackendClient {
           amount_total: amountTotal,
           amount_paid: 0,
           amount_return: 0,
-          lines: lineMoney.map(({ line, untaxed, total }) => [
+          lines: lineMoney.map(({ line, untaxed, total, taxIds }) => [
             0,
             0,
             {
@@ -1439,16 +1452,33 @@ export class OdooAdapter implements BackendClient {
               price_subtotal_incl: total,
               discount: line.discount,
               name: "Producto",
+              // Sin tax_ids Odoo 19 recalcula amount_total sin IVA al pagar.
+              tax_ids: [[6, 0, taxIds]],
             },
           ]),
         },
       ]
     );
 
+    // Usar el total que Odoo persistió (fuente de verdad para action_pos_order_paid).
+    const [createdOrder] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "pos.order",
+      "read",
+      [[orderId], ["amount_total", "amount_tax"]]
+    );
+    const paidTotal = roundCents(
+      Number(createdOrder?.amount_total) || amountTotal
+    );
+    const paidTax = roundCents(
+      Number(createdOrder?.amount_tax) || amountTax
+    );
+    const paidUntaxed = roundCents(paidTotal - paidTax);
+
     await this.#callKw(odooSessionId, "pos.order", "write", [
       [orderId],
       {
-        amount_paid: amountTotal,
+        amount_paid: paidTotal,
         amount_return: 0,
         payment_ids: [
           [
@@ -1456,7 +1486,7 @@ export class OdooAdapter implements BackendClient {
             0,
             {
               payment_method_id: paymentMethodId,
-              amount: amountTotal,
+              amount: paidTotal,
             },
           ],
         ],
@@ -1485,9 +1515,9 @@ export class OdooAdapter implements BackendClient {
       ),
       partnerId: partnerId === false ? null : partnerId,
       partnerName,
-      amountUntaxed,
-      amountTax,
-      amountTotal,
+      amountUntaxed: paidUntaxed,
+      amountTax: paidTax,
+      amountTotal: paidTotal,
     };
   }
 
