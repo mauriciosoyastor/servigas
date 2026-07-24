@@ -21,7 +21,7 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 - Inventario con ubicaciones internas (Recepción, Depósito, Mostrador)
 - Punto de venta (POS) — búsqueda por código fabricante
 - Compras y recepciones
-- Contabilidad operativa + FC Astro (destino CF/CUIT, tipo sugerido); sin emisión electrónica AFIP aún
+- Contabilidad operativa + FC Astro (destino CF/CUIT, tipo sugerido) + FP con adjunto; sin emisión electrónica AFIP aún
 - Catálogo importado desde planillas Excel de proveedores
 - Puente manual Odoo ↔ Factura Web
 - Frontend personalizado con **Liquid Glass v2** (ver abajo)

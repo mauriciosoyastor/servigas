@@ -1343,6 +1343,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "amount_residual",
       "payment_state",
       "state",
+      "sg_bill_source",
     ],
     columns: moveCols(false, { due: true, residual: true }),
     limit: 50,

@@ -1,8 +1,15 @@
 /**
  * Allowlisted account.move creates (FC / NC / FP), multi-line.
  * Specs: fc-create-publish-destino + accounting-ops-prioridad-alta
+ * + docs/superpowers/specs/2026-07-24-vendor-bill-attachment-design.md
  */
 
+import {
+  normalizeBillAttachment,
+  normalizeBillSource,
+  type BillSource,
+  type NormalizedBillAttachment,
+} from "./bill-attachment.ts";
 import {
   filterOrderCreateValues,
   type OrderCreateLine,
@@ -20,6 +27,7 @@ export type InvoiceCreateDef = {
   listKey: string;
   model: "account.move";
   moveType: InvoiceMoveType;
+  requireAttachment?: boolean;
 };
 
 const INVOICE_CREATES: Record<string, InvoiceCreateDef> = {
@@ -37,6 +45,7 @@ const INVOICE_CREATES: Record<string, InvoiceCreateDef> = {
     listKey: "accounting/vendor-bills",
     model: "account.move",
     moveType: "in_invoice",
+    requireAttachment: true,
   },
   "accounting/vendor-refunds": {
     listKey: "accounting/vendor-refunds",
@@ -57,16 +66,39 @@ export function canCreateInvoice(listKey: string): boolean {
   return Boolean(getInvoiceCreateDef(listKey));
 }
 
-export type InvoiceCreateValues = OrderCreateValues;
 export type InvoiceCreateLine = OrderCreateLine;
 
-/** Same partner+lines shape as order-creates; keyed for invoice lists. */
+export type InvoiceCreateValues = OrderCreateValues & {
+  billSource?: BillSource | "";
+  attachment?: NormalizedBillAttachment;
+};
+
+/** Same partner+lines shape as order-creates; FP also requires attachment. */
 export function filterInvoiceCreateValues(
   listKey: string,
   values: Record<string, unknown>
 ): InvoiceCreateValues | null {
-  if (!getInvoiceCreateDef(listKey)) return null;
+  const def = getInvoiceCreateDef(listKey);
+  if (!def) return null;
+
   // Reuse line/partner parsing via a known order key, then accept for invoice.
   const parsed = filterOrderCreateValues("sales/quotations", values);
-  return parsed;
+  if (!parsed) return null;
+
+  const out: InvoiceCreateValues = { ...parsed };
+
+  if (def.moveType === "in_invoice") {
+    const source = normalizeBillSource(
+      values.billSource ?? values.sg_bill_source
+    );
+    if (source) out.billSource = source;
+  }
+
+  if (def.requireAttachment) {
+    out.attachment = normalizeBillAttachment(
+      values.attachment ?? values.file
+    );
+  }
+
+  return out;
 }
