@@ -277,18 +277,22 @@ class SgAppTile(models.Model):
 
     @api.model
     def setup_launcher_home_for_users(self):
-        """Asigna el launcher como home a usuarios internos (install + upgrade)."""
-        action = self.env.ref("servigas_core.action_servigas_app_launcher", raise_if_not_found=False)
+        """Día D (ADR 0016): home OWL solo para Settings; operativos usan Astro.
+
+        No toca `groups_id` de tiles: Astro BFF sigue leyendo
+        `get_launcher_payload` para el shell oficial.
+        """
+        action = self.env.ref(
+            "servigas_core.action_servigas_app_launcher", raise_if_not_found=False
+        )
         if not action:
             return
-        discuss_action = self.env.ref("mail.action_discuss", raise_if_not_found=False)
-        domain = [("share", "=", False)]
-        if discuss_action:
-            domain = [
-                "&",
-                ("share", "=", False),
-                "|",
-                ("action_id", "=", False),
-                ("action_id", "=", discuss_action.id),
-            ]
-        self.env["res.users"].search(domain).write({"action_id": action.id})
+        Users = self.env["res.users"]
+        internal = Users.search([("share", "=", False)])
+        admins = internal.filtered(lambda u: u.has_group("base.group_system"))
+        operatives = internal - admins
+        if admins:
+            admins.write({"action_id": action.id})
+        stuck = operatives.filtered(lambda u: u.action_id == action)
+        if stuck:
+            stuck.write({"action_id": False})

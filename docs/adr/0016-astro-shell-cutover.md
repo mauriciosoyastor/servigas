@@ -23,10 +23,10 @@ Posturas evaluadas:
 Adoptar la **postura B — camino a corte**, con alcance de corte **completo del camino operativo**:
 
 1. **Meta:** Astro (`web/`) es el shell operativo oficial: login → launcher → hubs → listas allowlisted → **POS caja Astro**.
-2. **Hoy (2026-07-23):** **corte autorizado (condicional)** — Astro = shell oficial; OWL = fallback; smoke real = deuda pre-prod (`CONTEXT` + bitácora).
-3. **Regla de build:** solo slices que suman **paridad del camino feliz** o **endurecen el BFF**; no features de laboratorio.
-4. **Después del día D operativo** (smoke verde en el entorno objetivo): hubs/launcher/POS OWL dejan de ser UI de negocio; Odoo sigue como backend (y assets residuales si hacen falta).
-5. **Alcance del día D (opción 1):** shell + listas + **POS Astro** en un solo corte operativo (no fase POS diferida).
+2. **2026-07-23:** corte autorizado (condicional) → smoke verde → **día D operativo**.
+3. **Regla de build:** endurecer BFF / paridad mostrador; no features de laboratorio OWL.
+4. **Día D (ejecutado 2026-07-23):** launcher/menú OWL solo `base.group_system`; operativos sin home OWL; Odoo = backend; Astro = UI de negocio.
+5. **Alcance del día D (opción 1):** shell + listas + **POS Astro** (sin fase POS diferida).
 
 ### Checklist go/no-go (mínimo)
 
@@ -35,6 +35,7 @@ Adoptar la **postura B — camino a corte**, con alcance de corte **completo del
 - [x] Errores BFF seguros + logout/timeout definidos — #24
 - [x] Paridad Liquid Glass “usable en mostrador” (no pixel-perfect) — #27
 - [x] Decisión explícita: “corte autorizado” en `CONTEXT.md` + bitácora — go condicional 2026-07-23
+- [x] Día D: UI OWL de negocio apagada para operativos (`servigas_core` 19.0.1.20.31)
 
 ### Filtro semanal
 

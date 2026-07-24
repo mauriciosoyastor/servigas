@@ -70,22 +70,21 @@ Operar stock, ventas en mostrador, compras y contabilidad en **Odoo 19 Community
 | Repo | https://github.com/mauriciosoyastor/servigas |
 | Protección `main` | `infra/github/` — ruleset + `apply-rulesets.sh` |
 
-## Shell Astro — corte autorizado (condicional) (`web/`)
+## Shell Astro — día D operativo (`web/`)
 
-**Corte autorizado (condicional) — 2026-07-23.**  
+**Día D ejecutado — 2026-07-23.**  
 Shell oficial = Astro BFF (`web/`).  
-Smoke camino feliz (lectura + venta POS): **OK** 2026-07-23 (`npm run smoke:shell`, `SMOKE_MUTATE=1`).  
-OWL queda como fallback hasta el día D operativo (apagar UI OWL de negocio).
+Smoke camino feliz (lectura + venta POS): **OK** (`npm run smoke:shell`, `SMOKE_MUTATE=1`).  
+UI OWL de negocio **apagada para operativos** (residual solo Settings / hotfix). Odoo = backend.
 
-**Gobernanza (ADR 0016):** postura **B** cerrada con go condicional. Spec: [go condicional](docs/superpowers/specs/2026-07-23-astro-cutover-go-condicional-design.md).
+**Gobernanza (ADR 0016):** postura **B** + día D. Spec: [go condicional](docs/superpowers/specs/2026-07-23-astro-cutover-go-condicional-design.md).
 
-| Hoy (gobernanza) | Día D operativo (cuando pase el smoke) |
-|------------------|----------------------------------------|
-| Astro login → hubs → listas → POS caja = **shell oficial** | UI OWL de negocio apagada / residual |
-| OWL launcher/hubs/POS = **fallback** | Odoo = backend únicamente |
-| Smoke lectura + mutate POS = **OK** | UI OWL de negocio apagada / residual |
+| Operativos | Admins (Settings) |
+|------------|-------------------|
+| Entran por Astro (login → hubs → listas → POS) | Pueden abrir launcher OWL residual en Odoo |
+| Sin home OWL ni menú Servigas en `/web` | Home OWL + menú Servigas (hotfix) |
 
-**Regla de build:** solo paridad del camino feliz, endurecer BFF, o onboarding spotlight del shell. Fuera de alcance post-go (hasta priorizar): offline, multi-caja.
+**Regla de build:** endurecer BFF / paridad mostrador; no invertir en paridad OWL. Fuera de alcance hasta priorizar: offline, multi-caja.
 
 **Onboarding:** tour spotlight en `ShellLayout` (inicio → hub → caja); preferencia `localStorage` (`sg_tour_done`). Spec: [onboarding spotlight](docs/superpowers/specs/2026-07-23-astro-onboarding-spotlight-design.md).
 

@@ -1,16 +1,14 @@
 # Servigas Astro BFF Shell
 
-Spike experimental de un shell operativo Astro 7 con SSR y BFF. Implementa
-login, launcher, rail y un hub de inventario contra Odoo 19 sin exponer la
-sesión de Odoo al navegador.
+Shell operativo oficial (Astro 7 + BFF) contra Odoo 19. Login, launcher, rail,
+hubs, listas allowlisted y caja POS sin exponer la sesión de Odoo al navegador.
 
 ```text
 Browser → Astro BFF → BackendClient → OdooAdapter → Odoo
 ```
 
-`web/` es el **shell operativo oficial** tras el **corte autorizado
-(condicional)** de ADR 0016 (2026-07-23). OWL queda como fallback. Deuda
-pre-prod: smoke real contra Odoo (`npm run smoke:shell`).
+**Día D (ADR 0016, 2026-07-23):** Astro = UI de negocio; OWL residual solo
+para Settings. Smoke: `npm run smoke:shell` (+ `SMOKE_MUTATE=1` para cobro).
 
 ## Requisitos
 
@@ -18,7 +16,7 @@ pre-prod: smoke real contra Odoo (`npm run smoke:shell`).
 - Odoo de desarrollo accesible, con los modelos `sg.app.tile` y `sg.hub.card`.
 - Una base con un usuario válido; en Servigas se usa `servigas_dev`.
 
-## Ejecutar el spike
+## Ejecutar
 
 Desde `web/`:
 

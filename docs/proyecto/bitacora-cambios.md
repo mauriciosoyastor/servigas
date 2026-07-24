@@ -37,11 +37,11 @@
 |------|--------|-------|
 | Identidad visual | Hecho | Tokens llama + Montserrat (`servigas_tokens.scss`) |
 | Backend Odoo | Hecho | Navbar, acentos flame, `servigas_hub.scss` |
-| Hubs App Shell (OWL) | **Fallback** | Residual hasta día D operativo (smoke verde) |
-| POS OWL | **Fallback** | Tema oscuro + glass; norte = POS Astro |
+| Hubs App Shell (OWL) | **Residual admin** | Día D 2026-07-23: solo Settings |
+| POS OWL | **Residual admin** | Operativos cobran en POS Astro |
 | Catálogo / datos | Hecho | 8.767 SKU importados |
 | Facturación fiscal | Pendiente | Factura Web manual por ahora |
-| Shell Astro BFF (`web/`) | **Shell oficial (go condicional)** | Smoke lectura + venta POS OK 2026-07-23 |
+| Shell Astro BFF (`web/`) | **Shell oficial (día D)** | Smoke + OWL apagado para operativos |
 | Infra GitHub (`main`) | Documentado | Ruleset versionado; aplicar con script o UI |
 
 **Docs de referencia hubs:** [plan-hub-rail-kpi-ingreso.md](./plan-hub-rail-kpi-ingreso.md) · [plan-liquid-glass-kpi-routes.md](./plan-liquid-glass-kpi-routes.md)
@@ -49,6 +49,25 @@
 ---
 
 ## Entradas
+
+### 2026-07-23 — Día D: apagar UI OWL de negocio para operativos
+
+**Área:** core | gobernanza | shell  
+**Motivo:** smoke camino feliz OK → ejecutar ADR 0016 día D.  
+**Archivos:**
+- `custom_addons/servigas_core/models/sg_app_tile.py` (`setup_launcher_home_for_users`)
+- `custom_addons/servigas_core/views/servigas_app_menu.xml`
+- `custom_addons/servigas_core/migrations/19.0.1.20.31/post-migrate.py`
+- `CONTEXT.md`, ADR 0016
+
+**Cambios:**
+- Home OWL solo usuarios Settings; operativos pierden `action_id` del launcher.
+- Menú raíz Servigas OWL restringido a `base.group_system`.
+- Tiles `sg.app.tile` **sin** cambio de grupos (Astro sigue usándolos vía BFF).
+- Versión módulo `19.0.1.20.31`.
+
+**Verificación:** `-u servigas_core` en `servigas_dev`; login operativo en `/web` sin launcher; Astro `/` con tiles OK.  
+**Automatización:** post-migrate reaplica home/menú en upgrade.
 
 ### 2026-07-23 — Fix checkout POS (tax_ids) + smoke mutate OK
 
