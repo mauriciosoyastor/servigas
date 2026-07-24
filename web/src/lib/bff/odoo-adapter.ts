@@ -307,17 +307,6 @@ export class OdooAdapter implements BackendClient {
     const payload = (await response.json()) as JsonRpcResponse<unknown>;
     if (payload.error !== undefined) {
       const errorText = this.#describeRpcError(payload.error);
-      if (
-        /(incorrect|wrong|invalid|actual|current|password|contraseñ)/i.test(
-          errorText
-        )
-      ) {
-        throw new BffError(
-          "validation_error",
-          400,
-          "La contraseña actual no es correcta"
-        );
-      }
       if (/(session|authenticat|unauthoriz)/i.test(errorText)) {
         throw new BffError(
           "unauthorized",
@@ -325,10 +314,32 @@ export class OdooAdapter implements BackendClient {
           "La sesión de Odoo no es válida"
         );
       }
+      const looksLikeWrongPassword =
+        /(incorrect|wrong|actual|current|password|contraseñ)/i.test(
+          errorText
+        ) ||
+        /invalid.*(password|contraseñ)/i.test(errorText) ||
+        /(password|contraseñ).*invalid/i.test(errorText) ||
+        /access denied/i.test(errorText);
+      if (looksLikeWrongPassword) {
+        throw new BffError(
+          "validation_error",
+          400,
+          "La contraseña actual no es correcta"
+        );
+      }
       throw new BffError(
         "odoo_unavailable",
         503,
         `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+      );
+    }
+
+    if (payload.result === undefined) {
+      throw new BffError(
+        "odoo_unavailable",
+        503,
+        "Odoo devolvió una respuesta JSON-RPC sin resultado"
       );
     }
   }

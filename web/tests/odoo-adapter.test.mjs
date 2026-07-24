@@ -1670,6 +1670,45 @@ describe("OdooAdapter.changePassword", () => {
     });
   });
 
+  it("maps Invalid session to unauthorized, not validation_error", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: { data: { message: "Invalid session" } },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "old", "new-secret"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "unauthorized" &&
+        err.status === 401
+    );
+  });
+
+  it("maps bare Access Denied to validation_error (wrong current password)", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: { data: { message: "Access Denied" } },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.changePassword("sid-1", "bad", "new-secret"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "validation_error" &&
+        err.status === 400 &&
+        /actual/i.test(err.message)
+    );
+  });
+
   it("maps wrong current password to validation_error without treating it as unauthorized", async () => {
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
