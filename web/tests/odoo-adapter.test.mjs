@@ -1478,6 +1478,22 @@ describe("OdooAdapter.markFwLoaded", () => {
     assert.equal(writeBody.params.args[1].sg_fw_number, "0001-1");
   });
 
+  it("rejects a single FW mark without a number", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: true }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.markFwLoaded("sess", "accounting/customer-invoices", 55, {}),
+      (err) => err?.code === "validation_error"
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+
   it("marks a bulk of markable FC and skips the rest", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};
@@ -1528,20 +1544,31 @@ describe("OdooAdapter.markFwLoaded", () => {
     const result = await adapter.markFwLoadedBulk(
       "sess",
       "accounting/factura-web-pending",
-      [1, 2, 3, 4, 5]
+      [
+        { id: 1, fwNumber: "0001-1" },
+        { id: 2, fwNumber: "0001-2" },
+        { id: 3, fwNumber: "0001-3" },
+        { id: 4, fwNumber: "0001-4" },
+        { id: 5, fwNumber: "0001-5" },
+      ]
     );
     assert.equal(result.ok, true);
     assert.equal(result.marked, 2);
     assert.equal(result.skipped, 3);
     assert.deepEqual(result.markedIds, [1, 5]);
-    const writeBody = fetchImpl.mock.calls
+    const writes = fetchImpl.mock.calls
       .map((call) => JSON.parse(call.arguments[1].body))
-      .find((body) => body.params?.method === "write");
-    assert.deepEqual(writeBody.params.args[0], [1, 5]);
-    assert.equal(writeBody.params.args[1].sg_fw_loaded, true);
+      .filter((body) => body.params?.method === "write");
+    assert.equal(writes.length, 2);
+    assert.equal(writes[0].params.args[0][0], 1);
+    assert.equal(writes[0].params.args[1].sg_fw_loaded, true);
+    assert.equal(writes[0].params.args[1].sg_fw_number, "0001-1");
+    assert.equal(writes[1].params.args[0][0], 5);
+    assert.equal(writes[1].params.args[1].sg_fw_loaded, true);
+    assert.equal(writes[1].params.args[1].sg_fw_number, "0001-5");
   });
 
-  it("rejects empty bulk mark ids", async () => {
+  it("rejects bulk marks with empty or missing FW numbers", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: true }));
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
@@ -1551,6 +1578,20 @@ describe("OdooAdapter.markFwLoaded", () => {
     await assert.rejects(
       () =>
         adapter.markFwLoadedBulk("sess", "accounting/factura-web-pending", []),
+      (err) => err?.code === "validation_error"
+    );
+    await assert.rejects(
+      () =>
+        adapter.markFwLoadedBulk("sess", "accounting/factura-web-pending", [
+          { id: 1, fwNumber: "" },
+        ]),
+      (err) => err?.code === "validation_error"
+    );
+    await assert.rejects(
+      () =>
+        adapter.markFwLoadedBulk("sess", "accounting/factura-web-pending", [
+          { id: 1 },
+        ]),
       (err) => err?.code === "validation_error"
     );
     assert.equal(fetchImpl.mock.calls.length, 0);

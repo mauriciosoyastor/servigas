@@ -8,6 +8,7 @@ import {
   canMarkFwLoadedBulk,
   csvEscape,
   filterMarkFwBulkIds,
+  filterMarkFwBulkItems,
   filterMarkFwLoadedValues,
   isFwMarkableState,
 } from "../src/lib/shell/fw-bridge.ts";
@@ -37,10 +38,16 @@ describe("fw-bridge", () => {
     assert.equal(FW_BULK_MAX_IDS, 100);
   });
 
-  it("filters optional fw number", () => {
-    assert.deepEqual(
+  it("requires fw number for mark", () => {
+    assert.equal(
       filterMarkFwLoadedValues("accounting/customer-invoices", {}),
-      {}
+      null
+    );
+    assert.equal(
+      filterMarkFwLoadedValues("accounting/customer-invoices", {
+        fwNumber: "   ",
+      }),
+      null
     );
     assert.deepEqual(
       filterMarkFwLoadedValues("accounting/customer-invoices", {
@@ -49,9 +56,38 @@ describe("fw-bridge", () => {
       { fwNumber: "0001-99" }
     );
     assert.equal(
+      filterMarkFwLoadedValues("accounting/customer-invoices", {
+        fwNumber: "x".repeat(65),
+      }),
+      null
+    );
+    assert.equal(
       filterMarkFwLoadedValues("accounting/drafts", { fwNumber: "1" }),
       null
     );
+  });
+
+  it("filters bulk mark items with per-row fw numbers", () => {
+    assert.deepEqual(
+      filterMarkFwBulkItems([
+        { id: 1, fwNumber: " A " },
+        { id: 2, fwNumber: "B" },
+        { id: 1, fwNumber: "C" },
+      ]),
+      [
+        { id: 1, fwNumber: "A" },
+        { id: 2, fwNumber: "B" },
+      ]
+    );
+    assert.equal(filterMarkFwBulkItems([]), null);
+    assert.equal(filterMarkFwBulkItems([{ id: 1, fwNumber: "" }]), null);
+    assert.equal(filterMarkFwBulkItems([{ id: 1 }]), null);
+    assert.equal(filterMarkFwBulkItems(null), null);
+    const tooMany = Array.from({ length: FW_BULK_MAX_IDS + 1 }, (_, i) => ({
+      id: i + 1,
+      fwNumber: String(i + 1),
+    }));
+    assert.equal(filterMarkFwBulkItems(tooMany), null);
   });
 
   it("gates markable state", () => {

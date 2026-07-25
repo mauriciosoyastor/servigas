@@ -12,6 +12,8 @@ interface Props {
 	invoicePdfListKey?: string;
 	/** Columna checkbox para acciones bulk (p. ej. Factura Web). */
 	rowSelect?: boolean;
+	/** Campo de número Factura Web por fila seleccionable. */
+	fwNumberInput?: boolean;
 }
 
 const {
@@ -21,6 +23,7 @@ const {
 	imageUploadApiPath = '',
 	invoicePdfListKey = '',
 	rowSelect = false,
+	fwNumberInput = false,
 } = Astro.props;
 
 const showInvoicePdf = Boolean(invoicePdfListKey);
@@ -63,6 +66,11 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 						{column.label}
 					</th>
 				))}
+				{rowSelect && fwNumberInput ? (
+					<th scope="col" data-col="fw-number" data-kind="action">
+						N° Factura Web
+					</th>
+				) : null}
 				{showInvoicePdf ? (
 					<th scope="col" data-col="pdf" data-kind="action">
 						PDF
@@ -154,6 +162,19 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 								)}
 							</td>
 						))}
+						{rowSelect && fwNumberInput ? (
+							<td data-col="fw-number" data-kind="action" data-label="N° Factura Web">
+								<input
+									class="sg-focus-ring"
+									type="text"
+									data-fw-row-number
+									data-record-id={String(recordId)}
+									placeholder="0001-…"
+									autocomplete="off"
+									aria-label={`N° Factura Web registro ${recordId}`}
+								/>
+							</td>
+						) : null}
 						{showInvoicePdf ? (
 							<td data-col="pdf" data-kind="action" data-label="PDF">
 								{pdfPath ? (
@@ -204,6 +225,22 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 		width: 1%;
 		text-align: center;
 		vertical-align: middle;
+	}
+
+	.sg-record-table th[data-col='fw-number'],
+	.sg-record-table td[data-col='fw-number'] {
+		min-width: 11rem;
+	}
+
+	.sg-record-table input[data-fw-row-number] {
+		width: 100%;
+		min-width: 9rem;
+		border: 1px solid rgba(255, 255, 255, 0.14);
+		border-radius: 0.65rem;
+		padding: 0.45rem 0.6rem;
+		background: rgba(0, 0, 0, 0.25);
+		color: var(--sg-text-dark, #f4f1ea);
+		font-size: 0.82rem;
 	}
 
 	.sg-record-table input[data-row-select],

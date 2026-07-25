@@ -436,9 +436,15 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Nueva NC proveedor/);
     assert.match(fwExport, /exportFwPendingCsv/);
     assert.match(markCtrl, /mark_fw_loaded/);
+    assert.match(markCtrl, /N° Factura Web/);
+    assert.doesNotMatch(markCtrl, /opcional/i);
     assert.match(bulkBar, /mark_fw_loaded_bulk/);
     assert.match(bulkBar, /Marcar seleccionadas/);
+    assert.match(bulkBar, /items/);
+    assert.match(bulkBar, /fwNumber/);
     assert.match(recordTable, /data-row-select/);
+    assert.match(recordTable, /data-fw-row-number/);
+    assert.match(listPage, /fwNumberInput/);
     assert.match(invoiceDetail, /RecordMarkFwLoadedControl/);
     assert.match(posDetail, /RecordCreateInvoiceControl/);
     assert.match(posDetail, /isPosOrderReadyToInvoice/);

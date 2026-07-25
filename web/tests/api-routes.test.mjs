@@ -513,8 +513,8 @@ describe("BFF API routes", () => {
     cookies.values.set(BFF_COOKIE, bffSid);
     let called = null;
     __setBackendForTests({
-      markFwLoadedBulk: async (sessionId, listKey, ids, values) => {
-        called = { sessionId, listKey, ids, values };
+      markFwLoadedBulk: async (sessionId, listKey, items) => {
+        called = { sessionId, listKey, items };
         return { ok: true, marked: 2, skipped: 1, markedIds: [10, 11] };
       },
     });
@@ -529,7 +529,11 @@ describe("BFF API routes", () => {
             headers: { "content-type": "application/json" },
             body: JSON.stringify({
               action: "mark_fw_loaded_bulk",
-              ids: [10, 11, 12],
+            items: [
+              { id: 10, fwNumber: "0001-10" },
+              { id: 11, fwNumber: "0001-11" },
+              { id: 12, fwNumber: "0001-12" },
+            ],
             }),
           }
         ),
@@ -544,8 +548,11 @@ describe("BFF API routes", () => {
       assert.deepEqual(called, {
         sessionId: "odoo",
         listKey: "accounting/factura-web-pending",
-        ids: [10, 11, 12],
-        values: {},
+        items: [
+          { id: 10, fwNumber: "0001-10" },
+          { id: 11, fwNumber: "0001-11" },
+          { id: 12, fwNumber: "0001-12" },
+        ],
       });
     } finally {
       __setBackendForTests(undefined);

@@ -14,7 +14,7 @@ const { listKey, apiPath } = Astro.props;
 	data-api={apiPath}
 >
 	<p class="sg-fw-bulk-hint">
-		Seleccioná facturas de esta página y marcálas como ya cargadas en Factura Web.
+		Ingresá el N° de Factura Web de cada factura y seleccioná las que ya cargaste.
 	</p>
 	<div class="sg-fw-bulk-actions">
 		<span class="sg-fw-bulk-count" data-fw-bulk-count>0 seleccionadas</span>
@@ -70,11 +70,31 @@ const { listKey, apiPath } = Astro.props;
 	btn?.addEventListener('click', async () => {
 		const ids = selectedIds();
 		if (!ids.length || !(btn instanceof HTMLButtonElement)) return;
+		const numberById = new Map(
+			ids.map((id) => {
+				const input = document.querySelector(
+					`tr[data-row-id="${id}"] [data-fw-row-number]`
+				);
+				return [
+					id,
+					input instanceof HTMLInputElement ? input.value.trim() : '',
+				];
+			})
+		);
+		if (ids.some((id) => !numberById.get(id))) {
+			if (status instanceof HTMLElement) {
+				status.hidden = false;
+				status.textContent = 'Ingresá el N° de Factura Web de cada factura seleccionada';
+				status.dataset.state = 'error';
+			}
+			return;
+		}
+		const items = ids.map((id) => ({ id, fwNumber: numberById.get(id) || '' }));
 		if (
 			!window.confirm(
 				ids.length === 1
-					? '¿Marcar 1 factura como cargada en Factura Web?'
-					: `¿Marcar ${ids.length} facturas como cargadas en Factura Web?`
+					? '¿Marcar 1 factura como cargada en Factura Web con su N° ingresado?'
+					: `¿Marcar ${ids.length} facturas como cargadas en Factura Web con sus N° ingresados?`
 			)
 		) {
 			return;
@@ -92,7 +112,7 @@ const { listKey, apiPath } = Astro.props;
 				headers: { 'content-type': 'application/json' },
 				body: JSON.stringify({
 					action: 'mark_fw_loaded_bulk',
-					ids,
+					items,
 				}),
 			});
 			const payload = await response.json().catch(() => ({}));

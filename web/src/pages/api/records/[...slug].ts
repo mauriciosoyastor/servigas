@@ -43,7 +43,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     let body: {
       action?: RecordAction;
       id?: unknown;
-      ids?: unknown;
+      items?: unknown;
       values?: Record<string, unknown>;
     };
     try {
@@ -183,8 +183,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       const result = await getBackend().markFwLoadedBulk(
         odooSessionId,
         slug,
-        body.ids,
-        values
+        body.items
       );
       return json(result);
     }

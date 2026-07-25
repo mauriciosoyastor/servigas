@@ -78,7 +78,7 @@ import {
   buildFwPendingCsv,
   canMarkFwLoaded,
   canMarkFwLoadedBulk,
-  filterMarkFwBulkIds,
+  filterMarkFwBulkItems,
   filterMarkFwLoadedValues,
   isFwMarkableState,
 } from "../shell/fw-bridge.ts";
@@ -1921,10 +1921,8 @@ export class OdooAdapter implements BackendClient {
     const writeVals: Record<string, unknown> = {
       sg_fw_loaded: true,
       sg_fw_loaded_at: new Date().toISOString().slice(0, 19).replace("T", " "),
+      sg_fw_number: filtered.fwNumber,
     };
-    if (filtered.fwNumber) {
-      writeVals.sg_fw_number = filtered.fwNumber;
-    }
 
     await this.#callKw(odooSessionId, "account.move", "write", [
       [id],
@@ -1941,8 +1939,7 @@ export class OdooAdapter implements BackendClient {
   async markFwLoadedBulk(
     odooSessionId: string,
     listKey: string,
-    ids: unknown,
-    values: Record<string, unknown> = {}
+    items: unknown
   ): Promise<{
     ok: true;
     marked: number;
@@ -1952,30 +1949,30 @@ export class OdooAdapter implements BackendClient {
     if (!canMarkFwLoadedBulk(listKey)) {
       throw new BffError("not_found", 404, "Marcado Factura Web no permitido");
     }
-    const filteredIds = filterMarkFwBulkIds(ids);
-    if (!filteredIds) {
+    const filteredItems = filterMarkFwBulkItems(items);
+    if (!filteredItems) {
       throw new BffError(
         "validation_error",
         400,
-        "Seleccioná entre 1 y 100 facturas válidas"
+        "Seleccioná entre 1 y 100 facturas con N° Factura Web"
       );
     }
-    const filtered = filterMarkFwLoadedValues(listKey, values);
-    if (!filtered) {
-      throw new BffError("validation_error", 400, "Datos de marcado inválidos");
-    }
+    const ids = filteredItems.map((item) => item.id);
+    const numberById = new Map(
+      filteredItems.map((item) => [item.id, item.fwNumber])
+    );
 
     const moves = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       "account.move",
       "read",
-      [filteredIds, ["state", "move_type", "sg_fw_loaded", "name"]]
+      [ids, ["state", "move_type", "sg_fw_loaded", "name"]]
     );
     const byId = new Map(
       (moves || []).map((move) => [Number(move.id), move] as const)
     );
     const markedIds: number[] = [];
-    for (const id of filteredIds) {
+    for (const id of ids) {
       const move = byId.get(id);
       if (!move) continue;
       if (String(move.move_type || "") !== "out_invoice") continue;
@@ -1983,27 +1980,24 @@ export class OdooAdapter implements BackendClient {
       markedIds.push(id);
     }
 
-    if (markedIds.length) {
-      const writeVals: Record<string, unknown> = {
-        sg_fw_loaded: true,
-        sg_fw_loaded_at: new Date()
-          .toISOString()
-          .slice(0, 19)
-          .replace("T", " "),
-      };
-      if (filtered.fwNumber) {
-        writeVals.sg_fw_number = filtered.fwNumber;
-      }
+    for (const id of markedIds) {
       await this.#callKw(odooSessionId, "account.move", "write", [
-        markedIds,
-        writeVals,
+        [id],
+        {
+          sg_fw_loaded: true,
+          sg_fw_loaded_at: new Date()
+            .toISOString()
+            .slice(0, 19)
+            .replace("T", " "),
+          sg_fw_number: numberById.get(id),
+        },
       ]);
     }
 
     return {
       ok: true,
       marked: markedIds.length,
-      skipped: filteredIds.length - markedIds.length,
+      skipped: ids.length - markedIds.length,
       markedIds,
     };
   }
