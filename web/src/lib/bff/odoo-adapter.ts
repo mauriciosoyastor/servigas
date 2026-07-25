@@ -124,7 +124,7 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
       { key: "price_subtotal", label: "Subtotal" },
     ],
     order: "id asc",
-    title: "Líneas",
+    title: "LÃ­neas",
   },
   "purchase.order": {
     model: "purchase.order.line",
@@ -137,7 +137,7 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
       { key: "price_subtotal", label: "Subtotal" },
     ],
     order: "id asc",
-    title: "Líneas",
+    title: "LÃ­neas",
   },
   "pos.order": {
     model: "pos.order.line",
@@ -151,7 +151,7 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
       { key: "price_subtotal", label: "Subtotal" },
     ],
     order: "id asc",
-    title: "Líneas",
+    title: "LÃ­neas",
   },
   "account.move": {
     model: "account.move.line",
@@ -165,7 +165,7 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
       { key: "price_subtotal", label: "Subtotal" },
     ],
     order: "id asc",
-    title: "Líneas",
+    title: "LÃ­neas",
     extraDomain: [["display_type", "=", "product"]],
   },
   "stock.picking": {
@@ -263,7 +263,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "odoo_unavailable",
         503,
-        "Odoo autenticó al usuario pero no devolvió la cookie session_id"
+        "Odoo autenticÃ³ al usuario pero no devolviÃ³ la cookie session_id"
       );
     }
 
@@ -301,7 +301,7 @@ export class OdooAdapter implements BackendClient {
     );
     const payload = (await response.json()) as JsonRpcResponse<{ uid?: number | false }>;
     if (!payload.result?.uid) {
-      throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+      throw new BffError("unauthorized", 401, "La sesiÃ³n de Odoo no es vÃ¡lida");
     }
   }
 
@@ -316,18 +316,18 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "Completá la contraseña actual y la nueva"
+        "CompletÃ¡ la contraseÃ±a actual y la nueva"
       );
     }
     if (current === next) {
       throw new BffError(
         "validation_error",
         400,
-        "La nueva contraseña debe ser distinta a la actual"
+        "La nueva contraseÃ±a debe ser distinta a la actual"
       );
     }
 
-    // Dedicated call: do NOT use #callKw — its Access Denied → unauthorized
+    // Dedicated call: do NOT use #callKw â its Access Denied â unauthorized
     // mapping would wipe the BFF session on a wrong current password.
     let response: Response;
     try {
@@ -364,21 +364,21 @@ export class OdooAdapter implements BackendClient {
         throw new BffError(
           "unauthorized",
           401,
-          "La sesión de Odoo no es válida"
+          "La sesiÃ³n de Odoo no es vÃ¡lida"
         );
       }
       if (dataName === "odoo.exceptions.AccessDenied") {
         throw new BffError(
           "validation_error",
           400,
-          "La contraseña actual no es correcta"
+          "La contraseÃ±a actual no es correcta"
         );
       }
       if (dataName === "odoo.exceptions.UserError") {
         throw new BffError(
           "validation_error",
           400,
-          dataMessage.trim() || "No se pudo cambiar la contraseña"
+          dataMessage.trim() || "No se pudo cambiar la contraseÃ±a"
         );
       }
 
@@ -387,7 +387,7 @@ export class OdooAdapter implements BackendClient {
         throw new BffError(
           "unauthorized",
           401,
-          "La sesión de Odoo no es válida"
+          "La sesiÃ³n de Odoo no es vÃ¡lida"
         );
       }
       if (
@@ -398,13 +398,13 @@ export class OdooAdapter implements BackendClient {
         throw new BffError(
           "validation_error",
           400,
-          "La contraseña actual no es correcta"
+          "La contraseÃ±a actual no es correcta"
         );
       }
       throw new BffError(
         "odoo_unavailable",
         503,
-        `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+        `Odoo devolviÃ³ un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
       );
     }
 
@@ -412,7 +412,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "odoo_unavailable",
         503,
-        "Odoo devolvió una respuesta JSON-RPC sin resultado"
+        "Odoo devolviÃ³ una respuesta JSON-RPC sin resultado"
       );
     }
   }
@@ -424,16 +424,16 @@ export class OdooAdapter implements BackendClient {
   ): Promise<{ login: string }> {
     const next = String(login || "").trim();
     if (!next) {
-      throw new BffError("validation_error", 400, "El usuario no puede estar vacío");
+      throw new BffError("validation_error", 400, "El usuario no puede estar vacÃ­o");
     }
     if (!Number.isFinite(uid) || uid <= 0) {
-      throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+      throw new BffError("unauthorized", 401, "La sesiÃ³n de Odoo no es vÃ¡lida");
     }
     if (!/^[a-zA-Z0-9._@+-]{2,64}$/.test(next)) {
       throw new BffError(
         "validation_error",
         400,
-        "Usá un usuario de 2 a 64 caracteres (letras, números o . _ @ + -)"
+        "UsÃ¡ un usuario de 2 a 64 caracteres (letras, nÃºmeros o . _ @ + -)"
       );
     }
 
@@ -450,7 +450,7 @@ export class OdooAdapter implements BackendClient {
           throw new BffError(
             "validation_error",
             400,
-            "Ese usuario ya está en uso"
+            "Ese usuario ya estÃ¡ en uso"
           );
         }
         throw new BffError(
@@ -529,7 +529,7 @@ export class OdooAdapter implements BackendClient {
       if (!(cause instanceof BffError) || cause.code === "unauthorized") {
         throw cause;
       }
-      // Campos opcionales / aún no migrados en la BD.
+      // Campos opcionales / aÃºn no migrados en la BD.
       fields = fields.filter(
         (field) =>
           field !== "qty_available" &&
@@ -694,7 +694,7 @@ export class OdooAdapter implements BackendClient {
       street: "Calle",
       city: "Ciudad",
       email: "Email",
-      phone: "Teléfono",
+      phone: "TelÃ©fono",
       sg_invoice_dest: "Destino fiscal",
       sg_doc_type_short: "Tipo sug.",
       sg_bill_source: "Origen del comprobante",
@@ -704,7 +704,7 @@ export class OdooAdapter implements BackendClient {
       amount_total: "Total",
       payment_state: "Pago",
       sg_fw_loaded: "Factura Web",
-      sg_fw_number: "N° Factura Web",
+      sg_fw_number: "NÂ° Factura Web",
       sg_fw_loaded_at: "Cargada el",
     };
     for (const column of def.columns) {
@@ -734,7 +734,7 @@ export class OdooAdapter implements BackendClient {
       detailFields.push({
         key: "sg_doc_type_label",
         label: "Tipo sugerido",
-        value: `${suggestedDocTypeLabel(row.sg_invoice_dest)} — ${SUGGESTED_DOC_TYPE_NOTE}`,
+        value: `${suggestedDocTypeLabel(row.sg_invoice_dest)} â ${SUGGESTED_DOC_TYPE_NOTE}`,
       });
     }
 
@@ -808,7 +808,7 @@ export class OdooAdapter implements BackendClient {
     }
     const filtered = filterCreateValues(listKey, values);
     if (!filtered) {
-      throw new BffError("not_found", 404, "Datos de alta inválidos");
+      throw new BffError("not_found", 404, "Datos de alta invÃ¡lidos");
     }
 
     const fiscalError = customerInvoiceDestError(listKey, filtered);
@@ -852,14 +852,14 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "Indicá qué columna es el nombre del producto."
+        "IndicÃ¡ quÃ© columna es el nombre del producto."
       );
     }
     if (!mapping.list_price && !mapping.standard_price) {
       throw new BffError(
         "validation_error",
         400,
-        "Indicá al menos una columna de precio (venta o costo)."
+        "IndicÃ¡ al menos una columna de precio (venta o costo)."
       );
     }
 
@@ -1021,7 +1021,7 @@ export class OdooAdapter implements BackendClient {
     }
     const filtered = filterInvoiceCreateValues(listKey, values);
     if (!filtered) {
-      throw new BffError("not_found", 404, "Datos de alta inválidos");
+      throw new BffError("not_found", 404, "Datos de alta invÃ¡lidos");
     }
 
     const invoice_line_ids = filtered.lines.map((line) => {
@@ -1103,7 +1103,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "Medio de pago o monto inválido"
+        "Medio de pago o monto invÃ¡lido"
       );
     }
 
@@ -1172,7 +1172,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        `No hay un diario contable para ${paymentMethodLabel(filtered.paymentMethod)}. Configurá caja/banco en Odoo.`
+        `No hay un diario contable para ${paymentMethodLabel(filtered.paymentMethod)}. ConfigurÃ¡ caja/banco en Odoo.`
       );
     }
 
@@ -1316,7 +1316,7 @@ export class OdooAdapter implements BackendClient {
     }
     const filtered = filterOrderCreateValues(listKey, values);
     if (!filtered) {
-      throw new BffError("not_found", 404, "Datos de alta inválidos");
+      throw new BffError("not_found", 404, "Datos de alta invÃ¡lidos");
     }
 
     const order_line = filtered.lines.map((line) => {
@@ -1478,7 +1478,7 @@ export class OdooAdapter implements BackendClient {
   ): Promise<{ ok: true; state: string | null }> {
     const actionDef = getRecordActionDef(listKey);
     if (!actionDef) {
-      throw new BffError("not_found", 404, "Acción no permitida");
+      throw new BffError("not_found", 404, "AcciÃ³n no permitida");
     }
     if (!Number.isFinite(id) || id <= 0) {
       throw new BffError("not_found", 404, "Registro no encontrado");
@@ -1539,7 +1539,7 @@ export class OdooAdapter implements BackendClient {
     id: number
   ): Promise<{ ok: true; id: number; detailPath: string }> {
     if (!canCreateInvoiceFromOrder(listKey)) {
-      throw new BffError("not_found", 404, "Facturación no permitida");
+      throw new BffError("not_found", 404, "FacturaciÃ³n no permitida");
     }
     if (!Number.isFinite(id) || id <= 0) {
       throw new BffError("not_found", 404, "Registro no encontrado");
@@ -1558,7 +1558,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "Este pedido no está listo para facturar"
+        "Este pedido no estÃ¡ listo para facturar"
       );
     }
 
@@ -1576,7 +1576,7 @@ export class OdooAdapter implements BackendClient {
       if (cause instanceof BffError && cause.code === "unauthorized") {
         throw cause;
       }
-      // Fallback: wizard estándar de Odoo
+      // Fallback: wizard estÃ¡ndar de Odoo
       try {
         const wizardId = await this.#callKw<number>(
           odooSessionId,
@@ -1637,7 +1637,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "action_failed",
         502,
-        "Odoo no devolvió una factura de cliente"
+        "Odoo no devolviÃ³ una factura de cliente"
       );
     }
 
@@ -1654,7 +1654,7 @@ export class OdooAdapter implements BackendClient {
     id: number
   ): Promise<{ ok: true; id: number; detailPath: string }> {
     if (!canCreateInvoiceFromPos(listKey)) {
-      throw new BffError("not_found", 404, "Facturación no permitida");
+      throw new BffError("not_found", 404, "FacturaciÃ³n no permitida");
     }
     if (!Number.isFinite(id) || id <= 0) {
       throw new BffError("not_found", 404, "Registro no encontrado");
@@ -1711,7 +1711,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "Asigná un cliente a la venta de caja antes de facturar"
+        "AsignÃ¡ un cliente a la venta de caja antes de facturar"
       );
     }
 
@@ -1743,7 +1743,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "La venta de caja no tiene líneas facturables"
+        "La venta de caja no tiene lÃ­neas facturables"
       );
     }
 
@@ -1793,7 +1793,7 @@ export class OdooAdapter implements BackendClient {
     }
     const filtered = filterMarkFwLoadedValues(listKey, values);
     if (!filtered) {
-      throw new BffError("validation_error", 400, "Datos de marcado inválidos");
+      throw new BffError("validation_error", 400, "Datos de marcado invÃ¡lidos");
     }
 
     const [move] = await this.#callKw<Record<string, unknown>[]>(
@@ -1816,7 +1816,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "validation_error",
         400,
-        "La factura ya está marcada o no está publicada"
+        "La factura ya estÃ¡ marcada o no estÃ¡ publicada"
       );
     }
 
@@ -2000,7 +2000,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "action_failed",
         409,
-        "La validación no completó la transferencia (puede requerir asistente en Odoo)"
+        "La validaciÃ³n no completÃ³ la transferencia (puede requerir asistente en Odoo)"
       );
     }
     return { ok: true, state: afterState };
@@ -2189,7 +2189,7 @@ export class OdooAdapter implements BackendClient {
       );
 
     if (!clean.length) {
-      throw new BffError("not_found", 404, "Carrito vacío");
+      throw new BffError("not_found", 404, "Carrito vacÃ­o");
     }
 
     try {
@@ -2274,7 +2274,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "odoo_unavailable",
         503,
-        "No se pudo abrir la sesión de caja"
+        "No se pudo abrir la sesiÃ³n de caja"
       );
     }
     return sessionId;
@@ -2445,7 +2445,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "odoo_unavailable",
         503,
-        "No hay método de pago POS"
+        "No hay mÃ©todo de pago POS"
       );
     }
 
@@ -2481,7 +2481,7 @@ export class OdooAdapter implements BackendClient {
       ]
     );
 
-    // Usar el total que Odoo persistió (fuente de verdad para action_pos_order_paid).
+    // Usar el total que Odoo persistiÃ³ (fuente de verdad para action_pos_order_paid).
     const [createdOrder] = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       "pos.order",
@@ -2691,7 +2691,7 @@ export class OdooAdapter implements BackendClient {
       const contentType =
         response.headers.get("content-type") || "application/pdf";
       const body = await response.arrayBuffer();
-      // Odoo may return an HTML login/error page with 200 � reject non-PDF.
+      // Odoo may return an HTML login/error page with 200 — reject non-PDF.
       const head = new Uint8Array(body.slice(0, 5));
       const isPdf =
         head.length >= 5 &&
@@ -2704,7 +2704,7 @@ export class OdooAdapter implements BackendClient {
         throw new BffError(
           "odoo_unavailable",
           503,
-          "Odoo no devolvi� un PDF v�lido"
+          "Odoo no devolvió un PDF válido"
         );
       }
       return {
@@ -2898,7 +2898,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "forbidden",
         403,
-        "Solo podés editar tus propias notas"
+        "Solo podÃ©s editar tus propias notas"
       );
     }
   }
@@ -2943,13 +2943,13 @@ export class OdooAdapter implements BackendClient {
           errorText
         )
       ) {
-        throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+        throw new BffError("unauthorized", 401, "La sesiÃ³n de Odoo no es vÃ¡lida");
       }
 
       throw new BffError(
         "odoo_unavailable",
         503,
-        `Odoo devolvió un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
+        `Odoo devolviÃ³ un error JSON-RPC${errorText ? `: ${errorText}` : ""}`
       );
     }
 
@@ -2957,7 +2957,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "odoo_unavailable",
         503,
-        "Odoo devolvió una respuesta JSON-RPC sin resultado"
+        "Odoo devolviÃ³ una respuesta JSON-RPC sin resultado"
       );
     }
 
