@@ -22,6 +22,9 @@ interface Props {
 }
 
 const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
+const enableCuitWarn =
+	fields.some((field) => field.key === 'sg_invoice_dest') &&
+	fields.some((field) => field.key === 'vat');
 ---
 
 <section class="sg-record-create sg-glass" data-record-create data-list-key={listKey}>
@@ -55,6 +58,9 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 				)}
 			</label>
 		))}
+		{enableCuitWarn ? (
+			<p class="sg-cuit-fiscal-warn" data-cuit-fiscal-warn hidden></p>
+		) : null}
 		<div class="sg-record-create-actions">
 			<button class="sg-focus-ring" type="submit">Crear</button>
 			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
@@ -63,10 +69,49 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 	</form>
 </section>
 
-<script define:vars={{ apiPath }}>
+<script define:vars={{ apiPath, enableCuitWarn }}>
 	const root = document.querySelector('[data-record-create]');
 	const form = root?.querySelector('[data-record-create-form]');
 	const status = root?.querySelector('[data-record-create-status]');
+	const cuitWarn = root?.querySelector('[data-cuit-fiscal-warn]');
+	const CUIT_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+	const CUIT_MISSING_MSG = 'Este cliente es Con CUIT: cargá el CUIT para guardar.';
+	const CUIT_INVALID_MSG = 'El CUIT no es válido (revisá los 11 dígitos).';
+
+	const isValidCuitClient = (raw) => {
+		const digits = String(raw || '').replace(/\D/g, '');
+		if (digits.length !== 11) return false;
+		let sum = 0;
+		for (let i = 0; i < 10; i++) sum += Number(digits[i]) * CUIT_WEIGHTS[i];
+		const rem = sum % 11;
+		const expected = rem === 0 ? 0 : rem === 1 ? 9 : 11 - rem;
+		return Number(digits[10]) === expected;
+	};
+
+	const refreshCuitWarn = () => {
+		if (!enableCuitWarn || !(form instanceof HTMLFormElement) || !(cuitWarn instanceof HTMLElement)) {
+			return;
+		}
+		const dest = String(new FormData(form).get('sg_invoice_dest') || 'cf').toLowerCase();
+		const vat = String(new FormData(form).get('vat') || '').trim();
+		let msg = '';
+		if (dest === 'cuit' && !vat) msg = CUIT_MISSING_MSG;
+		else if (vat && !isValidCuitClient(vat)) msg = CUIT_INVALID_MSG;
+		if (msg) {
+			cuitWarn.hidden = false;
+			cuitWarn.textContent = msg;
+		} else {
+			cuitWarn.hidden = true;
+			cuitWarn.textContent = '';
+		}
+	};
+
+	if (form instanceof HTMLFormElement && enableCuitWarn) {
+		form.addEventListener('input', refreshCuitWarn);
+		form.addEventListener('change', refreshCuitWarn);
+		refreshCuitWarn();
+	}
+
 	if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
@@ -177,5 +222,12 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 	}
 	.sg-record-create-status[data-state='error'] {
 		color: #ffb4a2;
+	}
+	.sg-cuit-fiscal-warn {
+		grid-column: 1 / -1;
+		margin: 0;
+		font-size: 0.8rem;
+		line-height: 1.4;
+		color: #ffc107;
 	}
 </style>

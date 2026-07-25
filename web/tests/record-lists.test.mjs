@@ -278,6 +278,31 @@ describe("record-lists allowlist", () => {
       }),
       "/lists/accounting/factura-web"
     );
+    assert.equal(
+      resolveRecordListPath(
+        {
+          type: "ir.actions.act_window",
+          res_model: "account.move",
+          domain: [["state", "=", "posted"]],
+        },
+        { label: "Todos los asientos" }
+      ),
+      "/lists/accounting/moves"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "account.move",
+        domain: [["state", "=", "posted"]],
+      }),
+      "/lists/accounting/moves"
+    );
+    const moves = getRecordListDef("accounting/moves");
+    assert.ok(moves);
+    assert.equal(moves.model, "account.move");
+    assert.deepEqual(moves.domain, [["state", "=", "posted"]]);
+    assert.ok(moves.fields.includes("move_type"));
+    assert.equal(moves.detailPath, "/lists/accounting/moves/:id");
   });
 
   it("builds search domain with OR polish notation including barcode", () => {

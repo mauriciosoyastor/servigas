@@ -1,0 +1,40 @@
+---
+/**
+ * Bridge: Todos los asientos → ficha especializada FC/FP/NC según move_type.
+ */
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { resolveAccountingMoveDetailPath } from '../../../../lib/shell/accounting-move-detail.ts';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	'accounting/moves',
+	id,
+	'No encontramos este asiento.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+
+const { userName, detail, error } = loaded;
+if (detail && !error) {
+	const moveType = detail.fields.find((field) => field.key === 'move_type')?.value;
+	const specialized = resolveAccountingMoveDetailPath(moveType, id);
+	if (specialized) {
+		return Astro.redirect(specialized);
+	}
+}
+---
+
+<ShellLayout title={`${detail?.title || 'Asiento'} | Servigas`} active="accounting" userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow="Ficha — Todos los asientos"
+		fallbackTitle="Asiento"
+		fallbackListPath="/lists/accounting/moves"
+	/>
+</ShellLayout>

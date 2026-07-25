@@ -11,6 +11,7 @@ import {
 } from "../src/lib/shell/bill-attachment.ts";
 import { BffError } from "../src/lib/bff/errors.ts";
 import {
+  CUIT_INVALID_MSG,
   PUBLISH_CUIT_ADDRESS_MSG,
   PUBLISH_CUIT_VAT_MSG,
   publishInvoiceDestError,
@@ -138,6 +139,15 @@ describe("publishInvoiceDestError", () => {
       publishInvoiceDestError({
         sg_invoice_dest: "cuit",
         vat: "20123456789",
+        street: "Calle 1",
+        city: "CABA",
+      }),
+      CUIT_INVALID_MSG
+    );
+    assert.equal(
+      publishInvoiceDestError({
+        sg_invoice_dest: "cuit",
+        vat: "20123456786",
         street: "",
         city: "",
       }),
@@ -146,7 +156,7 @@ describe("publishInvoiceDestError", () => {
     assert.equal(
       publishInvoiceDestError({
         sg_invoice_dest: "cuit",
-        vat: "20123456789",
+        vat: "20-12345678-6",
         street: "Calle 1",
         city: "CABA",
       }),

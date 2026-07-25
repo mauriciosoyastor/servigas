@@ -31,6 +31,20 @@
 
 ---
 
+### 2026-07-25 — Todos los asientos + checksum CUIT (P0.1 + P0.2)
+
+**Área:** contabilidad | web | BFF | Odoo  
+**Motivo:** la card hub «Todos los asientos» caía a CxC; destino CUIT aceptaba basura.  
+**Archivos:**  
+- `web/src/lib/shell/cuit.ts`, `invoice-dest.ts`, `record-lists.ts`, `accounting-move-detail.ts`  
+- `web/src/pages/lists/accounting/moves/[id].astro` (redirect FC/FP/NC)  
+- `RecordCreateForm` / `RecordDetailBody` / `pos.astro` (aviso CUIT)  
+- `custom_addons/servigas_core/models/res_partner.py` (constraint)  
+- Spec/plan `docs/superpowers/*2026-07-25-accounting-moves-cuit-checksum*`  
+**Cambios:** lista `accounting/moves`; ruteo label/domain; checksum AFIP (opción C); avisos en alta/edición cliente; ficha moves → especializada.  
+**Verificación:** `npm test` en `web/` (335 pass).  
+**Automatización:** helper CUIT + `resolveAccountingMoveDetailPath` reutilizables.
+
 ### 2026-07-24 — Medio de pago al registrar cobro/pago
 
 **Área:** contabilidad | web | BFF  
