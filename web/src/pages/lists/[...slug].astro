@@ -1,5 +1,6 @@
 ---
 import ShellLayout from '../../layouts/ShellLayout.astro';
+import InvoicePdfModalHost from '../../components/InvoicePdfModalHost.astro';
 import ProductImageUploadHost from '../../components/ProductImageUploadHost.astro';
 import RecordTable from '../../components/RecordTable.astro';
 import ListToolbar from '../../components/ListToolbar.astro';
@@ -7,6 +8,7 @@ import { BffError } from '../../lib/bff/errors.ts';
 import { getBackend } from '../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
 import type { RecordListPayload } from '../../lib/bff/types.ts';
+import { canFetchInvoicePdf } from '../../lib/shell/invoice-pdf.ts';
 import {
 	getRecordListDef,
 	resolveRecordListKey,
@@ -151,8 +153,12 @@ if (!def) {
 								? '/api/records/inventory/products'
 								: undefined
 						}
+						invoicePdfListKey={
+							canFetchInvoicePdf(listKey) ? listKey : undefined
+						}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
+					{canFetchInvoicePdf(listKey) ? <InvoicePdfModalHost /> : null}
 				</>
 			) : (
 				<section class="sg-list-state sg-glass">

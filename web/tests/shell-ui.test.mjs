@@ -185,6 +185,7 @@ describe("shell UI contracts", () => {
 
   it("embeds invoice PDF viewer on accounting move fichas", async () => {
     const control = await source("components/RecordInvoicePdfControl.astro");
+    const host = await source("components/InvoicePdfModalHost.astro");
     const pages = await Promise.all([
       source("pages/lists/accounting/customer-invoices/[id].astro"),
       source("pages/lists/accounting/vendor-bills/[id].astro"),
@@ -195,11 +196,14 @@ describe("shell UI contracts", () => {
     assert.match(control, /data-invoice-pdf/);
     assert.match(control, /Ver PDF/);
     assert.match(control, /Descargar/);
-    assert.match(control, /embed|iframe/);
-    assert.match(control, /application\/pdf/);
-    assert.match(control, /createObjectURL/);
-    assert.match(control, /Abrir en pestaña/);
-    assert.match(control, /role=["']dialog["']/);
+    assert.match(control, /InvoicePdfModalHost/);
+    assert.match(host, /data-invoice-pdf-host/);
+    assert.match(host, /embed|iframe/);
+    assert.match(host, /application\/pdf/);
+    assert.match(host, /createObjectURL/);
+    assert.match(host, /Abrir en pestaña/);
+    assert.match(host, /role=["']dialog["']/);
+    assert.match(host, /data-invoice-pdf-open/);
     for (const page of pages) {
       assert.match(page, /RecordInvoicePdfControl/);
       assert.match(page, /slot=["']secondary["']/);
@@ -208,6 +212,19 @@ describe("shell UI contracts", () => {
     const api = await source("pages/api/reports/invoice/[...slug].ts");
     assert.match(api, /fetchInvoicePdf/);
     assert.match(api, /"cache-control":\s*"private, no-store"/);
+  });
+
+  it("wires compact PDF action on allowlisted accounting list rows", async () => {
+    const table = await source("components/RecordTable.astro");
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(table, /invoicePdfListKey/);
+    assert.match(table, /invoicePdfPath/);
+    assert.match(table, /data-invoice-pdf-open/);
+    assert.match(table, /data-pdf-url/);
+    assert.match(table, />\s*PDF\s*</);
+    assert.match(listPage, /canFetchInvoicePdf/);
+    assert.match(listPage, /invoicePdfListKey/);
+    assert.match(listPage, /InvoicePdfModalHost/);
   });
 
   it("renders transfer detail page", async () => {
@@ -220,8 +237,12 @@ describe("shell UI contracts", () => {
 
   it("renders order lines block in record detail body", async () => {
     const body = await source("components/RecordDetailBody.astro");
+    const css = await source("styles/list.css");
     assert.match(body, /detail\.lines/);
     assert.match(body, /sg-detail-lines/);
+    assert.match(body, /product_image/);
+    assert.match(body, /sg-detail-line-product/);
+    assert.match(css, /\.sg-detail-line-thumb/);
   });
 
   it("renders Apps and Settings landings", async () => {
@@ -430,6 +451,25 @@ describe("shell UI contracts", () => {
     assert.match(billDetail, /Publicar/);
     assert.match(detailBody, /sg-detail-attachments|Comprobante/);
     assert.match(listPage, /Cargar FP/);
+  });
+
+  it("styles bill-source origin picker for dark contrast", async () => {
+    const form = await source("components/OrderCreateForm.astro");
+    assert.match(form, /data-bill-source-select/);
+    assert.match(form, /data-bill-source-list/);
+    assert.match(form, /sg-order-bill-source-list/);
+    assert.match(form, /color:\s*var\(--sg-text-on-dark\)/);
+    assert.match(form, /background:\s*rgba\(0,\s*0,\s*0,\s*0\.72\)/);
+  });
+
+  it("styles bill attachment picker with Spanish glass control", async () => {
+    const form = await source("components/OrderCreateForm.astro");
+    assert.match(form, /data-bill-attachment/);
+    assert.match(form, /data-bill-attachment-name/);
+    assert.match(form, /sg-order-attachment-control/);
+    assert.match(form, /Elegir archivo/);
+    assert.match(form, /Sin archivo/);
+    assert.match(form, /\.sg-order-attachment-native[\s\S]*display:\s*none/);
   });
 
   it("wires Crear FC on sale order detail when to invoice", async () => {

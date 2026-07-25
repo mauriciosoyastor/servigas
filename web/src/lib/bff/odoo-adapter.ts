@@ -2575,6 +2575,14 @@ export class OdooAdapter implements BackendClient {
           for (const column of lineDef.columns) {
             out[column.key] = this.#cellValue(row[column.key]);
           }
+          // Thumb for lines that reference a product variant (POS, SO, PO, FC, stock).
+          if (lineDef.fields.includes("product_id")) {
+            const productId = this.#partnerIdFromM2o(row.product_id);
+            if (productId > 0) {
+              out.product_image =
+                mediaPath("product.product", productId, "image_128") || null;
+            }
+          }
           return out;
         }),
       };

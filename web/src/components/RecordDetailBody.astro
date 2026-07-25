@@ -264,13 +264,36 @@ function displayValue(
 									<tbody>
 										{detail.lines.rows.map((row) => (
 											<tr>
-												{detail.lines!.columns.map((column) => (
-													<td>
-														{row[column.key] === null || row[column.key] === ''
-															? '—'
-															: String(row[column.key])}
-													</td>
-												))}
+												{detail.lines!.columns.map((column) => {
+													const raw = row[column.key];
+													const empty = raw === null || raw === '' || raw === undefined;
+													const image =
+														column.key === 'product_id' &&
+														typeof row.product_image === 'string'
+															? row.product_image
+															: '';
+													return (
+														<td data-label={column.label}>
+															{column.key === 'product_id' && image ? (
+																<span class="sg-detail-line-product">
+																	<img
+																		class="sg-detail-line-thumb"
+																		src={image}
+																		alt=""
+																		loading="lazy"
+																		width="40"
+																		height="40"
+																	/>
+																	<span>{empty ? '—' : String(raw)}</span>
+																</span>
+															) : empty ? (
+																'—'
+															) : (
+																String(raw)
+															)}
+														</td>
+													);
+												})}
 											</tr>
 										))}
 									</tbody>

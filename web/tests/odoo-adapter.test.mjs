@@ -467,6 +467,10 @@ describe("OdooAdapter.getRecordDetail", () => {
     assert.equal(detail.lines?.title, "Líneas");
     assert.equal(detail.lines?.rows.length, 1);
     assert.equal(detail.lines?.rows[0].product_id, "Calefactor");
+    assert.equal(
+      detail.lines?.rows[0].product_image,
+      "/api/media/product.product/9/image_128"
+    );
   });
 
   it("loads stock.picking move lines", async () => {
@@ -569,6 +573,10 @@ describe("OdooAdapter.getRecordDetail", () => {
     assert.equal(detail.lines?.columns.some((col) => col.key === "discount"), true);
     assert.equal(detail.lines?.rows[0].discount, 10);
     assert.equal(detail.lines?.rows[0].product_id, "Arandela");
+    assert.equal(
+      detail.lines?.rows[0].product_image,
+      "/api/media/product.product/42/image_128"
+    );
   });
 
   it("loads account.move lines with product display_type domain", async () => {

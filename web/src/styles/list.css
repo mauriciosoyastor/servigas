@@ -317,6 +317,28 @@
 	font-size: 0.85rem;
 }
 
+.sg-detail-line-product {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.65rem;
+	min-width: 0;
+}
+
+.sg-detail-line-thumb {
+	flex: 0 0 auto;
+	width: 2.5rem;
+	height: 2.5rem;
+	border-radius: 0.55rem;
+	object-fit: cover;
+	background: color-mix(in srgb, var(--sg-canvas) 88%, white);
+	border: 1px solid var(--sg-glass-border);
+}
+
+.sg-detail-line-product > span {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
 .sg-detail-fields {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));

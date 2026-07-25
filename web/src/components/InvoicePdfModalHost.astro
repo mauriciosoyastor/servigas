@@ -1,0 +1,274 @@
+---
+/** Montar una sola vez por página; atiende cualquier botón [data-invoice-pdf-open]. */
+---
+
+<div class="sg-invoice-pdf-host" data-invoice-pdf-host hidden>
+	<div
+		class="sg-invoice-pdf-modal"
+		data-invoice-pdf-modal
+		role="dialog"
+		aria-modal="true"
+		aria-labelledby="sg-invoice-pdf-title"
+		hidden
+	>
+		<div class="sg-invoice-pdf-dialog sg-glass">
+			<header class="sg-invoice-pdf-header">
+				<strong id="sg-invoice-pdf-title">Factura PDF</strong>
+				<div class="sg-invoice-pdf-header-actions">
+					<a
+						class="sg-focus-ring"
+						href="#"
+						target="_blank"
+						rel="noopener"
+						data-invoice-pdf-open-tab
+					>
+						Abrir en pestaña
+					</a>
+					<a
+						class="sg-focus-ring"
+						href="#"
+						download
+						data-invoice-pdf-modal-download
+					>
+						Descargar
+					</a>
+					<button type="button" class="sg-focus-ring" data-invoice-pdf-close>
+						Cerrar
+					</button>
+				</div>
+			</header>
+			<p class="sg-invoice-pdf-status" data-invoice-pdf-status hidden></p>
+			<embed
+				class="sg-invoice-pdf-frame"
+				data-invoice-pdf-frame
+				type="application/pdf"
+				title="Vista previa del PDF"
+			/>
+		</div>
+	</div>
+</div>
+
+<script>
+	function initInvoicePdfHost() {
+		const host = document.querySelector('[data-invoice-pdf-host]');
+		if (!(host instanceof HTMLElement) || host.dataset.bound === '1') return;
+		host.dataset.bound = '1';
+		host.hidden = false;
+
+		const modal = host.querySelector('[data-invoice-pdf-modal]');
+		const frame = host.querySelector('[data-invoice-pdf-frame]');
+		const status = host.querySelector('[data-invoice-pdf-status]');
+		const closeBtn = host.querySelector('[data-invoice-pdf-close]');
+		const openTab = host.querySelector('[data-invoice-pdf-open-tab]');
+		const modalDownload = host.querySelector('[data-invoice-pdf-modal-download]');
+		const titleEl = host.querySelector('#sg-invoice-pdf-title');
+
+		if (
+			!(modal instanceof HTMLElement) ||
+			!(frame instanceof HTMLElement) ||
+			!(status instanceof HTMLElement) ||
+			!(closeBtn instanceof HTMLButtonElement)
+		) {
+			return;
+		}
+
+		/** @type {string | null} */
+		let objectUrl = null;
+
+		function setStatus(text, state) {
+			if (!text) {
+				status.hidden = true;
+				status.textContent = '';
+				status.dataset.state = '';
+				return;
+			}
+			status.hidden = false;
+			status.textContent = text;
+			status.dataset.state = state || '';
+		}
+
+		function revokeObjectUrl() {
+			if (objectUrl) {
+				URL.revokeObjectURL(objectUrl);
+				objectUrl = null;
+			}
+		}
+
+		function closeModal() {
+			modal.hidden = true;
+			frame.removeAttribute('src');
+			revokeObjectUrl();
+			if (openTab instanceof HTMLAnchorElement) {
+				openTab.href = '#';
+			}
+			if (modalDownload instanceof HTMLAnchorElement) {
+				modalDownload.href = '#';
+			}
+			setStatus('');
+		}
+
+		/**
+		 * @param {HTMLElement} openBtn
+		 */
+		async function openModal(openBtn) {
+			const pdfUrl = openBtn.dataset.pdfUrl || '';
+			const pdfTitle = openBtn.dataset.pdfTitle || 'Factura PDF';
+			if (!pdfUrl) return;
+			if (titleEl instanceof HTMLElement) titleEl.textContent = pdfTitle;
+			modal.hidden = false;
+			setStatus('Cargando PDF…', 'pending');
+			frame.removeAttribute('src');
+			revokeObjectUrl();
+			if (modalDownload instanceof HTMLAnchorElement) {
+				modalDownload.href = `${pdfUrl}?download=1`;
+			}
+
+			try {
+				const response = await fetch(pdfUrl, { credentials: 'same-origin' });
+				if (!response.ok) {
+					const payload = await response.json().catch(() => ({}));
+					throw new Error(
+						payload?.error?.message || 'No se pudo cargar el PDF'
+					);
+				}
+				const buffer = await response.arrayBuffer();
+				if (buffer.byteLength < 5) {
+					throw new Error('Odoo no devolvió un PDF válido');
+				}
+				const head = new Uint8Array(buffer.slice(0, 5));
+				const isPdf =
+					head[0] === 0x25 &&
+					head[1] === 0x50 &&
+					head[2] === 0x44 &&
+					head[3] === 0x46 &&
+					head[4] === 0x2d;
+				if (!isPdf) {
+					throw new Error('Odoo no devolvió un PDF válido');
+				}
+				// Force MIME so Chrome/Edge embed the viewer instead of a blank frame.
+				const pdfBlob = new Blob([buffer], { type: 'application/pdf' });
+				objectUrl = URL.createObjectURL(pdfBlob);
+				frame.setAttribute('src', `${objectUrl}#view=FitH`);
+				if (openTab instanceof HTMLAnchorElement) {
+					openTab.href = objectUrl;
+				}
+				setStatus('');
+			} catch (error) {
+				setStatus(
+					error instanceof Error ? error.message : 'No se pudo cargar el PDF',
+					'error'
+				);
+			}
+		}
+
+		document.addEventListener('click', (event) => {
+			const target = event.target;
+			if (!(target instanceof Element)) return;
+			const openBtn = target.closest('[data-invoice-pdf-open]');
+			if (!(openBtn instanceof HTMLElement) || !openBtn.dataset.pdfUrl) return;
+			event.preventDefault();
+			void openModal(openBtn);
+		});
+		closeBtn.addEventListener('click', closeModal);
+		modal.addEventListener('click', (event) => {
+			if (event.target === modal) closeModal();
+		});
+		document.addEventListener('keydown', (event) => {
+			if (event.key === 'Escape' && !modal.hidden) closeModal();
+		});
+	}
+
+	initInvoicePdfHost();
+	document.addEventListener('astro:page-load', initInvoicePdfHost);
+</script>
+
+<style>
+	.sg-invoice-pdf-host {
+		display: contents;
+	}
+
+	.sg-invoice-pdf-modal {
+		position: fixed;
+		inset: 0;
+		z-index: 80;
+		display: grid;
+		place-items: center;
+		padding: 1rem;
+		background: rgba(6, 12, 20, 0.72);
+	}
+
+	.sg-invoice-pdf-modal[hidden] {
+		display: none;
+	}
+
+	.sg-invoice-pdf-dialog {
+		width: min(960px, 100%);
+		height: min(88vh, 920px);
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem;
+		border-radius: var(--sg-radius-lg, 1rem);
+	}
+
+	.sg-invoice-pdf-header {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.75rem;
+	}
+
+	.sg-invoice-pdf-header strong {
+		font-size: 1rem;
+	}
+
+	.sg-invoice-pdf-header-actions {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.sg-invoice-pdf-header-actions a,
+	.sg-invoice-pdf-header-actions button {
+		border: 1px solid rgba(255, 255, 255, 0.18);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.4rem 0.75rem;
+		color: var(--sg-text-dark, #eef3f8);
+		background: rgba(255, 255, 255, 0.06);
+		font-size: 0.78rem;
+		font-weight: 600;
+		text-decoration: none;
+		cursor: pointer;
+	}
+
+	.sg-invoice-pdf-status {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+
+	.sg-invoice-pdf-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+
+	.sg-invoice-pdf-frame {
+		flex: 1;
+		width: 100%;
+		min-height: 0;
+		border: 1px solid rgba(255, 255, 255, 0.12);
+		border-radius: 0.75rem;
+		background: #111827;
+	}
+
+	@media (max-width: 767px) {
+		.sg-invoice-pdf-dialog {
+			height: min(92vh, 100%);
+			padding: 0.75rem;
+		}
+
+		.sg-invoice-pdf-header {
+			flex-direction: column;
+			align-items: flex-start;
+		}
+	}
+</style>

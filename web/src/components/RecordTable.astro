@@ -1,15 +1,25 @@
 ---
 import type { RecordListColumn, RecordListRow } from '../lib/bff/types.ts';
 import { invoiceDestBadge } from '../lib/shell/invoice-dest.ts';
+import { invoicePdfPath } from '../lib/shell/invoice-pdf.ts';
 
 interface Props {
 	columns: RecordListColumn[];
 	rows: RecordListRow[];
 	caption?: string;
 	imageUploadApiPath?: string;
+	invoicePdfListKey?: string;
 }
 
-const { columns, rows, caption = 'Registros', imageUploadApiPath = '' } = Astro.props;
+const {
+	columns,
+	rows,
+	caption = 'Registros',
+	imageUploadApiPath = '',
+	invoicePdfListKey = '',
+} = Astro.props;
+
+const showInvoicePdf = Boolean(invoicePdfListKey);
 
 function formatCell(key: string, value: string | number | boolean | null): string {
 	if (value === null || value === undefined || value === '') return '—';
@@ -19,6 +29,12 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 		return value.toLocaleString('es-AR');
 	}
 	return String(value);
+}
+
+function rowPdfTitle(row: RecordListRow, id: number): string {
+	const name = row.name;
+	if (typeof name === 'string' && name.trim()) return name.trim();
+	return `Comprobante ${id}`;
 }
 ---
 
@@ -32,11 +48,21 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 						{column.label}
 					</th>
 				))}
+				{showInvoicePdf ? (
+					<th scope="col" data-col="pdf" data-kind="action">
+						PDF
+					</th>
+				) : null}
 			</tr>
 		</thead>
 		<tbody>
 			{rows.map((row) => {
 				const href = typeof row.detail_path === 'string' ? row.detail_path : '';
+				const recordId = Number(row.id);
+				const pdfPath =
+					showInvoicePdf && Number.isFinite(recordId)
+						? invoicePdfPath(invoicePdfListKey, recordId)
+						: '';
 				return (
 					<tr data-row-id={row.id}>
 						{columns.map((column) => (
@@ -102,9 +128,48 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 								)}
 							</td>
 						))}
+						{showInvoicePdf ? (
+							<td data-col="pdf" data-kind="action" data-label="PDF">
+								{pdfPath ? (
+									<button
+										type="button"
+										class="sg-record-pdf-btn sg-focus-ring"
+										data-invoice-pdf-open
+										data-pdf-url={pdfPath}
+										data-pdf-title={rowPdfTitle(row, recordId)}
+										aria-label={`Ver PDF de ${rowPdfTitle(row, recordId)}`}
+									>
+										PDF
+									</button>
+								) : (
+									'—'
+								)}
+							</td>
+						) : null}
 					</tr>
 				);
 			})}
 		</tbody>
 	</table>
 </div>
+
+<style>
+	.sg-record-pdf-btn {
+		border: 1px solid rgba(155, 200, 255, 0.45);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.35rem 0.7rem;
+		color: #b7d7ff;
+		background: rgba(25, 45, 75, 0.45);
+		font-size: 0.75rem;
+		font-weight: 650;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
+	.sg-record-table th[data-col='pdf'],
+	.sg-record-table td[data-col='pdf'] {
+		width: 1%;
+		text-align: right;
+		white-space: nowrap;
+	}
+</style>
