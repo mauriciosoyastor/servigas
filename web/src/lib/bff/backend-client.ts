@@ -125,8 +125,7 @@ export interface BackendClient {
   markFwLoadedBulk(
     odooSessionId: string,
     listKey: string,
-    ids: unknown,
-    values?: Record<string, unknown>
+    items: unknown
   ): Promise<{
     ok: true;
     marked: number;
