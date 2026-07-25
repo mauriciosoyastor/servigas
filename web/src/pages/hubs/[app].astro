@@ -96,7 +96,14 @@ const sectionName =
 							<div class="sg-hub-grid">
 								{group.cards.map((card, cardIndex) => (
 									<TileCard
-										tile={{ ...card, target_type: 'action', client_tag: '' }}
+										tile={{
+											...card,
+											// Misma paleta flame/ember del inicio, rotada por posición en la grilla.
+											accent_key: '',
+											target_type: 'action',
+											client_tag: '',
+										}}
+										accentIndex={cardIndex}
 										tourTarget={
 											groupIndex === 0 && cardIndex === 0 ? 'hub-card' : undefined
 										}
@@ -110,7 +117,13 @@ const sectionName =
 				<section class="sg-hub-grid" aria-label={`Accesos de ${HUB_LABELS[app]} — ${sectionName}`}>
 					{cards.map((card, index) => (
 						<TileCard
-							tile={{ ...card, target_type: 'action', client_tag: '' }}
+							tile={{
+								...card,
+								accent_key: '',
+								target_type: 'action',
+								client_tag: '',
+							}}
+							accentIndex={index}
 							tourTarget={index === 0 ? 'hub-card' : undefined}
 						/>
 					))}

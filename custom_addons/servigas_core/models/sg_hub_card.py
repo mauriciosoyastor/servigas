@@ -37,6 +37,24 @@ class SgHubCard(models.Model):
         [("default", "Default"), ("warning", "Warning")],
         default="default",
     )
+    accent_key = fields.Selection(
+        [
+            ("flame-yellow", "Amarillo llama"),
+            ("flame-orange", "Naranja llama"),
+            ("flame-deep", "Naranja profundo"),
+            ("flame-rust", "Óxido"),
+            ("ember-amber", "Ámbar"),
+            ("ember-coral", "Coral"),
+            ("ember-scarlet", "Escarlata"),
+            ("ember-wine", "Vino"),
+            ("bg-mid", "Gris medio"),
+            ("bg-charcoal", "Carbón"),
+            ("bg-deep", "Carbón profundo"),
+        ],
+        string="Acento",
+        help="Acento visual de la KPI card (misma paleta que el launcher). "
+        "Vacío = el shell rota flame/ember por índice.",
+    )
     enter_label = fields.Char(
         string="Texto de ingreso",
         default="Ingresar →",
@@ -193,10 +211,59 @@ class SgHubCard(models.Model):
             "hint": self.hint or "",
             "icon": self.icon or "fa-circle",
             "variant": self.variant,
+            "accent_key": self.accent_key or "",
             "enter_label": self.enter_label or _("Ingresar →"),
             "value": self._get_metric_display(),
             "action": self._get_action_payload(),
         }
+
+    _HUB_ACCENT_CYCLE = (
+        "flame-yellow",
+        "flame-orange",
+        "flame-deep",
+        "flame-rust",
+        "ember-amber",
+        "ember-coral",
+        "ember-scarlet",
+        "ember-wine",
+    )
+
+    @api.model
+    def _setup_hub_card_accents_for_app(self, app):
+        """Rota acentos flame/ember por sección (cada pestaña arranca en amarillo)."""
+        cards = self.search([("app", "=", app)], order="section, sequence, id")
+        cycle = self._HUB_ACCENT_CYCLE
+        index_by_section = {}
+        for card in cards:
+            section = card.section or "summary"
+            index = index_by_section.get(section, 0)
+            index_by_section[section] = index + 1
+            accent = cycle[index % len(cycle)]
+            if card.accent_key != accent:
+                card.write({"accent_key": accent})
+
+    @api.model
+    def setup_inventory_hub_card_accents(self):
+        self._setup_hub_card_accents_for_app("inventory")
+
+    @api.model
+    def setup_sales_hub_card_accents(self):
+        self._setup_hub_card_accents_for_app("sales")
+
+    @api.model
+    def setup_purchase_hub_card_accents(self):
+        self._setup_hub_card_accents_for_app("purchase")
+
+    @api.model
+    def setup_accounting_hub_card_accents(self):
+        self._setup_hub_card_accents_for_app("accounting")
+
+    @api.model
+    def setup_all_hub_card_accents(self):
+        self.setup_inventory_hub_card_accents()
+        self.setup_sales_hub_card_accents()
+        self.setup_purchase_hub_card_accents()
+        self.setup_accounting_hub_card_accents()
 
     @api.model
     def get_hub_payload(self, app, section="summary"):

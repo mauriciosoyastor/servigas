@@ -1,27 +1,18 @@
 ---
 import type { LauncherTile } from '../lib/bff/types.ts';
+import { accentCssVar, resolveAccentKey } from '../lib/shell/tile-accents.ts';
 
 interface Props {
 	tile: LauncherTile;
 	/** Onboarding spotlight anchor (data-tour) */
 	tourTarget?: string;
+	/** Used to cycle accents when the tile has no accent_key (hub KPI cards). */
+	accentIndex?: number;
 }
 
-const { tile, tourTarget } = Astro.props;
-const accents: Record<string, string> = {
-	'flame-yellow': 'var(--sg-flame-yellow)',
-	'flame-orange': 'var(--sg-flame-orange)',
-	'flame-deep': 'var(--sg-flame-deep)',
-	'flame-rust': 'var(--sg-flame-rust)',
-	'ember-amber': 'var(--sg-ember-amber)',
-	'ember-coral': 'var(--sg-ember-coral)',
-	'ember-scarlet': 'var(--sg-ember-scarlet)',
-	'ember-wine': 'var(--sg-ember-wine)',
-	'bg-mid': '#555',
-	'bg-charcoal': 'var(--sg-bg-charcoal)',
-	'bg-deep': 'var(--sg-bg-deep)',
-};
-const accent = accents[tile.accent_key] ?? 'var(--sg-flame-orange)';
+const { tile, tourTarget, accentIndex = 0 } = Astro.props;
+const accentKey = resolveAccentKey(tile.accent_key, accentIndex);
+const accent = accentCssVar(accentKey);
 const monogram = tile.label.trim().slice(0, 1).toUpperCase() || 'S';
 const actionPayload =
 	tile.action && typeof tile.action === 'object'
@@ -38,6 +29,7 @@ const actionPayload =
 	data-label={tile.label}
 	data-action={actionPayload}
 	data-tour={tourTarget}
+	data-accent={accentKey}
 	style={`--tile-accent: ${accent}`}
 >
 	<span class="sg-tile-icon" aria-hidden="true">{monogram}</span>
@@ -47,7 +39,6 @@ const actionPayload =
 	</span>
 	{tile.value ? (
 		<span class="sg-tile-kpi" data-kpi>
-			<span class="sg-tile-kpi-label">Dato</span>
 			<span class="sg-tile-value">{tile.value}</span>
 		</span>
 	) : null}
@@ -132,13 +123,6 @@ const actionPayload =
 		background: rgba(0, 0, 0, 0.28);
 		border: 1px solid color-mix(in srgb, var(--tile-accent), white 18%);
 		min-width: 4.5rem;
-	}
-	.sg-tile-kpi-label {
-		color: var(--sg-text-muted-dark);
-		font-size: 0.62rem;
-		font-weight: 700;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
 	}
 	.sg-tile-value {
 		font-size: clamp(1.15rem, 2vw, 1.55rem);

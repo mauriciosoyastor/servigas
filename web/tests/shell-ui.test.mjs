@@ -44,9 +44,14 @@ describe("shell UI contracts", () => {
     assert.match(rail, />Servigas</);
     assert.match(tile, /data-tile/);
     assert.match(tile, /data-kpi|sg-tile-kpi/);
+    assert.doesNotMatch(tile, />\s*Dato\s*</);
+    assert.match(tile, /resolveAccentKey|accentCssVar|tile-accents/);
+    assert.match(tile, /data-accent/);
     assert.match(tile, /tourTarget|data-tour=\{tourTarget\}/);
-    assert.match(tile, /ember-amber/);
-    assert.match(tile, /ember-wine/);
+    const accents = await source("lib/shell/tile-accents.ts");
+    assert.match(accents, /ember-amber/);
+    assert.match(accents, /ember-wine/);
+    assert.match(accents, /TILE_ACCENT_CYCLE/);
     assert.match(note, /Próximamente/);
     assert.match(note, /data-coming-soon-detail/);
     assert.match(note, /todavía no está disponible/);
@@ -105,6 +110,7 @@ describe("shell UI contracts", () => {
     assert.match(hub, /searchParams\.get\(['"]section['"]\)/);
     assert.match(hub, /payload\.groups/);
     assert.match(hub, /sg-hub-group/);
+    assert.match(hub, /accentIndex=/);
     assert.match(hub, /resolveTileNavigation/);
     assert.match(hub, /destination\.kind === ['"]list['"]/);
   });
