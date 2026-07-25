@@ -2,6 +2,7 @@
 import type { RecordListColumn, RecordListRow } from '../lib/bff/types.ts';
 import { invoiceDestBadge } from '../lib/shell/invoice-dest.ts';
 import { invoicePdfPath } from '../lib/shell/invoice-pdf.ts';
+import { labelOdooSelection } from '../lib/shell/odoo-selection-labels.ts';
 
 interface Props {
 	columns: RecordListColumn[];
@@ -28,7 +29,7 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 	if ((key === 'qty_available' || key === 'id') && typeof value === 'number') {
 		return value.toLocaleString('es-AR');
 	}
-	return String(value);
+	return String(labelOdooSelection(key, value));
 }
 
 function rowPdfTitle(row: RecordListRow, id: number): string {

@@ -1,6 +1,7 @@
 ---
 import type { RecordDetailPayload } from '../lib/bff/types.ts';
 import { invoiceDestLabel } from '../lib/shell/invoice-dest.ts';
+import { labelOdooSelection } from '../lib/shell/odoo-selection-labels.ts';
 
 interface EditFieldOption {
 	value: string;
@@ -55,7 +56,8 @@ function displayValue(
 	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
 	if (value === null || value === '') return '—';
 	if (key === 'sg_invoice_dest') return invoiceDestLabel(value);
-	return String(value);
+	const labeled = labelOdooSelection(key, value);
+	return String(labeled);
 }
 ---
 
@@ -272,6 +274,9 @@ function displayValue(
 														typeof row.product_image === 'string'
 															? row.product_image
 															: '';
+													const text = empty
+														? '—'
+														: String(labelOdooSelection(column.key, raw));
 													return (
 														<td data-label={column.label}>
 															{column.key === 'product_id' && image ? (
@@ -284,12 +289,10 @@ function displayValue(
 																		width="40"
 																		height="40"
 																	/>
-																	<span>{empty ? '—' : String(raw)}</span>
+																	<span>{text}</span>
 																</span>
-															) : empty ? (
-																'—'
 															) : (
-																String(raw)
+																text
 															)}
 														</td>
 													);

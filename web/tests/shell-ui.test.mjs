@@ -245,6 +245,13 @@ describe("shell UI contracts", () => {
     assert.match(css, /\.sg-detail-line-thumb/);
   });
 
+  it("labels Odoo selection values in Spanish on fichas and lists", async () => {
+    const body = await source("components/RecordDetailBody.astro");
+    const table = await source("components/RecordTable.astro");
+    assert.match(body, /labelOdooSelection/);
+    assert.match(table, /labelOdooSelection/);
+  });
+
   it("renders Apps and Settings landings", async () => {
     const apps = await source("pages/apps.astro");
     const settings = await source("pages/settings.astro");
