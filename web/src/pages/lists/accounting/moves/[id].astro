@@ -2,10 +2,10 @@
 /**
  * Bridge: Todos los asientos → ficha especializada FC/FP/NC según move_type.
  */
-import RecordDetailBody from '../../../../../components/RecordDetailBody.astro';
-import ShellLayout from '../../../../../layouts/ShellLayout.astro';
-import { resolveAccountingMoveDetailPath } from '../../../../../lib/shell/accounting-move-detail.ts';
-import { loadRecordDetail } from '../../../../../lib/shell/load-record-detail.ts';
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { resolveAccountingMoveDetailPath } from '../../../../lib/shell/accounting-move-detail.ts';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
