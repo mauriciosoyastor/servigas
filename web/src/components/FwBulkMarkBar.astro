@@ -1,0 +1,174 @@
+---
+interface Props {
+	listKey: string;
+	apiPath: string;
+}
+
+const { listKey, apiPath } = Astro.props;
+---
+
+<section
+	class="sg-fw-bulk sg-glass"
+	data-fw-bulk
+	data-list-key={listKey}
+	data-api={apiPath}
+>
+	<p class="sg-fw-bulk-hint">
+		Seleccioná facturas de esta página y marcálas como ya cargadas en Factura Web.
+	</p>
+	<div class="sg-fw-bulk-actions">
+		<span class="sg-fw-bulk-count" data-fw-bulk-count>0 seleccionadas</span>
+		<button
+			class="sg-focus-ring"
+			type="button"
+			data-fw-bulk-btn
+			disabled
+		>
+			Marcar seleccionadas
+		</button>
+		<span class="sg-fw-bulk-status" data-fw-bulk-status hidden></span>
+	</div>
+</section>
+
+<script>
+	const root = document.querySelector('[data-fw-bulk]');
+	const btn = root?.querySelector('[data-fw-bulk-btn]');
+	const countEl = root?.querySelector('[data-fw-bulk-count]');
+	const status = root?.querySelector('[data-fw-bulk-status]');
+	const apiPath = root instanceof HTMLElement ? root.dataset.api || '' : '';
+
+	const selectedIds = () =>
+		[...document.querySelectorAll('.sg-record-table [data-row-select]:checked')]
+			.map((el) => Number(el instanceof HTMLInputElement ? el.value : NaN))
+			.filter((id) => Number.isFinite(id) && id > 0);
+
+	const refresh = () => {
+		const ids = selectedIds();
+		if (countEl instanceof HTMLElement) {
+			const n = ids.length;
+			countEl.textContent =
+				n === 1 ? '1 seleccionada' : `${n} seleccionadas`;
+		}
+		if (btn instanceof HTMLButtonElement) {
+			btn.disabled = ids.length === 0;
+		}
+	};
+
+	document.addEventListener('sg:row-select-change', refresh);
+	document.addEventListener('change', (event) => {
+		const target = event.target;
+		if (
+			target instanceof HTMLInputElement &&
+			(target.matches('[data-row-select]') ||
+				target.matches('[data-row-select-all]'))
+		) {
+			refresh();
+		}
+	});
+	refresh();
+
+	btn?.addEventListener('click', async () => {
+		const ids = selectedIds();
+		if (!ids.length || !(btn instanceof HTMLButtonElement)) return;
+		if (
+			!window.confirm(
+				ids.length === 1
+					? '¿Marcar 1 factura como cargada en Factura Web?'
+					: `¿Marcar ${ids.length} facturas como cargadas en Factura Web?`
+			)
+		) {
+			return;
+		}
+		if (status instanceof HTMLElement) {
+			status.hidden = false;
+			status.textContent = 'Marcando…';
+			status.dataset.state = 'pending';
+		}
+		btn.disabled = true;
+		try {
+			const response = await fetch(apiPath, {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					action: 'mark_fw_loaded_bulk',
+					ids,
+				}),
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(
+					payload?.error?.message || 'No se pudieron marcar las facturas'
+				);
+			}
+			const marked = Number(payload?.marked || 0);
+			const skipped = Number(payload?.skipped || 0);
+			if (status instanceof HTMLElement) {
+				status.textContent =
+					skipped > 0
+						? `Marcadas ${marked} · omitidas ${skipped}`
+						: `Marcadas ${marked}`;
+				status.dataset.state = 'ok';
+			}
+			window.setTimeout(() => window.location.reload(), 500);
+		} catch (error) {
+			if (status instanceof HTMLElement) {
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo marcar';
+				status.dataset.state = 'error';
+			}
+			btn.disabled = false;
+		}
+	});
+</script>
+
+<style>
+	.sg-fw-bulk {
+		display: grid;
+		gap: 0.55rem;
+		margin: 0 0 0.85rem;
+		padding: 0.85rem 1rem;
+		border-radius: var(--sg-radius-card);
+	}
+	.sg-fw-bulk-hint {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+		line-height: 1.4;
+	}
+	.sg-fw-bulk-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.sg-fw-bulk-count {
+		font-size: 0.82rem;
+		font-weight: 650;
+		color: var(--sg-text-on-dark);
+	}
+	.sg-fw-bulk button {
+		border: 1px solid rgba(155, 231, 176, 0.5);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.5rem 0.9rem;
+		color: #9be7b0;
+		background: rgba(20, 60, 35, 0.4);
+		font-size: 0.82rem;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-fw-bulk button:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.sg-fw-bulk-status {
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-fw-bulk-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-fw-bulk-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+</style>

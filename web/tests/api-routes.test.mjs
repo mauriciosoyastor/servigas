@@ -443,6 +443,56 @@ describe("BFF API routes", () => {
     }
   });
 
+  it("marks FC bulk as loaded in Factura Web", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      markFwLoadedBulk: async (sessionId, listKey, ids, values) => {
+        called = { sessionId, listKey, ids, values };
+        return { ok: true, marked: 2, skipped: 1, markedIds: [10, 11] };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: "accounting/factura-web-pending" },
+        request: new Request(
+          "http://localhost/api/records/accounting/factura-web-pending",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "mark_fw_loaded_bulk",
+              ids: [10, 11, 12],
+            }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        marked: 2,
+        skipped: 1,
+        markedIds: [10, 11],
+      });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "accounting/factura-web-pending",
+        ids: [10, 11, 12],
+        values: {},
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
   it("registers a payment on an allowlisted invoice list", async () => {
     const cookies = new FakeCookies();
     const bffSid = sessionStore.create("odoo", {

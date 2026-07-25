@@ -1,10 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  FW_BULK_MAX_IDS,
   buildFwPendingCsv,
   canExportFwPending,
   canMarkFwLoaded,
+  canMarkFwLoadedBulk,
   csvEscape,
+  filterMarkFwBulkIds,
   filterMarkFwLoadedValues,
   isFwMarkableState,
 } from "../src/lib/shell/fw-bridge.ts";
@@ -19,6 +22,19 @@ describe("fw-bridge", () => {
     assert.equal(canMarkFwLoaded("accounting/factura-web-pending"), true);
     assert.equal(canMarkFwLoaded("accounting/vendor-bills"), false);
     assert.equal(canExportFwPending("accounting/factura-web-pending"), true);
+    assert.equal(canMarkFwLoadedBulk("accounting/factura-web-pending"), true);
+    assert.equal(canMarkFwLoadedBulk("accounting/customer-invoices"), true);
+    assert.equal(canMarkFwLoadedBulk("accounting/vendor-bills"), false);
+  });
+
+  it("filters bulk mark ids", () => {
+    assert.deepEqual(filterMarkFwBulkIds([1, 2, 2, "3"]), [1, 2, 3]);
+    assert.equal(filterMarkFwBulkIds([]), null);
+    assert.equal(filterMarkFwBulkIds([0, -1, "x"]), null);
+    assert.equal(filterMarkFwBulkIds(null), null);
+    const tooMany = Array.from({ length: FW_BULK_MAX_IDS + 1 }, (_, i) => i + 1);
+    assert.equal(filterMarkFwBulkIds(tooMany), null);
+    assert.equal(FW_BULK_MAX_IDS, 100);
   });
 
   it("filters optional fw number", () => {

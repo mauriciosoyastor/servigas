@@ -73,6 +73,8 @@ import {
 import {
   buildFwPendingCsv,
   canMarkFwLoaded,
+  canMarkFwLoadedBulk,
+  filterMarkFwBulkIds,
   filterMarkFwLoadedValues,
   isFwMarkableState,
 } from "../shell/fw-bridge.ts";
@@ -1837,6 +1839,76 @@ export class OdooAdapter implements BackendClient {
       ok: true,
       sg_fw_loaded: true,
       sg_fw_number: filtered.fwNumber || null,
+    };
+  }
+
+  async markFwLoadedBulk(
+    odooSessionId: string,
+    listKey: string,
+    ids: unknown,
+    values: Record<string, unknown> = {}
+  ): Promise<{
+    ok: true;
+    marked: number;
+    skipped: number;
+    markedIds: number[];
+  }> {
+    if (!canMarkFwLoadedBulk(listKey)) {
+      throw new BffError("not_found", 404, "Marcado Factura Web no permitido");
+    }
+    const filteredIds = filterMarkFwBulkIds(ids);
+    if (!filteredIds) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Seleccioná entre 1 y 100 facturas válidas"
+      );
+    }
+    const filtered = filterMarkFwLoadedValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("validation_error", 400, "Datos de marcado inválidos");
+    }
+
+    const moves = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [filteredIds, ["state", "move_type", "sg_fw_loaded", "name"]]
+    );
+    const byId = new Map(
+      (moves || []).map((move) => [Number(move.id), move] as const)
+    );
+    const markedIds: number[] = [];
+    for (const id of filteredIds) {
+      const move = byId.get(id);
+      if (!move) continue;
+      if (String(move.move_type || "") !== "out_invoice") continue;
+      if (!isFwMarkableState(move.state as string, move.sg_fw_loaded)) continue;
+      markedIds.push(id);
+    }
+
+    if (markedIds.length) {
+      const writeVals: Record<string, unknown> = {
+        sg_fw_loaded: true,
+        sg_fw_loaded_at: new Date()
+          .toISOString()
+          .slice(0, 19)
+          .replace("T", " "),
+      };
+      if (filtered.fwNumber) {
+        writeVals.sg_fw_number = filtered.fwNumber;
+      }
+      await this.#callKw(odooSessionId, "account.move", "write", [
+        markedIds,
+        writeVals,
+      ]);
+    }
+
+    return {
+      ok: true,
+      marked: markedIds.length,
+      skipped: filteredIds.length - markedIds.length,
+      markedIds,
     };
   }
 
