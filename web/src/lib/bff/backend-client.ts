@@ -116,6 +116,17 @@ export interface BackendClient {
     id: number,
     values?: Record<string, unknown>
   ): Promise<{ ok: true; sg_fw_loaded: true; sg_fw_number: string | null }>;
+  markFwLoadedBulk(
+    odooSessionId: string,
+    listKey: string,
+    ids: unknown,
+    values?: Record<string, unknown>
+  ): Promise<{
+    ok: true;
+    marked: number;
+    skipped: number;
+    markedIds: number[];
+  }>;
   exportFwPendingCsv(odooSessionId: string): Promise<{
     filename: string;
     csv: string;

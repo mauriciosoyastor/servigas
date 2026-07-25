@@ -410,6 +410,8 @@ describe("shell UI contracts", () => {
     const listPage = await source("pages/lists/[...slug].astro");
     const fwExport = await source("pages/api/accounting/factura-web-export.ts");
     const markCtrl = await source("components/RecordMarkFwLoadedControl.astro");
+    const bulkBar = await source("components/FwBulkMarkBar.astro");
+    const recordTable = await source("components/RecordTable.astro");
     const invoiceDetail = await source(
       "pages/lists/accounting/customer-invoices/[id].astro"
     );
@@ -421,9 +423,14 @@ describe("shell UI contracts", () => {
       "pages/lists/accounting/vendor-refunds/[id].astro"
     );
     assert.match(listPage, /factura-web-export/);
+    assert.match(listPage, /FwBulkMarkBar/);
+    assert.match(listPage, /rowSelect=\{showFwBulk\}/);
     assert.match(listPage, /Nueva NC proveedor/);
     assert.match(fwExport, /exportFwPendingCsv/);
     assert.match(markCtrl, /mark_fw_loaded/);
+    assert.match(bulkBar, /mark_fw_loaded_bulk/);
+    assert.match(bulkBar, /Marcar seleccionadas/);
+    assert.match(recordTable, /data-row-select/);
     assert.match(invoiceDetail, /RecordMarkFwLoadedControl/);
     assert.match(posDetail, /RecordCreateInvoiceControl/);
     assert.match(posDetail, /isPosOrderReadyToInvoice/);

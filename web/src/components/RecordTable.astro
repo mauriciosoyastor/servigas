@@ -10,6 +10,8 @@ interface Props {
 	caption?: string;
 	imageUploadApiPath?: string;
 	invoicePdfListKey?: string;
+	/** Columna checkbox para acciones bulk (p. ej. Factura Web). */
+	rowSelect?: boolean;
 }
 
 const {
@@ -18,6 +20,7 @@ const {
 	caption = 'Registros',
 	imageUploadApiPath = '',
 	invoicePdfListKey = '',
+	rowSelect = false,
 } = Astro.props;
 
 const showInvoicePdf = Boolean(invoicePdfListKey);
@@ -44,6 +47,17 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 		<caption class="sr-only">{caption}</caption>
 		<thead>
 			<tr>
+				{rowSelect ? (
+					<th scope="col" data-col="select" data-kind="action">
+						<span class="sr-only">Seleccionar</span>
+						<input
+							type="checkbox"
+							class="sg-focus-ring"
+							data-row-select-all
+							aria-label="Seleccionar todas las filas de esta página"
+						/>
+					</th>
+				) : null}
 				{columns.map((column) => (
 					<th scope="col" data-col={column.key} data-kind={column.kind || 'text'}>
 						{column.label}
@@ -66,6 +80,17 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 						: '';
 				return (
 					<tr data-row-id={row.id}>
+						{rowSelect ? (
+							<td data-col="select" data-kind="action" data-label="Seleccionar">
+								<input
+									type="checkbox"
+									class="sg-focus-ring"
+									data-row-select
+									value={String(recordId)}
+									aria-label={`Seleccionar registro ${recordId}`}
+								/>
+							</td>
+						) : null}
 						{columns.map((column) => (
 							<td data-col={column.key} data-kind={column.kind || 'text'} data-label={column.label}>
 								{column.kind === 'image' ? (
@@ -173,4 +198,49 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 		text-align: right;
 		white-space: nowrap;
 	}
+
+	.sg-record-table th[data-col='select'],
+	.sg-record-table td[data-col='select'] {
+		width: 1%;
+		text-align: center;
+		vertical-align: middle;
+	}
+
+	.sg-record-table input[data-row-select],
+	.sg-record-table input[data-row-select-all] {
+		width: 1.05rem;
+		height: 1.05rem;
+		accent-color: #9be7b0;
+		cursor: pointer;
+	}
 </style>
+
+{rowSelect ? (
+	<script>
+		const table = document.querySelector('.sg-record-table');
+		const selectAll = table?.querySelector('[data-row-select-all]');
+		const syncSelectAll = () => {
+			if (!(selectAll instanceof HTMLInputElement) || !table) return;
+			const boxes = [...table.querySelectorAll('[data-row-select]')].filter(
+				(el) => el instanceof HTMLInputElement
+			);
+			const checked = boxes.filter((el) => el.checked).length;
+			selectAll.checked = boxes.length > 0 && checked === boxes.length;
+			selectAll.indeterminate = checked > 0 && checked < boxes.length;
+			table.dispatchEvent(new CustomEvent('sg:row-select-change', { bubbles: true }));
+		};
+		selectAll?.addEventListener('change', () => {
+			if (!(selectAll instanceof HTMLInputElement) || !table) return;
+			table.querySelectorAll('[data-row-select]').forEach((el) => {
+				if (el instanceof HTMLInputElement) el.checked = selectAll.checked;
+			});
+			syncSelectAll();
+		});
+		table?.addEventListener('change', (event) => {
+			const target = event.target;
+			if (target instanceof HTMLInputElement && target.matches('[data-row-select]')) {
+				syncSelectAll();
+			}
+		});
+	</script>
+) : null}

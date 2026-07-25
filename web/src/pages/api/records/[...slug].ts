@@ -12,7 +12,10 @@ import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateInvoiceFromPos } from "../../../lib/shell/pos-invoice.ts";
 import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import { canRegisterPayment } from "../../../lib/shell/payment-registers.ts";
-import { canMarkFwLoaded } from "../../../lib/shell/fw-bridge.ts";
+import {
+  canMarkFwLoaded,
+  canMarkFwLoadedBulk,
+} from "../../../lib/shell/fw-bridge.ts";
 import {
   canArchiveRecord,
   canCreateRecord,
@@ -26,7 +29,8 @@ type RecordAction =
   | "confirm"
   | "create_invoice"
   | "register_payment"
-  | "mark_fw_loaded";
+  | "mark_fw_loaded"
+  | "mark_fw_loaded_bulk";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -37,6 +41,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     let body: {
       action?: RecordAction;
       id?: unknown;
+      ids?: unknown;
       values?: Record<string, unknown>;
     };
     try {
@@ -64,6 +69,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         "create_invoice",
         "register_payment",
         "mark_fw_loaded",
+        "mark_fw_loaded_bulk",
       ].includes(body.action)
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
@@ -77,6 +83,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         (canCreateInvoiceFromOrder(slug) || canCreateInvoiceFromPos(slug))) ||
       (action === "register_payment" && canRegisterPayment(slug)) ||
       (action === "mark_fw_loaded" && canMarkFwLoaded(slug)) ||
+      (action === "mark_fw_loaded_bulk" && canMarkFwLoadedBulk(slug)) ||
       (action === "create" &&
         (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
@@ -160,6 +167,19 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         odooSessionId,
         slug,
         id,
+        values
+      );
+      return json(result);
+    }
+
+    if (action === "mark_fw_loaded_bulk") {
+      if (!canMarkFwLoadedBulk(slug)) {
+        throw new BffError("not_found", 404, "Marcado Factura Web no permitido");
+      }
+      const result = await getBackend().markFwLoadedBulk(
+        odooSessionId,
+        slug,
+        body.ids,
         values
       );
       return json(result);

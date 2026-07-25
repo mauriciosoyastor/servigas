@@ -1,5 +1,6 @@
 ---
 import ShellLayout from '../../layouts/ShellLayout.astro';
+import FwBulkMarkBar from '../../components/FwBulkMarkBar.astro';
 import InvoicePdfModalHost from '../../components/InvoicePdfModalHost.astro';
 import ProductImageUploadHost from '../../components/ProductImageUploadHost.astro';
 import RecordTable from '../../components/RecordTable.astro';
@@ -52,6 +53,7 @@ const createLabel =
 										: 'Nuevo';
 
 const showFwExport = listKey === 'accounting/factura-web-pending';
+const showFwBulk = listKey === 'accounting/factura-web-pending';
 
 let userName = '';
 let listError = '';
@@ -144,6 +146,12 @@ if (!def) {
 				</section>
 			) : payload && payload.rows.length ? (
 				<>
+					{showFwBulk ? (
+						<FwBulkMarkBar
+							listKey={listKey}
+							apiPath={`/api/records/${listKey}`}
+						/>
+					) : null}
 					<RecordTable
 						columns={payload.columns}
 						rows={payload.rows}
@@ -156,6 +164,7 @@ if (!def) {
 						invoicePdfListKey={
 							canFetchInvoicePdf(listKey) ? listKey : undefined
 						}
+						rowSelect={showFwBulk}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
 					{canFetchInvoicePdf(listKey) ? <InvoicePdfModalHost /> : null}

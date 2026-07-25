@@ -1,6 +1,6 @@
 /**
- * Puente Factura Web: marcar FC cargadas + export pendientes.
- * Spec: docs/superpowers/specs/2026-07-24-fw-pos-nc-prov-design.md
+ * Puente Factura Web: marcar FC cargadas + export pendientes + bulk.
+ * Specs: fw-pos-nc-prov · fw-bulk-mark
  */
 
 import { resolveRecordListKey } from "./record-lists.ts";
@@ -11,15 +11,39 @@ const FW_MARK_KEYS = new Set([
 ]);
 
 export const FW_PENDING_LIST_KEY = "accounting/factura-web-pending";
+export const FW_BULK_MAX_IDS = 100;
 
 export function canMarkFwLoaded(listKey: string): boolean {
   const key = resolveRecordListKey(listKey) || listKey;
   return FW_MARK_KEYS.has(key);
 }
 
+export function canMarkFwLoadedBulk(listKey: string): boolean {
+  return canMarkFwLoaded(listKey);
+}
+
 export function canExportFwPending(listKey: string): boolean {
   const key = resolveRecordListKey(listKey) || listKey;
   return key === FW_PENDING_LIST_KEY || key === "accounting/customer-invoices";
+}
+
+/**
+ * Normaliza ids de bulk mark. null = payload inválido / vacío / exceso.
+ */
+export function filterMarkFwBulkIds(raw: unknown): number[] | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<number>();
+  const ids: number[] = [];
+  for (const item of raw) {
+    const id = Number(item);
+    if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) continue;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    ids.push(id);
+  }
+  if (!ids.length) return null;
+  if (ids.length > FW_BULK_MAX_IDS) return null;
+  return ids;
 }
 
 export type MarkFwLoadedValues = {

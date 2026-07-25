@@ -31,6 +31,15 @@
 
 ---
 
+### 2026-07-25 — Bulk marcar Factura Web (P0.4)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** marcar N FC pendientes FW de a una era lento.  
+**Archivos:** `fw-bridge.ts`, `odoo-adapter.ts`, `FwBulkMarkBar.astro`, `RecordTable` (checkboxes), API `mark_fw_loaded_bulk`  
+**Cambios:** selección en cola pendientes + confirmación + write Odoo en lote (máx. 100).  
+**Verificación:** `npm test` / `npm run build` en `web/`.  
+**Automatización:** patrón selectable + bulk action reutilizable.
+
 ### 2026-07-25 — Todos los asientos + checksum CUIT (P0.1 + P0.2)
 
 **Área:** contabilidad | web | BFF | Odoo  
