@@ -466,4 +466,17 @@ describe("record-lists allowlist", () => {
       "/lists/sales/teams/:id"
     );
   });
+
+  it("defines purchase/uom with Odoo 19 uom.uom fields", () => {
+    const def = getRecordListDef("purchase/uom");
+    assert.ok(def);
+    assert.equal(def.model, "uom.uom");
+    assert.deepEqual(def.fields, ["name", "relative_uom_id", "factor"]);
+    assert.deepEqual(
+      def.columns.map((c) => c.key),
+      ["name", "relative_uom_id", "factor"]
+    );
+    assert.ok(!def.fields.includes("category_id"));
+    assert.ok(!def.fields.includes("uom_type"));
+  });
 });

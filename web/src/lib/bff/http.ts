@@ -18,7 +18,12 @@ export const USER_ERROR_MESSAGES: Record<BffErrorCode, string> = {
   action_failed: "No se pudo completar la acción",
 };
 
-const PASSTHROUGH_CODES: BffErrorCode[] = ["validation_error", "forbidden"];
+const PASSTHROUGH_CODES: BffErrorCode[] = [
+  "validation_error",
+  "forbidden",
+  // Adapter-authored Spanish copy (payments, PDF, stock validate, …).
+  "action_failed",
+];
 
 export function json(data: unknown, init: ResponseInit = {}) {
   return new Response(JSON.stringify(data), {

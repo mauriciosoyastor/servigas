@@ -135,7 +135,32 @@ describe("OdooAdapter.fetchInvoicePdf", () => {
     });
     await assert.rejects(
       () => bad.fetchInvoicePdf("sess", "accounting/customer-invoices", 1),
-      (err) => err instanceof BffError && err.code === "odoo_unavailable"
+      (err) =>
+        err instanceof BffError &&
+        err.code === "action_failed" &&
+        /PDF válido/i.test(err.message)
+    );
+  });
+
+  it("maps missing wkhtmltopdf (HTTP 422) to a clear action_failed", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async (url) => {
+        if (String(url).includes("/call_kw")) {
+          return Response.json({
+            result: [{ id: 8, name: "/", display_name: "/" }],
+          });
+        }
+        return new Response("Unable to find Wkhtmltopdf", { status: 422 });
+      },
+    });
+    await assert.rejects(
+      () => adapter.fetchInvoicePdf("sess", "accounting/customer-invoices", 8),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "action_failed" &&
+        /wkhtmltopdf/i.test(err.message)
     );
   });
 });

@@ -34,9 +34,17 @@ const PAYMENT_STATE_LABELS: Record<string, string> = {
   invoicing_legacy: "Legacy",
 };
 
+/** purchase.order receipt_status (purchase_stock). */
+const RECEIPT_STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  partial: "Parcial",
+  full: "Completa",
+};
+
 const BY_FIELD: Record<string, Record<string, string>> = {
   state: STATE_LABELS,
   payment_state: PAYMENT_STATE_LABELS,
+  receipt_status: RECEIPT_STATUS_LABELS,
 };
 
 export function labelOdooSelection(

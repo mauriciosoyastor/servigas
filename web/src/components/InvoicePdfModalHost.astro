@@ -1,5 +1,5 @@
 ---
-/** Montar una sola vez por página; atiende cualquier botón [data-invoice-pdf-open]. */
+/** Montar una sola vez por página; atiende Ver PDF y Descargar ([data-invoice-pdf-*]). */
 ---
 
 <div class="sg-invoice-pdf-host" data-invoice-pdf-host hidden>
@@ -24,14 +24,13 @@
 					>
 						Abrir en pestaña
 					</a>
-					<a
+					<button
+						type="button"
 						class="sg-focus-ring"
-						href="#"
-						download
 						data-invoice-pdf-modal-download
 					>
 						Descargar
-					</a>
+					</button>
 					<button type="button" class="sg-focus-ring" data-invoice-pdf-close>
 						Cerrar
 					</button>
@@ -74,17 +73,40 @@
 
 		/** @type {string | null} */
 		let objectUrl = null;
+		/** @type {string} */
+		let activePdfUrl = '';
+		/** @type {string} */
+		let activePdfTitle = 'Factura PDF';
 
-		function setStatus(text, state) {
+		/**
+		 * @param {HTMLElement | null} el
+		 * @param {string} text
+		 * @param {string} [state]
+		 */
+		function setElStatus(el, text, state) {
+			if (!(el instanceof HTMLElement)) return;
 			if (!text) {
-				status.hidden = true;
-				status.textContent = '';
-				status.dataset.state = '';
+				el.hidden = true;
+				el.textContent = '';
+				el.dataset.state = '';
 				return;
 			}
-			status.hidden = false;
-			status.textContent = text;
-			status.dataset.state = state || '';
+			el.hidden = false;
+			el.textContent = text;
+			el.dataset.state = state || '';
+		}
+
+		function setStatus(text, state) {
+			setElStatus(status, text, state);
+		}
+
+		/**
+		 * @param {Element | null} from
+		 */
+		function inlineStatusNear(from) {
+			const section = from?.closest?.('[data-invoice-pdf]');
+			const el = section?.querySelector?.('[data-invoice-pdf-inline-status]');
+			return el instanceof HTMLElement ? el : null;
 		}
 
 		function revokeObjectUrl() {
@@ -101,10 +123,68 @@
 			if (openTab instanceof HTMLAnchorElement) {
 				openTab.href = '#';
 			}
-			if (modalDownload instanceof HTMLAnchorElement) {
-				modalDownload.href = '#';
-			}
+			activePdfUrl = '';
 			setStatus('');
+		}
+
+		/**
+		 * @param {ArrayBuffer} buffer
+		 */
+		function assertPdfBuffer(buffer) {
+			if (buffer.byteLength < 5) {
+				throw new Error('Odoo no devolvió un PDF válido');
+			}
+			const head = new Uint8Array(buffer.slice(0, 5));
+			const isPdf =
+				head[0] === 0x25 &&
+				head[1] === 0x50 &&
+				head[2] === 0x44 &&
+				head[3] === 0x46 &&
+				head[4] === 0x2d;
+			if (!isPdf) {
+				throw new Error('Odoo no devolvió un PDF válido');
+			}
+		}
+
+		/**
+		 * @param {string} pdfUrl
+		 * @returns {Promise<ArrayBuffer>}
+		 */
+		async function fetchPdfBuffer(pdfUrl) {
+			const response = await fetch(pdfUrl, { credentials: 'same-origin' });
+			if (!response.ok) {
+				const payload = await response.json().catch(() => ({}));
+				throw new Error(
+					payload?.error?.message || 'No se pudo cargar el PDF'
+				);
+			}
+			const buffer = await response.arrayBuffer();
+			assertPdfBuffer(buffer);
+			return buffer;
+		}
+
+		/**
+		 * @param {string} pdfUrl
+		 * @param {string} pdfTitle
+		 */
+		async function downloadPdf(pdfUrl, pdfTitle) {
+			const buffer = await fetchPdfBuffer(pdfUrl);
+			const pdfBlob = new Blob([buffer], { type: 'application/pdf' });
+			const url = URL.createObjectURL(pdfBlob);
+			const a = document.createElement('a');
+			const safe =
+				String(pdfTitle || 'comprobante')
+					.replace(/[/\\]+/g, '-')
+					.replace(/[^\w.\-áéíóúñÁÉÍÓÚÑ ]+/gi, '')
+					.replace(/\s+/g, '-')
+					.slice(0, 80) || 'comprobante';
+			a.href = url;
+			a.download = safe.endsWith('.pdf') ? safe : `${safe}.pdf`;
+			a.rel = 'noopener';
+			document.body.appendChild(a);
+			a.click();
+			a.remove();
+			URL.revokeObjectURL(url);
 		}
 
 		/**
@@ -114,37 +194,16 @@
 			const pdfUrl = openBtn.dataset.pdfUrl || '';
 			const pdfTitle = openBtn.dataset.pdfTitle || 'Factura PDF';
 			if (!pdfUrl) return;
+			activePdfUrl = pdfUrl;
+			activePdfTitle = pdfTitle;
 			if (titleEl instanceof HTMLElement) titleEl.textContent = pdfTitle;
 			modal.hidden = false;
 			setStatus('Cargando PDF…', 'pending');
 			frame.removeAttribute('src');
 			revokeObjectUrl();
-			if (modalDownload instanceof HTMLAnchorElement) {
-				modalDownload.href = `${pdfUrl}?download=1`;
-			}
 
 			try {
-				const response = await fetch(pdfUrl, { credentials: 'same-origin' });
-				if (!response.ok) {
-					const payload = await response.json().catch(() => ({}));
-					throw new Error(
-						payload?.error?.message || 'No se pudo cargar el PDF'
-					);
-				}
-				const buffer = await response.arrayBuffer();
-				if (buffer.byteLength < 5) {
-					throw new Error('Odoo no devolvió un PDF válido');
-				}
-				const head = new Uint8Array(buffer.slice(0, 5));
-				const isPdf =
-					head[0] === 0x25 &&
-					head[1] === 0x50 &&
-					head[2] === 0x44 &&
-					head[3] === 0x46 &&
-					head[4] === 0x2d;
-				if (!isPdf) {
-					throw new Error('Odoo no devolvió un PDF válido');
-				}
+				const buffer = await fetchPdfBuffer(pdfUrl);
 				// Force MIME so Chrome/Edge embed the viewer instead of a blank frame.
 				const pdfBlob = new Blob([buffer], { type: 'application/pdf' });
 				objectUrl = URL.createObjectURL(pdfBlob);
@@ -164,11 +223,50 @@
 		document.addEventListener('click', (event) => {
 			const target = event.target;
 			if (!(target instanceof Element)) return;
+
 			const openBtn = target.closest('[data-invoice-pdf-open]');
-			if (!(openBtn instanceof HTMLElement) || !openBtn.dataset.pdfUrl) return;
-			event.preventDefault();
-			void openModal(openBtn);
+			if (openBtn instanceof HTMLElement && openBtn.dataset.pdfUrl) {
+				event.preventDefault();
+				void openModal(openBtn);
+				return;
+			}
+
+			const downloadBtn = target.closest('[data-invoice-pdf-download]');
+			if (downloadBtn instanceof HTMLElement && downloadBtn.dataset.pdfUrl) {
+				event.preventDefault();
+				const pdfUrl = downloadBtn.dataset.pdfUrl;
+				const pdfTitle = downloadBtn.dataset.pdfTitle || 'Comprobante';
+				const inline = inlineStatusNear(downloadBtn);
+				setElStatus(inline, 'Descargando PDF…', 'pending');
+				void downloadPdf(pdfUrl, pdfTitle)
+					.then(() => setElStatus(inline, ''))
+					.catch((error) => {
+						setElStatus(
+							inline,
+							error instanceof Error ? error.message : 'No se pudo descargar el PDF',
+							'error'
+						);
+					});
+			}
 		});
+
+		if (modalDownload instanceof HTMLButtonElement) {
+			modalDownload.addEventListener('click', () => {
+				if (!activePdfUrl) return;
+				setStatus('Descargando PDF…', 'pending');
+				void downloadPdf(activePdfUrl, activePdfTitle)
+					.then(() => setStatus(''))
+					.catch((error) => {
+						setStatus(
+							error instanceof Error
+								? error.message
+								: 'No se pudo descargar el PDF',
+							'error'
+						);
+					});
+			});
+		}
+
 		closeBtn.addEventListener('click', closeModal);
 		modal.addEventListener('click', (event) => {
 			if (event.target === modal) closeModal();

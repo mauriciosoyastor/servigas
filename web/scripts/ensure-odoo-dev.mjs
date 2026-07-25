@@ -51,12 +51,65 @@ async function waitUntilReady() {
   return false;
 }
 
+/** @returns {string | null} directory containing wkhtmltopdf, if resolvable */
+function resolveWkhtmltopdfBinDir() {
+  const which = process.platform === "win32" ? "where.exe" : "which";
+  const probe = spawnSync(which, ["wkhtmltopdf"], { encoding: "utf8" });
+  const fromPath = String(probe.stdout || "")
+    .trim()
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .find(Boolean);
+  if (fromPath && existsSync(fromPath)) {
+    return path.dirname(fromPath);
+  }
+
+  if (process.platform === "win32") {
+    const candidates = [
+      path.join(
+        process.env["ProgramFiles"] || "C:\\Program Files",
+        "wkhtmltopdf",
+        "bin"
+      ),
+      path.join(
+        process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)",
+        "wkhtmltopdf",
+        "bin"
+      ),
+    ];
+    for (const dir of candidates) {
+      if (existsSync(path.join(dir, "wkhtmltopdf.exe"))) return dir;
+    }
+  }
+  return null;
+}
+
+function envWithWkhtmltopdfPath() {
+  const binDir = resolveWkhtmltopdfBinDir();
+  if (!binDir) return { env: process.env, binDir: null };
+  const sep = path.delimiter;
+  const current = String(process.env.PATH || "");
+  const parts = current.split(sep).filter(Boolean);
+  if (parts.some((p) => path.resolve(p) === path.resolve(binDir))) {
+    return { env: process.env, binDir };
+  }
+  return {
+    env: { ...process.env, PATH: `${binDir}${sep}${current}` },
+    binDir,
+  };
+}
+
 function startOdoo() {
   if (!existsSync(odooBin)) {
     throw new Error(`No se encontró odoo-bin en ${odooBin}`);
   }
   if (!existsSync(odooConfig)) {
     throw new Error(`No se encontró config en ${odooConfig}`);
+  }
+
+  const { env, binDir } = envWithWkhtmltopdfPath();
+  if (binDir) {
+    console.log(`PDF: wkhtmltopdf en PATH → ${binDir}`);
   }
 
   const child = spawn(
@@ -67,6 +120,7 @@ function startOdoo() {
       detached: true,
       stdio: "ignore",
       windowsHide: true,
+      env,
     }
   );
   child.unref();
@@ -78,8 +132,25 @@ function warnPdfPrereqs() {
   const guide = existsSync(windowsPdfDoc)
     ? windowsPdfDoc
     : "odoo-workspace/docs/WINDOWS-PDF.md";
+  const binDir = resolveWkhtmltopdfBinDir();
+
+  if (!binDir) {
+    console.warn(
+      [
+        "aviso PDF: no se encontró wkhtmltopdf en PATH.",
+        "  Los reportes/facturas PDF fallarán hasta instalarlo:",
+        "  winget install --id wkhtmltopdf.wkhtmltox -e",
+        `  Guía: ${guide}`,
+      ].join("\n")
+    );
+    return;
+  }
+
   const which = process.platform === "win32" ? "where.exe" : "which";
-  const probe = spawnSync(which, ["wkhtmltopdf"], { encoding: "utf8" });
+  const probe = spawnSync(which, ["wkhtmltopdf"], {
+    encoding: "utf8",
+    env: envWithWkhtmltopdfPath().env,
+  });
   const found =
     probe.status === 0 &&
     String(probe.stdout || "")
@@ -90,9 +161,7 @@ function warnPdfPrereqs() {
   if (!found) {
     console.warn(
       [
-        "aviso PDF: no se encontró wkhtmltopdf en PATH.",
-        "  Los reportes/facturas PDF fallarán hasta instalarlo:",
-        "  winget install --id wkhtmltopdf.wkhtmltox -e",
+        `aviso PDF: wkhtmltopdf está en ${binDir} pero no responde.`,
         `  Guía: ${guide}`,
       ].join("\n")
     );

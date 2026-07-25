@@ -31,14 +31,16 @@ const pdfPath = invoicePdfPath(listKey, recordId);
 				>
 					Ver PDF
 				</button>
-				<a
+				<button
 					class="sg-invoice-pdf-download sg-focus-ring"
-					href={`${pdfPath}?download=1`}
-					download
+					type="button"
 					data-invoice-pdf-download
+					data-pdf-url={pdfPath}
+					data-pdf-title={title || 'Comprobante'}
 				>
 					Descargar
-				</a>
+				</button>
+				<p class="sg-invoice-pdf-inline-status" data-invoice-pdf-inline-status hidden></p>
 				<InvoicePdfModalHost />
 			</>
 		) : null
@@ -71,5 +73,20 @@ const pdfPath = invoicePdfPath(listKey, recordId);
 		border-color: rgba(255, 255, 255, 0.18);
 		color: var(--sg-text-muted-dark, #c5d0dc);
 		background: rgba(255, 255, 255, 0.04);
+	}
+
+	.sg-invoice-pdf-inline-status {
+		flex: 1 1 100%;
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+
+	.sg-invoice-pdf-inline-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+
+	.sg-invoice-pdf-inline-status[data-state='pending'] {
+		color: #b7d7ff;
 	}
 </style>

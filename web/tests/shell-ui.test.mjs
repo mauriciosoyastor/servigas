@@ -203,6 +203,12 @@ describe("shell UI contracts", () => {
     assert.match(control, /Ver PDF/);
     assert.match(control, /Descargar/);
     assert.match(control, /InvoicePdfModalHost/);
+    // Descargar must not use bare <a download> (Chrome saves API JSON errors as N.json).
+    assert.match(control, /<button[\s\S]*?data-invoice-pdf-download/);
+    assert.doesNotMatch(
+      control,
+      /<a[\s\S]*?data-invoice-pdf-download[\s\S]*?\bdownload\b/
+    );
     assert.match(host, /data-invoice-pdf-host/);
     assert.match(host, /embed|iframe/);
     assert.match(host, /application\/pdf/);
@@ -210,6 +216,8 @@ describe("shell UI contracts", () => {
     assert.match(host, /Abrir en pestaña/);
     assert.match(host, /role=["']dialog["']/);
     assert.match(host, /data-invoice-pdf-open/);
+    assert.match(host, /data-invoice-pdf-download/);
+    assert.match(host, /credentials:\s*['"]same-origin['"]/);
     for (const page of pages) {
       assert.match(page, /RecordInvoicePdfControl/);
       assert.match(page, /slot=["']secondary["']/);

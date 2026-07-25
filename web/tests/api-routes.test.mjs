@@ -89,6 +89,13 @@ describe("BFF HTTP helpers", () => {
     const checkout = bffErrorResponse(
       new BffError("checkout_failed", 503, "raw odoo")
     );
+    const pdfMissing = bffErrorResponse(
+      new BffError(
+        "action_failed",
+        503,
+        "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor"
+      )
+    );
 
     assert.equal(known.status, 401);
     assert.deepEqual(await known.json(), {
@@ -109,6 +116,13 @@ describe("BFF HTTP helpers", () => {
       error: {
         code: "checkout_failed",
         message: "No se pudo registrar la venta en caja",
+      },
+    });
+    assert.equal(pdfMissing.status, 503);
+    assert.deepEqual(await pdfMissing.json(), {
+      error: {
+        code: "action_failed",
+        message: "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor",
       },
     });
   });

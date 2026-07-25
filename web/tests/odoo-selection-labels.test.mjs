@@ -20,6 +20,12 @@ describe("labelOdooSelection", () => {
     assert.equal(labelOdooSelection("payment_state", "in_payment"), "En proceso");
   });
 
+  it("labels purchase receipt_status values in Spanish", () => {
+    assert.equal(labelOdooSelection("receipt_status", "pending"), "Pendiente");
+    assert.equal(labelOdooSelection("receipt_status", "partial"), "Parcial");
+    assert.equal(labelOdooSelection("receipt_status", "full"), "Completa");
+  });
+
   it("returns original string for unknown keys or values", () => {
     assert.equal(labelOdooSelection("name", "paid"), "paid");
     assert.equal(labelOdooSelection("state", "weird_custom"), "weird_custom");
