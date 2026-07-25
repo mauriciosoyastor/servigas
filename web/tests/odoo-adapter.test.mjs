@@ -1126,6 +1126,79 @@ describe("OdooAdapter.createRecord", () => {
     assert.equal(fetchImpl.mock.calls.length, 0);
   });
 
+  it("updates a customer invoice draft partner and lines", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      if (body.params?.method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 55,
+              state: "draft",
+              move_type: "out_invoice",
+              name: "FC/DRAFT",
+            },
+          ],
+        });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.updateInvoiceDraft(
+      "sess",
+      "accounting/customer-invoices",
+      55,
+      {
+        partnerId: 9,
+        lines: [{ productId: 7, qty: 3, price: 50 }],
+      }
+    );
+    assert.equal(result.ok, true);
+    assert.equal(result.id, 55);
+    const writeBody = fetchImpl.mock.calls
+      .map((call) => JSON.parse(call.arguments[1].body))
+      .find((body) => body.params?.method === "write");
+    assert.equal(writeBody.params.args[0][0], 55);
+    assert.equal(writeBody.params.args[1].partner_id, 9);
+    assert.deepEqual(writeBody.params.args[1].invoice_line_ids[0], [5, 0, 0]);
+    assert.deepEqual(writeBody.params.args[1].invoice_line_ids[1], [
+      0,
+      0,
+      { product_id: 7, quantity: 3, price_unit: 50 },
+    ]);
+  });
+
+  it("rejects updating a posted invoice draft", async () => {
+    const fetchImpl = mock.fn(async () =>
+      Response.json({
+        result: [
+          {
+            id: 55,
+            state: "posted",
+            move_type: "out_invoice",
+          },
+        ],
+      })
+    );
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.updateInvoiceDraft("sess", "accounting/customer-invoices", 55, {
+          partnerId: 1,
+          lines: [{ productId: 1, qty: 1 }],
+        }),
+      (err) => err?.code === "validation_error"
+    );
+  });
+
   it("creates a customer invoice draft with lines", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: 55 }));
     const adapter = new OdooAdapter({

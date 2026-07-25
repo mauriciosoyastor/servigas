@@ -46,7 +46,11 @@ const {
 const canEdit = Boolean(editFields.length && editApiPath && recordId);
 const editKeySet = new Set(editFields.map((field) => field.key));
 const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field]));
-const detailFieldKeys = new Set((detail?.fields ?? []).map((field) => field.key));
+const HIDDEN_DETAIL_KEYS = new Set(['partner_ref_id']);
+const visibleFields = (detail?.fields ?? []).filter(
+	(field) => !HIDDEN_DETAIL_KEYS.has(field.key)
+);
+const detailFieldKeys = new Set(visibleFields.map((field) => field.key));
 const extraEditFields = editFields.filter((field) => !detailFieldKeys.has(field.key));
 const enableCuitWarn =
 	canEdit &&
@@ -155,7 +159,7 @@ function displayValue(
 								<input type="hidden" name="id" value={String(recordId)} />
 							) : null}
 							<dl class="sg-detail-fields">
-								{detail.fields.map((field) => {
+								{visibleFields.map((field) => {
 									const editable = canEdit && editKeySet.has(field.key);
 									const editDef = editByKey[field.key];
 									return (

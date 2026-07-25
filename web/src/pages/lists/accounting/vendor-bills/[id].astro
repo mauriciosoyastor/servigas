@@ -52,6 +52,14 @@ const showPay = isPaymentRegisterableState(state, paymentState);
 				/>
 			) : null}
 			{detail && !error && showPublish ? (
+				<a
+					class="sg-list-create sg-focus-ring"
+					href={`/lists/accounting/vendor-bills/${id}/edit`}
+				>
+					Editar borrador
+				</a>
+			) : null}
+			{detail && !error && showPublish ? (
 				<RecordConfirmControl
 					listKey="accounting/vendor-bills"
 					recordId={id}

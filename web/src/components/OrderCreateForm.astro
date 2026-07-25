@@ -1,4 +1,17 @@
 ---
+interface InitialPartner {
+	id: number;
+	label: string;
+}
+
+interface InitialLine {
+	productId: number;
+	label: string;
+	qty: number;
+	price?: number;
+	discount?: number;
+}
+
 interface Props {
 	apiPath: string;
 	listPath: string;
@@ -16,6 +29,14 @@ interface Props {
 	showBillSource?: boolean;
 	/** Hide CF/CUIT fiscal hints (vendor bills) */
 	suppressFiscalHints?: boolean;
+	/** update_invoice_draft mode */
+	recordId?: number;
+	formAction?: 'create' | 'update_invoice_draft';
+	initialPartner?: InitialPartner | null;
+	initialLines?: InitialLine[];
+	pendingLabel?: string;
+	successLabel?: string;
+	cancelPath?: string;
 }
 
 const {
@@ -32,7 +53,16 @@ const {
 	requireAttachment = false,
 	showBillSource = false,
 	suppressFiscalHints = false,
+	recordId = 0,
+	formAction = 'create',
+	initialPartner = null,
+	initialLines = [],
+	pendingLabel = 'Creando…',
+	successLabel = 'Creada',
+	cancelPath = listPath,
 } = Astro.props;
+
+const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 ---
 
 <section
@@ -139,10 +169,23 @@ const {
 						autocomplete="off"
 						placeholder={partnerPlaceholder}
 						data-picker-query
+						value={initialPartner?.label || ''}
 					/>
 				</label>
-				<input type="hidden" name="partnerId" value="" required data-picker-id />
-				<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+				<input
+					type="hidden"
+					name="partnerId"
+					value={initialPartner?.id ? String(initialPartner.id) : ''}
+					required
+					data-picker-id
+				/>
+				<p
+					class="sg-order-picker-selected"
+					data-picker-selected
+					hidden={!initialPartner}
+				>
+					{initialPartner ? `Elegido: ${initialPartner.label}` : ''}
+				</p>
 				<p class="sg-order-picker-warn" data-partner-fiscal-warn hidden></p>
 				<ul class="sg-order-picker-results" data-picker-results hidden></ul>
 			</div>
@@ -196,13 +239,24 @@ const {
 
 		<div class="sg-order-create-actions">
 			<button class="sg-focus-ring" type="submit">{submitLabel}</button>
-			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
+			<a class="sg-focus-ring" href={cancelPath}>Cancelar</a>
 			<span class="sg-order-create-status" data-order-create-status hidden></span>
 		</div>
 	</form>
 </section>
 
-<script define:vars={{ apiPath, listPath }}>
+<script
+	define:vars={{
+		apiPath,
+		listPath,
+		formAction,
+		recordId,
+		initialLines,
+		pendingLabel,
+		successLabel,
+		isUpdate,
+	}}
+>
 	const root = document.querySelector('[data-order-create]');
 	const form = root?.querySelector('[data-order-create-form]');
 	const status = root?.querySelector('[data-order-create-status]');
@@ -214,7 +268,9 @@ const {
 	const draftPrice = root?.querySelector('[data-draft-price]');
 	const draftDiscount = root?.querySelector('[data-draft-discount]');
 	/** @type {{ productId: number, label: string, qty: number, price?: number, discount?: number }[]} */
-	let lines = [];
+	let lines = Array.isArray(initialLines)
+		? initialLines.map((line) => ({ ...line }))
+		: [];
 	let draftLabel = '';
 	let draftListPrice = null;
 
@@ -610,7 +666,7 @@ const {
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
 			status.hidden = false;
-			status.textContent = 'Creando…';
+			status.textContent = pendingLabel || 'Creando…';
 			status.dataset.state = 'pending';
 			const data = new FormData(form);
 			const partnerId = Number(data.get('partnerId'));
@@ -637,7 +693,7 @@ const {
 			if (typeof billSource === 'string' && billSource.trim()) {
 				values.billSource = billSource.trim();
 			}
-			if (root?.getAttribute('data-require-attachment') === '1') {
+			if (root?.getAttribute('data-require-attachment') === '1' && !isUpdate) {
 				const fileInput = root.querySelector('[data-bill-attachment]');
 				const file =
 					fileInput instanceof HTMLInputElement && fileInput.files?.length
@@ -667,24 +723,39 @@ const {
 				}
 			}
 			try {
+				const body =
+					isUpdate && formAction === 'update_invoice_draft'
+						? {
+								action: 'update_invoice_draft',
+								id: Number(recordId),
+								values,
+							}
+						: { action: 'create', values };
 				const response = await fetch(apiPath, {
 					method: 'POST',
 					credentials: 'same-origin',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({ action: 'create', values }),
+					body: JSON.stringify(body),
 				});
 				const payload = await response.json().catch(() => ({}));
 				if (!response.ok) {
-					throw new Error(payload?.error?.message || 'No se pudo crear');
+					throw new Error(
+						payload?.error?.message ||
+							(isUpdate ? 'No se pudo guardar' : 'No se pudo crear')
+					);
 				}
-				status.textContent = 'Creada';
+				status.textContent = successLabel || (isUpdate ? 'Guardado' : 'Creada');
 				status.dataset.state = 'ok';
 				window.setTimeout(() => {
 					window.location.href = payload.detailPath || listPath;
 				}, 350);
 			} catch (error) {
 				status.textContent =
-					error instanceof Error ? error.message : 'No se pudo crear';
+					error instanceof Error
+						? error.message
+						: isUpdate
+							? 'No se pudo guardar'
+							: 'No se pudo crear';
 				status.dataset.state = 'error';
 			}
 		});

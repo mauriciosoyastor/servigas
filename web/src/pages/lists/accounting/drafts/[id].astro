@@ -3,6 +3,7 @@ import RecordConfirmControl from '../../../../components/RecordConfirmControl.as
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordInvoicePdfControl from '../../../../components/RecordInvoicePdfControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { invoiceDraftEditPathFromMoveType } from '../../../../lib/shell/invoice-draft-edit.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
 
@@ -34,6 +35,7 @@ const showPublish =
 		moveType === 'out_refund' ||
 		moveType === 'in_refund' ||
 		!moveType);
+const editPath = invoiceDraftEditPathFromMoveType(moveType, id);
 ---
 
 <ShellLayout title={`${detail?.title || 'Borrador'} | Servigas`} active="accounting" userName={userName}>
@@ -52,6 +54,11 @@ const showPublish =
 					recordId={id}
 					title={detail.title}
 				/>
+			) : null}
+			{detail && !error && showPublish && editPath ? (
+				<a class="sg-list-create sg-focus-ring" href={editPath}>
+					Editar borrador
+				</a>
 			) : null}
 			{detail && !error && showPublish ? (
 				<RecordConfirmControl

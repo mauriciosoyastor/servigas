@@ -1,0 +1,66 @@
+---
+import OrderCreateForm from '../../../../../components/OrderCreateForm.astro';
+import ShellLayout from '../../../../../layouts/ShellLayout.astro';
+import {
+	linesFromInvoiceDetail,
+	partnerFromInvoiceDetail,
+} from '../../../../../lib/shell/invoice-draft-edit.ts';
+import { loadRecordDetail } from '../../../../../lib/shell/load-record-detail.ts';
+
+const listKey = 'accounting/credit-notes';
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	listKey,
+	id,
+	'No encontramos esta nota de crédito.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+
+const state = detail?.fields.find((f) => f.key === 'state')?.value;
+if (!error && detail && String(state || '') !== 'draft') {
+	return Astro.redirect(`/lists/${listKey}/${id}`);
+}
+
+const initialPartner = partnerFromInvoiceDetail(detail);
+const initialLines = linesFromInvoiceDetail(detail);
+const detailPath = `/lists/${listKey}/${id}`;
+---
+
+<ShellLayout title={`Editar NC | Servigas`} active="accounting" userName={userName}>
+	<main class="sg-create-page">
+		<header>
+			<p>Contabilidad</p>
+			<h1>Editar borrador de NC</h1>
+		</header>
+		{error || !detail ? (
+			<section class="sg-list-state sg-glass" role="alert">
+				<strong>No se pudo abrir el borrador</strong>
+				<p>{error || 'Registro no encontrado.'}</p>
+				<a class="sg-focus-ring" href={detailPath}>Volver</a>
+			</section>
+		) : (
+			<OrderCreateForm
+				apiPath={`/api/records/${listKey}`}
+				listPath={`/lists/${listKey}`}
+				cancelPath={detailPath}
+				partnerListKey="sales/customers"
+				productListKey="inventory/variants"
+				title="Editar borrador"
+				hint="Podés cambiar cliente y líneas. Al guardar sigue en borrador."
+				partnerLabel="Cliente"
+				submitLabel="Guardar borrador"
+				pendingLabel="Guardando…"
+				successLabel="Guardado"
+				formAction="update_invoice_draft"
+				recordId={id}
+				initialPartner={initialPartner}
+				initialLines={initialLines}
+			/>
+		)}
+	</main>
+</ShellLayout>

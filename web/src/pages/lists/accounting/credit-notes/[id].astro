@@ -47,6 +47,14 @@ const showPublish = isConfirmableState('accounting/credit-notes', state);
 				/>
 			) : null}
 			{detail && !error && showPublish ? (
+				<a
+					class="sg-list-create sg-focus-ring"
+					href={`/lists/accounting/credit-notes/${id}/edit`}
+				>
+					Editar borrador
+				</a>
+			) : null}
+			{detail && !error && showPublish ? (
 				<RecordConfirmControl
 					listKey="accounting/credit-notes"
 					recordId={id}

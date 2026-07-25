@@ -43,6 +43,10 @@ import {
   filterInvoiceCreateValues,
   getInvoiceCreateDef,
 } from "../shell/invoice-creates.ts";
+import {
+  canUpdateInvoiceDraft,
+  filterInvoiceDraftUpdateValues,
+} from "../shell/invoice-updates.ts";
 import { billSourceLabel } from "../shell/bill-attachment.ts";
 import {
   publishInvoiceDestError,
@@ -158,12 +162,20 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
   "account.move": {
     model: "account.move.line",
     domainField: "move_id",
-    fields: ["name", "product_id", "quantity", "price_unit", "price_subtotal"],
+    fields: [
+      "name",
+      "product_id",
+      "quantity",
+      "price_unit",
+      "discount",
+      "price_subtotal",
+    ],
     columns: [
       { key: "name", label: "Etiqueta" },
       { key: "product_id", label: "Producto" },
       { key: "quantity", label: "Cantidad" },
       { key: "price_unit", label: "Precio" },
+      { key: "discount", label: "Desc. %" },
       { key: "price_subtotal", label: "Subtotal" },
     ],
     order: "id asc",
@@ -740,6 +752,18 @@ export class OdooAdapter implements BackendClient {
       });
     }
 
+    // IDs crudos para editar borradores (no se muestran en UI de lectura).
+    if (def.model === "account.move") {
+      const partnerRef = this.#partnerIdFromM2o(row.partner_id);
+      if (partnerRef > 0) {
+        detailFields.push({
+          key: "partner_ref_id",
+          label: "Partner ref",
+          value: partnerRef,
+        });
+      }
+    }
+
     const attachments =
       def.key === "accounting/vendor-bills"
         ? await this.#loadMoveAttachments(odooSessionId, id)
@@ -1084,6 +1108,78 @@ export class OdooAdapter implements BackendClient {
     const detailPath =
       (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
     return { id, detailPath };
+  }
+
+  async updateInvoiceDraft(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    values: Record<string, unknown>
+  ): Promise<{ ok: true; id: number; detailPath: string }> {
+    const invoiceDef = getInvoiceCreateDef(listKey);
+    if (!invoiceDef || !canUpdateInvoiceDraft(listKey)) {
+      throw new BffError("not_found", 404, "Edición de borrador no permitida");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+    const filtered = filterInvoiceDraftUpdateValues(listKey, values);
+    if (!filtered) {
+      throw new BffError("validation_error", 400, "Datos de edición inválidos");
+    }
+
+    const [move] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [[id], ["state", "move_type", "name"]]
+    );
+    if (!move) {
+      throw new BffError("not_found", 404, "Comprobante no encontrado");
+    }
+    if (String(move.state || "") !== "draft") {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Solo se editan comprobantes en borrador"
+      );
+    }
+    if (String(move.move_type || "") !== invoiceDef.moveType) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "El tipo de comprobante no coincide con la lista"
+      );
+    }
+
+    const invoice_line_ids: unknown[] = [[5, 0, 0]];
+    for (const line of filtered.lines) {
+      const vals: Record<string, number> = {
+        product_id: line.productId,
+        quantity: line.qty,
+      };
+      if (line.price !== undefined) vals.price_unit = line.price;
+      if (line.discount !== undefined) vals.discount = line.discount;
+      invoice_line_ids.push([0, 0, vals]);
+    }
+
+    const writeVals: Record<string, unknown> = {
+      partner_id: filtered.partnerId,
+      invoice_line_ids,
+    };
+    if (filtered.billSource) {
+      writeVals.sg_bill_source = filtered.billSource;
+    }
+
+    await this.#callKw(odooSessionId, "account.move", "write", [
+      [id],
+      writeVals,
+    ]);
+
+    const list = getRecordListDef(listKey);
+    const detailPath =
+      (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
+    return { ok: true, id, detailPath };
   }
 
   async registerPayment(
@@ -2653,6 +2749,7 @@ export class OdooAdapter implements BackendClient {
             if (productId > 0) {
               out.product_image =
                 mediaPath("product.product", productId, "image_128") || null;
+              out.product_variant_id = productId;
             }
           }
           return out;

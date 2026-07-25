@@ -47,6 +47,14 @@ const showPublish = isConfirmableState('accounting/vendor-refunds', state);
 				/>
 			) : null}
 			{detail && !error && showPublish ? (
+				<a
+					class="sg-list-create sg-focus-ring"
+					href={`/lists/accounting/vendor-refunds/${id}/edit`}
+				>
+					Editar borrador
+				</a>
+			) : null}
+			{detail && !error && showPublish ? (
 				<RecordConfirmControl
 					listKey="accounting/vendor-refunds"
 					recordId={id}
