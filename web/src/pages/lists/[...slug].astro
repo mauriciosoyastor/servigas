@@ -165,6 +165,7 @@ if (!def) {
 							canFetchInvoicePdf(listKey) ? listKey : undefined
 						}
 						rowSelect={showFwBulk}
+						fwNumberInput={showFwBulk}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
 					{canFetchInvoicePdf(listKey) ? <InvoicePdfModalHost /> : null}

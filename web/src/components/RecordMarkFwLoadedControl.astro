@@ -20,7 +20,7 @@ const {
 	data-list-key={listKey}
 >
 	<label class="sg-record-fw-number">
-		<span>N° Factura Web (opcional)</span>
+		<span>N° Factura Web</span>
 		<input
 			class="sg-focus-ring"
 			type="text"
@@ -53,11 +53,16 @@ const {
 	) {
 		btn.addEventListener('click', async () => {
 			const fwNumber = numberInput.value.trim();
+			if (!fwNumber) {
+				status.hidden = false;
+				status.textContent = 'Ingresá el N° de Factura Web';
+				status.dataset.state = 'error';
+				numberInput.focus();
+				return;
+			}
 			if (
 				!window.confirm(
-					fwNumber
-						? `¿Marcar esta FC como cargada en Factura Web (${fwNumber})?`
-						: '¿Marcar esta FC como cargada en Factura Web?'
+					`¿Marcar esta FC como cargada en Factura Web (${fwNumber})?`
 				)
 			) {
 				return;
@@ -67,8 +72,6 @@ const {
 			status.dataset.state = 'pending';
 			btn.disabled = true;
 			try {
-				const values: Record<string, unknown> = {};
-				if (fwNumber) values.fwNumber = fwNumber;
 				const response = await fetch(btn.dataset.api || '', {
 					method: 'POST',
 					credentials: 'same-origin',
@@ -76,7 +79,7 @@ const {
 					body: JSON.stringify({
 						action: 'mark_fw_loaded',
 						id: Number(btn.dataset.id),
-						values,
+						values: { fwNumber },
 					}),
 				});
 				const payload = await response.json().catch(() => ({}));

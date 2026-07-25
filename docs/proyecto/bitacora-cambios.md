@@ -31,6 +31,17 @@
 
 ---
 
+### 2026-07-25 — Número Factura Web obligatorio en ficha y bulk (P1.5)
+
+**Área:** contabilidad | web | BFF
+**Motivo:** cada FC cargada manualmente en Factura Web debe conservar su número fiscal, también en la acción masiva.
+**Archivos:**
+- `web/src/components/{RecordMarkFwLoadedControl,RecordTable,FwBulkMarkBar}.astro`
+- `web/src/pages/lists/[...slug].astro`, `web/tests/shell-ui.test.mjs`
+**Cambios:** la ficha exige N° Factura Web antes de confirmar; la cola pendiente agrega un input por fila seleccionable y envía `items: [{ id, fwNumber }]`; el bulk bloquea números faltantes.
+**Verificación:** `cd web; npm test`; `npm run build`.
+**Automatización:** patrón bulk con valores por fila reutilizable para otras cargas manuales.
+
 ### 2026-07-25 — Editar borrador FC/FP/NC (P1.2)
 
 **Área:** contabilidad | web | BFF  
