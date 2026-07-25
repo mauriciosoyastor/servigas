@@ -8,7 +8,10 @@ import {
   filterWritableValues,
   getRecordWriteDef,
 } from "../src/lib/shell/record-writes.ts";
-import { CUIT_DEST_REQUIRED_MSG } from "../src/lib/shell/invoice-dest.ts";
+import {
+  CUIT_DEST_REQUIRED_MSG,
+  CUIT_INVALID_MSG,
+} from "../src/lib/shell/invoice-dest.ts";
 
 describe("record-writes allowlist", () => {
   it("allows phone, email, vat, dest and address updates on sales customers", () => {
@@ -71,7 +74,7 @@ describe("record-writes allowlist", () => {
     const filtered = filterWritableValues("sales/customers", {
       phone: "11-1234",
       email: "a@b.com",
-      vat: "20-12345678-9",
+      vat: "20-12345678-6",
       street: "Av. Demo 100",
       city: "CABA",
       sg_invoice_dest: "cuit",
@@ -81,7 +84,7 @@ describe("record-writes allowlist", () => {
     assert.deepEqual(filtered, {
       phone: "11-1234",
       email: "a@b.com",
-      vat: "20-12345678-9",
+      vat: "20-12345678-6",
       street: "Av. Demo 100",
       city: "CABA",
       sg_invoice_dest: "cuit",
@@ -93,7 +96,7 @@ describe("record-writes allowlist", () => {
       name: "  Cliente Demo  ",
       phone: "11-9999",
       email: "demo@servigas.test",
-      vat: " 20123456789 ",
+      vat: " 20123456786 ",
       street: "Calle Falsa 123",
       city: "Rosario",
       customer_rank: 99,
@@ -102,7 +105,7 @@ describe("record-writes allowlist", () => {
       name: "Cliente Demo",
       phone: "11-9999",
       email: "demo@servigas.test",
-      vat: "20123456789",
+      vat: "20123456786",
       street: "Calle Falsa 123",
       city: "Rosario",
       customer_rank: 1,
@@ -125,6 +128,23 @@ describe("record-writes allowlist", () => {
       customerInvoiceDestError("sales/customers", {
         sg_invoice_dest: "cf",
         vat: "",
+      }),
+      null
+    );
+  });
+
+  it("rejects cuit destination with invalid checksum on customers", () => {
+    assert.equal(
+      customerInvoiceDestError("sales/customers", {
+        sg_invoice_dest: "cuit",
+        vat: "20123456789",
+      }),
+      CUIT_INVALID_MSG
+    );
+    assert.equal(
+      customerInvoiceDestError("sales/customers", {
+        sg_invoice_dest: "cf",
+        vat: "20123456789",
       }),
       null
     );

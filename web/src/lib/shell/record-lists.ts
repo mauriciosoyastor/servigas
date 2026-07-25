@@ -70,6 +70,7 @@ export type RecordListKey =
   | "accounting/factura-web"
   | "accounting/factura-web-pending"
   | "accounting/invoice-analysis"
+  | "accounting/moves"
   | "integrations/all";
 
 export type RecordListColumnDef = {
@@ -1615,6 +1616,39 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     railApp: "accounting",
     searchFields: ["name"],
   },
+  "accounting/moves": {
+    key: "accounting/moves",
+    path: "/lists/accounting/moves",
+    title: "Todos los asientos",
+    hint: "Asientos contables publicados",
+    model: "account.move",
+    domain: [["state", "=", "posted"]],
+    fields: [
+      "name",
+      "date",
+      "partner_id",
+      "move_type",
+      "amount_total",
+      "payment_state",
+      "state",
+      "ref",
+    ],
+    columns: [
+      { key: "name", label: "Número" },
+      { key: "date", label: "Fecha" },
+      { key: "partner_id", label: "Contacto" },
+      { key: "move_type", label: "Tipo" },
+      { key: "amount_total", label: "Total" },
+      { key: "payment_state", label: "Pago" },
+      { key: "state", label: "Estado" },
+    ],
+    limit: 50,
+    order: "date desc, id desc",
+    hubBack: "/hubs/accounting",
+    railApp: "accounting",
+    searchFields: ["name", "ref"],
+    detailPath: "/lists/accounting/moves/:id",
+  },
   "integrations/all": {
     key: "integrations/all",
     path: "/lists/integrations",
@@ -1715,7 +1749,18 @@ function isAmbiguousDomain(model: string, domain: unknown): boolean {
   if (model === "stock.picking" && !domainHas(domain, "state") && !domainHas(domain, "picking_type")) {
     return true;
   }
-  if (model === "account.move" && text === "[]") return true;
+  if (model === "account.move") {
+    if (text === "[]") return true;
+    // Solo state=posted (sin move_type) — card «Todos los asientos»
+    if (
+      domainHas(domain, "posted") &&
+      !domainHas(domain, "move_type") &&
+      !domainHas(domain, "sg_fw_loaded") &&
+      !domainHas(domain, "payment_state")
+    ) {
+      return true;
+    }
+  }
   if (
     model === "sale.report" ||
     model === "purchase.report" ||
@@ -1898,6 +1943,11 @@ const LABEL_RULES: LabelRule[] = [
     model: "uom.uom",
     patterns: [/unidad/i, /medida/i],
     path: "/lists/purchase/uom",
+  },
+  {
+    model: "account.move",
+    patterns: [/todos los asientos/i],
+    path: "/lists/accounting/moves",
   },
   {
     model: "account.move",
@@ -2241,6 +2291,16 @@ const ROUTE_RULES: RouteRule[] = [
       domainHas(d, "out_invoice") &&
       domainHas(d, "sg_fw_loaded") &&
       (domainHas(d, "False") || domainHas(d, "false")),
+  },
+  {
+    model: "account.move",
+    path: "/lists/accounting/moves",
+    match: (d) =>
+      !domainHas(d, "move_type") &&
+      !domainHas(d, "sg_fw_loaded") &&
+      !domainHas(d, "payment_state") &&
+      !domainHas(d, '"draft"') &&
+      (isEmptyDomain(d) || domainHas(d, "posted")),
   },
   {
     model: "account.move",

@@ -371,6 +371,8 @@ describe("shell UI contracts", () => {
     const pos = await source("pages/pos.astro");
     assert.match(pos, /data-pos-customer-warn/);
     assert.match(pos, /Falta CUIT; completá la ficha antes de facturar/);
+    assert.match(pos, /El CUIT no es válido/);
+    assert.match(pos, /customerCuitWarnKind|isValidCuitClient/);
     assert.match(pos, /sg_invoice_dest/);
     assert.match(pos, /invoiceDestBadge|CUIT/);
   });

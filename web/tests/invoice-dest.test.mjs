@@ -2,11 +2,14 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   CUIT_DEST_REQUIRED_MSG,
+  CUIT_INVALID_MSG,
+  CUIT_INVALID_WARN_MSG,
   INVOICE_DEST_CF,
   INVOICE_DEST_CUIT,
   invoiceDestBadge,
   invoiceDestLabel,
   invoiceDestVatError,
+  invoiceDestVatWarning,
   needsCuitWarning,
   normalizeInvoiceDest,
   suggestedDocType,
@@ -33,17 +36,42 @@ describe("invoice-dest helpers", () => {
       CUIT_DEST_REQUIRED_MSG
     );
     assert.equal(
-      invoiceDestVatError({ sg_invoice_dest: "cuit", vat: "20123456789" }),
+      invoiceDestVatError({ sg_invoice_dest: "cuit", vat: "20-12345678-6" }),
       null
     );
+    assert.equal(
+      invoiceDestVatError({ sg_invoice_dest: "cuit", vat: "20123456789" }),
+      CUIT_INVALID_MSG
+    );
     assert.equal(invoiceDestVatError({ sg_invoice_dest: "cf" }), null);
+    assert.equal(
+      invoiceDestVatError({ sg_invoice_dest: "cf", vat: "20123456789" }),
+      null
+    );
     assert.equal(invoiceDestVatError({ phone: "11" }), null);
   });
 
-  it("flags POS warning when cuit dest lacks vat", () => {
+  it("warns on CF with invalid vat without blocking", () => {
+    assert.equal(
+      invoiceDestVatWarning({ sg_invoice_dest: "cf", vat: "20123456789" }),
+      CUIT_INVALID_WARN_MSG
+    );
+    assert.equal(
+      invoiceDestVatWarning({ sg_invoice_dest: "cf", vat: "20123456786" }),
+      null
+    );
+    assert.equal(
+      invoiceDestVatWarning({ sg_invoice_dest: "cuit", vat: "20123456789" }),
+      null
+    );
+  });
+
+  it("flags POS warning when cuit dest lacks vat or checksum fails", () => {
     assert.equal(needsCuitWarning("cuit", ""), true);
-    assert.equal(needsCuitWarning("cuit", "20123456789"), false);
+    assert.equal(needsCuitWarning("cuit", "20123456786"), false);
+    assert.equal(needsCuitWarning("cuit", "20123456789"), true);
     assert.equal(needsCuitWarning("cf", ""), false);
+    assert.equal(needsCuitWarning("cf", "20123456789"), true);
   });
 
   it("suggests document type from destination", () => {

@@ -1,7 +1,9 @@
 /**
- * Destino fiscal CF vs CUIT (fase 1).
- * Spec: docs/superpowers/specs/2026-07-24-cf-cuit-invoice-destination-design.md
+ * Destino fiscal CF vs CUIT (fase 1) + checksum (P0.2).
+ * Specs: cf-cuit-invoice-destination · accounting-moves-cuit-checksum
  */
+
+import { isValidCuit } from "./cuit.ts";
 
 export const INVOICE_DEST_CF = "cf";
 export const INVOICE_DEST_CUIT = "cuit";
@@ -13,6 +15,12 @@ export const INVOICE_DEST_OPTIONS = [
 
 export const CUIT_DEST_REQUIRED_MSG =
   "Este cliente es Con CUIT: cargá el CUIT para guardar.";
+
+export const CUIT_INVALID_MSG =
+  "El CUIT no es válido (revisá los 11 dígitos).";
+
+export const CUIT_INVALID_WARN_MSG =
+  "El CUIT cargado no es válido; podés guardar igual (destino CF).";
 
 export const POS_CUIT_MISSING_MSG =
   "Falta CUIT; completá la ficha antes de facturar.";
@@ -53,6 +61,7 @@ export function invoiceDestLabel(raw: unknown): string {
  * Valida destino+CUIT en un payload ya filtrado (create/update).
  * Devuelve mensaje de error o null si ok.
  * Si el payload no trae `sg_invoice_dest`, no exige (update parcial).
+ * Destino CF + vat inválido: no bloquea (ver invoiceDestVatWarning).
  */
 export function invoiceDestVatError(
   values: Record<string, unknown>
@@ -68,22 +77,45 @@ export function invoiceDestVatError(
     return null;
   }
   const vat = String(values.vat ?? "").trim();
-  if (dest === INVOICE_DEST_CUIT && !vat) {
-    return CUIT_DEST_REQUIRED_MSG;
+  if (dest === INVOICE_DEST_CUIT) {
+    if (!vat) return CUIT_DEST_REQUIRED_MSG;
+    if (!isValidCuit(vat)) return CUIT_INVALID_MSG;
   }
   return null;
 }
 
+/** Aviso no bloqueante (opción C): CF con texto inválido en vat. */
+export function invoiceDestVatWarning(
+  values: Record<string, unknown>
+): string | null {
+  if (!("sg_invoice_dest" in values) && !("vat" in values)) {
+    return null;
+  }
+  if (!("sg_invoice_dest" in values)) return null;
+  const dest = normalizeInvoiceDest(values.sg_invoice_dest);
+  if (dest !== INVOICE_DEST_CF) return null;
+  const vat = String(values.vat ?? "").trim();
+  if (!vat) return null;
+  if (!isValidCuit(vat)) return CUIT_INVALID_WARN_MSG;
+  return null;
+}
+
 export function needsCuitWarning(dest: unknown, vat: unknown): boolean {
-  return (
-    normalizeInvoiceDest(dest) === INVOICE_DEST_CUIT &&
-    !String(vat ?? "").trim()
-  );
+  const normalized = normalizeInvoiceDest(dest);
+  const trimmed = String(vat ?? "").trim();
+  if (normalized === INVOICE_DEST_CUIT) {
+    if (!trimmed) return true;
+    return !isValidCuit(trimmed);
+  }
+  if (normalized === INVOICE_DEST_CF && trimmed && !isValidCuit(trimmed)) {
+    return true;
+  }
+  return false;
 }
 
 /**
- * Validación al publicar FC: destino CUIT exige vat + street + city.
- * CF siempre ok.
+ * Validación al publicar FC: destino CUIT exige vat válido + street + city.
+ * CF siempre ok (vat inválido no bloquea publicación).
  */
 export function publishInvoiceDestError(
   partner: PartnerFiscalFields | null | undefined
@@ -91,7 +123,9 @@ export function publishInvoiceDestError(
   if (!partner) return null;
   const dest = normalizeInvoiceDest(partner.sg_invoice_dest);
   if (dest !== INVOICE_DEST_CUIT) return null;
-  if (!String(partner.vat ?? "").trim()) return PUBLISH_CUIT_VAT_MSG;
+  const vat = String(partner.vat ?? "").trim();
+  if (!vat) return PUBLISH_CUIT_VAT_MSG;
+  if (!isValidCuit(vat)) return CUIT_INVALID_MSG;
   if (
     !String(partner.street ?? "").trim() ||
     !String(partner.city ?? "").trim()

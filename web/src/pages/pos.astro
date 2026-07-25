@@ -336,12 +336,31 @@ try {
 		const customerClear = root.querySelector('[data-pos-customer-clear]');
 		const POS_CUIT_MISSING_MSG =
 			'Falta CUIT; completá la ficha antes de facturar.';
+		const POS_CUIT_INVALID_MSG =
+			'El CUIT no es válido (revisá los 11 dígitos).';
+		const CUIT_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
 
 		const invoiceDestBadge = (dest) =>
 			String(dest || 'cf').toLowerCase() === 'cuit' ? 'CUIT' : 'CF';
 
-		const customerNeedsCuitWarn = (dest, vat) =>
-			String(dest || 'cf').toLowerCase() === 'cuit' && !String(vat || '').trim();
+		const isValidCuitClient = (raw) => {
+			const digits = String(raw || '').replace(/\D/g, '');
+			if (digits.length !== 11) return false;
+			let sum = 0;
+			for (let i = 0; i < 10; i++) sum += Number(digits[i]) * CUIT_WEIGHTS[i];
+			const rem = sum % 11;
+			const expected = rem === 0 ? 0 : rem === 1 ? 9 : 11 - rem;
+			return Number(digits[10]) === expected;
+		};
+
+		/** '' | 'missing' | 'invalid' — espejo de needsCuitWarning (opción C). */
+		const customerCuitWarnKind = (dest, vat) => {
+			const d = String(dest || 'cf').toLowerCase();
+			const v = String(vat || '').trim();
+			if (d === 'cuit' && !v) return 'missing';
+			if (v && !isValidCuitClient(v)) return 'invalid';
+			return '';
+		};
 
 		const selectedPartnerId = () => {
 			if (!(customerIdInput instanceof HTMLInputElement)) return undefined;
@@ -349,11 +368,12 @@ try {
 			return Number.isFinite(id) && id > 0 ? id : undefined;
 		};
 
-		const setCustomerWarn = (show) => {
+		const setCustomerWarn = (kind) => {
 			if (!(customerWarn instanceof HTMLElement)) return;
-			if (show) {
+			if (kind) {
 				customerWarn.hidden = false;
-				customerWarn.textContent = POS_CUIT_MISSING_MSG;
+				customerWarn.textContent =
+					kind === 'missing' ? POS_CUIT_MISSING_MSG : POS_CUIT_INVALID_MSG;
 			} else {
 				customerWarn.hidden = true;
 				customerWarn.textContent = '';
@@ -385,7 +405,7 @@ try {
 				const badge = invoiceDestBadge(dest);
 				customerSelected.textContent = `Cliente: ${label} · ${badge}`;
 			}
-			setCustomerWarn(customerNeedsCuitWarn(dest, vat));
+			setCustomerWarn(customerCuitWarnKind(dest, vat));
 			if (customerResults instanceof HTMLElement) {
 				customerResults.hidden = true;
 				customerResults.replaceChildren();
