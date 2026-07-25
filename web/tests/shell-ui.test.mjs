@@ -531,6 +531,58 @@ describe("shell UI contracts", () => {
     );
   });
 
+  it("densifies ficha fields and reserves aside only when notes exist", async () => {
+    const css = await source("styles/list.css");
+    const body = await source("components/RecordDetailBody.astro");
+
+    assert.match(
+      css,
+      /\.sg-ficha-layout\s*\{[^}]*grid-template-columns:\s*1fr\s*;/s
+    );
+    assert.match(
+      css,
+      /\.sg-ficha-layout:has\(\.sg-ficha-aside\)\s*\{[^}]*minmax\(16rem,\s*22rem\)/s
+    );
+    assert.match(
+      css,
+      /\.sg-detail-fields\s*\{[^}]*repeat\(\s*auto-fit\s*,\s*minmax\(\s*min\(\s*100%\s*,\s*14rem\s*\)\s*,\s*1fr\s*\)\s*\)/s
+    );
+    assert.match(
+      css,
+      /@media\s*\(max-width:\s*720px\)[\s\S]*\.sg-detail-fields\s*\{[^}]*grid-template-columns:\s*1fr/s
+    );
+    assert.match(body, /Astro\.slots\.has\(['"]notes['"]\)/);
+    assert.match(body, /sg-ficha-aside/);
+  });
+
+  it("densifies shared create pages to ficha frame width", async () => {
+    const css = await source("styles/list.css");
+    const orderForm = await source("components/OrderCreateForm.astro");
+    const recordForm = await source("components/RecordCreateForm.astro");
+    const billNew = await source(
+      "pages/lists/accounting/vendor-bills/new.astro"
+    );
+    const customerNew = await source("pages/lists/sales/customers/new.astro");
+
+    assert.match(css, /\.sg-create-page\s*\{[^}]*max-width:\s*78rem/s);
+    assert.match(orderForm, /sg-order-create-meta/);
+    assert.match(orderForm, /sg-order-create-body/);
+    assert.match(
+      orderForm,
+      /\.sg-order-create-body\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1\.1fr\)\s*minmax\(0,\s*0\.9fr\)/s
+    );
+    assert.doesNotMatch(orderForm, /max-width:\s*40rem/);
+    assert.match(
+      recordForm,
+      /\.sg-record-create-form\s*\{[^}]*repeat\(\s*auto-fit\s*,\s*minmax\(\s*min\(\s*100%\s*,\s*14rem\s*\)\s*,\s*1fr\s*\)\s*\)/s
+    );
+    assert.doesNotMatch(recordForm, /max-width:\s*36rem/);
+    assert.match(billNew, /sg-create-page/);
+    assert.doesNotMatch(billNew, /max-width:\s*40rem/);
+    assert.match(customerNew, /sg-create-page/);
+    assert.doesNotMatch(customerNew, /max-width:\s*40rem/);
+  });
+
   it("provides product image upload host with gallery picker and preview", async () => {
     const host = await source("components/ProductImageUploadHost.astro");
     assert.match(host, /data-product-image-host/);

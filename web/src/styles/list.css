@@ -166,9 +166,13 @@
 
 .sg-ficha-layout {
 	display: grid;
-	grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
+	grid-template-columns: 1fr;
 	gap: 1.25rem;
 	align-items: start;
+}
+
+.sg-ficha-layout:has(.sg-ficha-aside) {
+	grid-template-columns: minmax(0, 1fr) minmax(16rem, 22rem);
 }
 
 .sg-ficha-main {
@@ -315,14 +319,16 @@
 
 .sg-detail-fields {
 	display: grid;
-	gap: 0.75rem;
+	grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+	gap: 0.65rem 1.25rem;
 	margin: 0;
 }
 
 .sg-detail-fields div {
 	display: grid;
 	gap: 0.2rem;
-	padding: 0.75rem 0;
+	min-width: 0;
+	padding: 0.45rem 0;
 	border-bottom: 1px solid var(--sg-glass-border);
 }
 
@@ -338,10 +344,15 @@
 	margin: 0;
 	font-size: 1.05rem;
 	font-weight: 600;
+	overflow-wrap: anywhere;
 }
 
 @media (max-width: 720px) {
 	.sg-detail-body {
+		grid-template-columns: 1fr;
+	}
+
+	.sg-detail-fields {
 		grid-template-columns: 1fr;
 	}
 }
@@ -601,4 +612,28 @@
 		align-items: flex-start;
 		flex-direction: column;
 	}
+}
+
+/* Create / alta pages — same frame width as fichas */
+.sg-create-page {
+	max-width: 78rem;
+	margin: 0 auto;
+	display: grid;
+	gap: 1.25rem;
+	width: 100%;
+	box-sizing: border-box;
+}
+
+.sg-create-page header p {
+	margin: 0 0 0.35rem;
+	color: var(--sg-text-muted-dark);
+	font-size: 0.78rem;
+	font-weight: 500;
+}
+
+.sg-create-page header h1 {
+	margin: 0;
+	font-size: clamp(1.8rem, 3.5vw, 2.4rem);
+	font-weight: 600;
+	letter-spacing: -0.04em;
 }

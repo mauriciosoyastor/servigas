@@ -44,52 +44,55 @@ const {
 	<strong>{title}</strong>
 	<p>{hint}</p>
 	<form class="sg-order-create-form" data-order-create-form>
-		{showBillSource ? (
-			<label class="sg-order-bill-source">
-				<span>Origen (opcional)</span>
-				<select class="sg-focus-ring" name="billSource" data-bill-source>
-					<option value="">Sin indicar</option>
-					<option value="whatsapp">WhatsApp</option>
-					<option value="mail">Mail</option>
-					<option value="other">Otro</option>
-				</select>
-			</label>
-		) : null}
+		<div class="sg-order-create-meta">
+			{showBillSource ? (
+				<label class="sg-order-bill-source">
+					<span>Origen (opcional)</span>
+					<select class="sg-focus-ring" name="billSource" data-bill-source>
+						<option value="">Sin indicar</option>
+						<option value="whatsapp">WhatsApp</option>
+						<option value="mail">Mail</option>
+						<option value="other">Otro</option>
+					</select>
+				</label>
+			) : null}
 
-		{requireAttachment ? (
-			<label class="sg-order-attachment">
-				<span>Comprobante (PDF, JPG o PNG) *</span>
-				<input
-					class="sg-focus-ring"
-					type="file"
-					accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
-					data-bill-attachment
-				/>
-			</label>
-		) : null}
+			{requireAttachment ? (
+				<label class="sg-order-attachment">
+					<span>Comprobante (PDF, JPG o PNG) *</span>
+					<input
+						class="sg-focus-ring"
+						type="file"
+						accept="application/pdf,image/jpeg,image/png,.pdf,.jpg,.jpeg,.png"
+						data-bill-attachment
+					/>
+				</label>
+			) : null}
 
-		<div
-			class="sg-order-picker"
-			data-order-picker
-			data-picker-kind="partner"
-			data-list-key={partnerListKey}
-		>
-			<label>
-				<span>{partnerLabel} *</span>
-				<input
-					class="sg-focus-ring"
-					type="search"
-					autocomplete="off"
-					placeholder={partnerPlaceholder}
-					data-picker-query
-				/>
-			</label>
-			<input type="hidden" name="partnerId" value="" required data-picker-id />
-			<p class="sg-order-picker-selected" data-picker-selected hidden></p>
-			<p class="sg-order-picker-warn" data-partner-fiscal-warn hidden></p>
-			<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+			<div
+				class="sg-order-picker sg-order-picker--partner"
+				data-order-picker
+				data-picker-kind="partner"
+				data-list-key={partnerListKey}
+			>
+				<label>
+					<span>{partnerLabel} *</span>
+					<input
+						class="sg-focus-ring"
+						type="search"
+						autocomplete="off"
+						placeholder={partnerPlaceholder}
+						data-picker-query
+					/>
+				</label>
+				<input type="hidden" name="partnerId" value="" required data-picker-id />
+				<p class="sg-order-picker-selected" data-picker-selected hidden></p>
+				<p class="sg-order-picker-warn" data-partner-fiscal-warn hidden></p>
+				<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+			</div>
 		</div>
 
+		<div class="sg-order-create-body">
 		<fieldset class="sg-order-line-composer" data-line-composer>
 			<legend>Agregar línea</legend>
 			<div
@@ -132,6 +135,7 @@ const {
 		<div class="sg-order-lines" data-order-lines>
 			<p class="sg-order-lines-empty" data-lines-empty>Sin líneas todavía.</p>
 			<ul data-lines-list hidden></ul>
+		</div>
 		</div>
 
 		<div class="sg-order-create-actions">
@@ -535,20 +539,38 @@ const {
 	.sg-order-create {
 		display: grid;
 		gap: 0.65rem;
-		max-width: 40rem;
+		width: 100%;
+		max-width: none;
 		border-radius: var(--sg-radius-card);
 		padding: 1.2rem;
+		box-sizing: border-box;
 	}
 	.sg-order-create > p {
 		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.82rem;
 		line-height: 1.45;
+		max-width: 48rem;
 	}
 	.sg-order-create-form {
 		display: grid;
-		gap: 0.85rem;
+		gap: 1rem;
 		margin-top: 0.35rem;
+	}
+	.sg-order-create-meta {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+		gap: 0.85rem 1.25rem;
+		align-items: start;
+	}
+	.sg-order-create-meta > .sg-order-picker--partner {
+		grid-column: 1 / -1;
+	}
+	.sg-order-create-body {
+		display: grid;
+		grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+		gap: 1rem;
+		align-items: start;
 	}
 	.sg-order-create-form label,
 	.sg-order-picker label {
@@ -582,6 +604,7 @@ const {
 		display: grid;
 		gap: 0.35rem;
 		position: relative;
+		min-width: 0;
 	}
 	.sg-order-picker-selected {
 		margin: 0;
@@ -727,7 +750,18 @@ const {
 	.sg-order-create-status[data-state='error'] {
 		color: #ffb4a2;
 	}
+	@media (max-width: 900px) {
+		.sg-order-create-body {
+			grid-template-columns: 1fr;
+		}
+	}
 	@media (max-width: 640px) {
+		.sg-order-create-meta {
+			grid-template-columns: 1fr;
+		}
+		.sg-order-create-meta > .sg-order-picker--partner {
+			grid-column: auto;
+		}
 		.sg-order-line-fields {
 			grid-template-columns: 1fr;
 		}
