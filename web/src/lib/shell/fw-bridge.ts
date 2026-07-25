@@ -47,7 +47,7 @@ export function filterMarkFwBulkIds(raw: unknown): number[] | null {
 }
 
 export type MarkFwLoadedValues = {
-  fwNumber?: string;
+  fwNumber: string;
 };
 
 export function filterMarkFwLoadedValues(
@@ -56,13 +56,42 @@ export function filterMarkFwLoadedValues(
 ): MarkFwLoadedValues | null {
   if (!canMarkFwLoaded(listKey)) return null;
   const raw = values.fwNumber ?? values.sg_fw_number;
-  if (raw === undefined || raw === null || raw === "") {
-    return {};
-  }
+  if (raw === undefined || raw === null) return null;
   const fwNumber = String(raw).trim();
-  if (!fwNumber) return {};
-  if (fwNumber.length > 64) return null;
+  if (!fwNumber || fwNumber.length > 64) return null;
   return { fwNumber };
+}
+
+export type MarkFwBulkItem = {
+  id: number;
+  fwNumber: string;
+};
+
+/**
+ * Normaliza items bulk. null = inválido / vacío / exceso / nº faltante.
+ * Dedup by id (first wins).
+ */
+export function filterMarkFwBulkItems(raw: unknown): MarkFwBulkItem[] | null {
+  if (!Array.isArray(raw)) return null;
+  const seen = new Set<number>();
+  const items: MarkFwBulkItem[] = [];
+  for (const entry of raw) {
+    if (!entry || typeof entry !== "object") return null;
+    const id = Number((entry as { id?: unknown }).id);
+    if (!Number.isFinite(id) || id <= 0 || !Number.isInteger(id)) return null;
+    if (seen.has(id)) continue;
+    const fwRaw =
+      (entry as { fwNumber?: unknown }).fwNumber ??
+      (entry as { sg_fw_number?: unknown }).sg_fw_number;
+    if (fwRaw === undefined || fwRaw === null) return null;
+    const fwNumber = String(fwRaw).trim();
+    if (!fwNumber || fwNumber.length > 64) return null;
+    seen.add(id);
+    items.push({ id, fwNumber });
+  }
+  if (!items.length) return null;
+  if (items.length > FW_BULK_MAX_IDS) return null;
+  return items;
 }
 
 export function isFwMarkableState(

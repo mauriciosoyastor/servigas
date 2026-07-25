@@ -22,6 +22,8 @@ En la cola `accounting/factura-web-pending`, marcar N FC como cargadas en un cli
 
 Exportás el CSV, cargás en Factura Web, volvés y tachás la pila entera — no ticket por ticket.
 
-## Fuera de alcance
+## Fuera de alcance (P0.4 original)
 
-Sync automática · AFIP · número FW distinto por fila en el bulk (usar ficha individual).
+Sync automática · AFIP.
+
+> **Nota P1.5:** El número FW distinto por fila en bulk pasó a alcance en [fw-number-required](./2026-07-25-fw-number-required-design.md) (`filterMarkFwBulkItems`, payload `items[]`).
