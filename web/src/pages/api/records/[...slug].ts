@@ -16,6 +16,7 @@ import {
   canMarkFwLoaded,
   canMarkFwLoadedBulk,
 } from "../../../lib/shell/fw-bridge.ts";
+import { canUpdateInvoiceDraft } from "../../../lib/shell/invoice-updates.ts";
 import {
   canArchiveRecord,
   canCreateRecord,
@@ -30,7 +31,8 @@ type RecordAction =
   | "create_invoice"
   | "register_payment"
   | "mark_fw_loaded"
-  | "mark_fw_loaded_bulk";
+  | "mark_fw_loaded_bulk"
+  | "update_invoice_draft";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -70,6 +72,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         "register_payment",
         "mark_fw_loaded",
         "mark_fw_loaded_bulk",
+        "update_invoice_draft",
       ].includes(body.action)
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
@@ -84,6 +87,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       (action === "register_payment" && canRegisterPayment(slug)) ||
       (action === "mark_fw_loaded" && canMarkFwLoaded(slug)) ||
       (action === "mark_fw_loaded_bulk" && canMarkFwLoadedBulk(slug)) ||
+      (action === "update_invoice_draft" && canUpdateInvoiceDraft(slug)) ||
       (action === "create" &&
         (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
@@ -180,6 +184,19 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         odooSessionId,
         slug,
         body.ids,
+        values
+      );
+      return json(result);
+    }
+
+    if (action === "update_invoice_draft") {
+      if (!canUpdateInvoiceDraft(slug)) {
+        throw new BffError("not_found", 404, "Edición de borrador no permitida");
+      }
+      const result = await getBackend().updateInvoiceDraft(
+        odooSessionId,
+        slug,
+        id,
         values
       );
       return json(result);

@@ -56,6 +56,14 @@ const showMarkFw = isFwMarkableState(state, fwLoaded);
 				/>
 			) : null}
 			{detail && !error && showPublish ? (
+				<a
+					class="sg-list-create sg-focus-ring"
+					href={`/lists/accounting/customer-invoices/${id}/edit`}
+				>
+					Editar borrador
+				</a>
+			) : null}
+			{detail && !error && showPublish ? (
 				<RecordConfirmControl
 					listKey="accounting/customer-invoices"
 					recordId={id}

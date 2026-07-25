@@ -399,6 +399,66 @@ describe("BFF API routes", () => {
     }
   });
 
+  it("updates an invoice draft via update_invoice_draft", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      updateInvoiceDraft: async (sessionId, listKey, id, values) => {
+        called = { sessionId, listKey, id, values };
+        return {
+          ok: true,
+          id: 55,
+          detailPath: "/lists/accounting/customer-invoices/55",
+        };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: "accounting/customer-invoices" },
+        request: new Request(
+          "http://localhost/api/records/accounting/customer-invoices",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              action: "update_invoice_draft",
+              id: 55,
+              values: {
+                partnerId: 6,
+                lines: [{ productId: 42, qty: 2, price: 100 }],
+              },
+            }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), {
+        ok: true,
+        id: 55,
+        detailPath: "/lists/accounting/customer-invoices/55",
+      });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "accounting/customer-invoices",
+        id: 55,
+        values: {
+          partnerId: 6,
+          lines: [{ productId: 42, qty: 2, price: 100 }],
+        },
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
   it("marks FC as loaded in Factura Web", async () => {
     const cookies = new FakeCookies();
     const bffSid = sessionStore.create("odoo", {

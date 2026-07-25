@@ -397,12 +397,20 @@ describe("shell UI contracts", () => {
     const invoiceDetail = await source(
       "pages/lists/accounting/customer-invoices/[id].astro"
     );
+    const invoiceEdit = await source(
+      "pages/lists/accounting/customer-invoices/[id]/edit.astro"
+    );
+    const orderForm = await source("components/OrderCreateForm.astro");
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(invoiceNew, /OrderCreateForm/);
     assert.match(invoiceNew, /accounting\/customer-invoices/);
     assert.match(invoiceDetail, /RecordConfirmControl/);
     assert.match(invoiceDetail, /Publicar/);
+    assert.match(invoiceDetail, /Editar borrador/);
     assert.match(invoiceDetail, /action_post|customer-invoices/);
+    assert.match(invoiceEdit, /update_invoice_draft/);
+    assert.match(invoiceEdit, /Guardar borrador/);
+    assert.match(orderForm, /update_invoice_draft/);
     assert.match(listPage, /Nueva factura/);
   });
 

@@ -31,6 +31,19 @@
 
 ---
 
+### 2026-07-25 — Editar borrador FC/FP/NC (P1.2)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** corregir partner/líneas de un comprobante en draft sin recrearlo.  
+**Archivos:**  
+- `web/src/lib/shell/invoice-updates.ts`, `invoice-draft-edit.ts`  
+- `web/src/lib/bff/odoo-adapter.ts` (`updateInvoiceDraft`)  
+- API `update_invoice_draft` + páginas `[id]/edit` + links en fichas  
+- Spec `docs/superpowers/specs/2026-07-25-edit-invoice-draft-design.md`  
+**Cambios:** replace-all de líneas en draft; FP sin reexigir adjunto; posted → 400.  
+**Verificación:** `npm test` (347) / `npm run build` en `web/`.  
+**Automatización:** patrón edit-draft reutilizable vía OrderCreateForm.
+
 ### 2026-07-25 — Bulk marcar Factura Web (P0.4)
 
 **Área:** contabilidad | web | BFF  
