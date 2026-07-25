@@ -354,6 +354,7 @@ describe("shell UI contracts", () => {
     const customerNew = await source("pages/lists/sales/customers/new.astro");
     const vendorNew = await source("pages/lists/purchase/vendors/new.astro");
     const createForm = await source("components/RecordCreateForm.astro");
+    const detailBody = await source("components/RecordDetailBody.astro");
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(customerNew, /RecordCreateForm/);
     assert.match(customerNew, /vat|CUIT/);
@@ -361,10 +362,22 @@ describe("shell UI contracts", () => {
     assert.match(customerNew, /Consumidor final|Con CUIT/);
     assert.match(createForm, /action:\s*['"]create['"]/);
     assert.match(createForm, /select/);
+    assert.match(createForm, /data-cuit-fiscal-warn/);
+    assert.match(createForm, /El CUIT no es válido/);
+    assert.match(detailBody, /data-cuit-fiscal-warn/);
     assert.match(vendorNew, /purchase\/vendors/);
     assert.match(vendorNew, /vat|CUIT/);
     assert.match(listPage, /canCreateRecord/);
     assert.match(listPage, /sg-list-create|Nuevo cliente/);
+  });
+
+  it("redirects accounting moves detail by move_type", async () => {
+    const movesDetail = await source(
+      "pages/lists/accounting/moves/[id].astro"
+    );
+    assert.match(movesDetail, /resolveAccountingMoveDetailPath/);
+    assert.match(movesDetail, /accounting\/moves/);
+    assert.match(movesDetail, /Astro\.redirect/);
   });
 
   it("wires CF/CUIT badge and non-blocking warn in POS customer picker", async () => {

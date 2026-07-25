@@ -1104,6 +1104,28 @@ describe("OdooAdapter.createRecord", () => {
     assert.equal(fetchImpl.mock.calls.length, 0);
   });
 
+  it("rejects customer create with cuit dest and invalid checksum", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 1 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "sales/customers", {
+          name: "Empresa",
+          sg_invoice_dest: "cuit",
+          vat: "20123456789",
+        }),
+      (err) =>
+        err?.code === "validation_error" &&
+        /CUIT no es válido/.test(String(err?.message || ""))
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+
   it("creates a customer invoice draft with lines", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: 55 }));
     const adapter = new OdooAdapter({

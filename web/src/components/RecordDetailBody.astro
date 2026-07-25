@@ -48,6 +48,10 @@ const editKeySet = new Set(editFields.map((field) => field.key));
 const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field]));
 const detailFieldKeys = new Set((detail?.fields ?? []).map((field) => field.key));
 const extraEditFields = editFields.filter((field) => !detailFieldKeys.has(field.key));
+const enableCuitWarn =
+	canEdit &&
+	editKeySet.has('sg_invoice_dest') &&
+	editKeySet.has('vat');
 
 function displayValue(
 	key: string,
@@ -231,6 +235,9 @@ function displayValue(
 									</div>
 								))}
 							</dl>
+							{enableCuitWarn ? (
+								<p class="sg-cuit-fiscal-warn" data-cuit-fiscal-warn hidden></p>
+							) : null}
 							{canEdit ? (
 								<div class="sg-detail-edit-actions" data-edit-actions hidden>
 									<button class="sg-focus-ring" type="submit">Guardar</button>
@@ -339,13 +346,50 @@ function displayValue(
 </main>
 
 {canEdit ? (
-	<script define:vars={{ editApiPath }}>
+	<script define:vars={{ editApiPath, enableCuitWarn }}>
 		const ficha = document.querySelector('[data-record-ficha]');
 		const form = ficha?.querySelector('[data-record-edit-form]');
 		const openBtn = ficha?.querySelector('[data-edit-open]');
 		const cancelBtn = ficha?.querySelector('[data-edit-cancel]');
 		const actions = ficha?.querySelector('[data-edit-actions]');
 		const status = ficha?.querySelector('[data-record-edit-status]');
+		const cuitWarn = ficha?.querySelector('[data-cuit-fiscal-warn]');
+		const CUIT_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
+		const CUIT_MISSING_MSG = 'Este cliente es Con CUIT: cargá el CUIT para guardar.';
+		const CUIT_INVALID_MSG = 'El CUIT no es válido (revisá los 11 dígitos).';
+
+		const isValidCuitClient = (raw) => {
+			const digits = String(raw || '').replace(/\D/g, '');
+			if (digits.length !== 11) return false;
+			let sum = 0;
+			for (let i = 0; i < 10; i++) sum += Number(digits[i]) * CUIT_WEIGHTS[i];
+			const rem = sum % 11;
+			const expected = rem === 0 ? 0 : rem === 1 ? 9 : 11 - rem;
+			return Number(digits[10]) === expected;
+		};
+
+		const refreshCuitWarn = () => {
+			if (!enableCuitWarn || !(form instanceof HTMLFormElement) || !(cuitWarn instanceof HTMLElement)) {
+				return;
+			}
+			if (form.dataset.editing !== 'true') {
+				cuitWarn.hidden = true;
+				cuitWarn.textContent = '';
+				return;
+			}
+			const dest = String(new FormData(form).get('sg_invoice_dest') || 'cf').toLowerCase();
+			const vat = String(new FormData(form).get('vat') || '').trim();
+			let msg = '';
+			if (dest === 'cuit' && !vat) msg = CUIT_MISSING_MSG;
+			else if (vat && !isValidCuitClient(vat)) msg = CUIT_INVALID_MSG;
+			if (msg) {
+				cuitWarn.hidden = false;
+				cuitWarn.textContent = msg;
+			} else {
+				cuitWarn.hidden = true;
+				cuitWarn.textContent = '';
+			}
+		};
 
 		function setEditing(on) {
 			if (!(ficha instanceof HTMLElement) || !(form instanceof HTMLFormElement)) return;
@@ -368,10 +412,16 @@ function displayValue(
 				status.textContent = '';
 				status.dataset.state = '';
 			}
+			refreshCuitWarn();
 		}
 
 		openBtn?.addEventListener('click', () => setEditing(true));
 		cancelBtn?.addEventListener('click', () => setEditing(false));
+
+		if (form instanceof HTMLFormElement && enableCuitWarn) {
+			form.addEventListener('input', refreshCuitWarn);
+			form.addEventListener('change', refreshCuitWarn);
+		}
 
 		if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
 			form.addEventListener('submit', async (event) => {
@@ -505,5 +555,11 @@ function displayValue(
 	.sg-detail-attachments span {
 		font-size: 0.75rem;
 		color: var(--sg-text-muted-dark);
+	}
+	.sg-cuit-fiscal-warn {
+		margin: 0.35rem 0 0;
+		font-size: 0.8rem;
+		line-height: 1.4;
+		color: #ffc107;
 	}
 </style>
