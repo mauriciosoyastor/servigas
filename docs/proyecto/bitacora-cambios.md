@@ -31,6 +31,17 @@
 
 ---
 
+### 2026-07-25 — Volver a borrador y anular comprobantes (P1.1)
+
+**Área:** contabilidad | web | BFF
+**Motivo:** permitir revertir o anular comprobantes publicados sin pago desde sus fichas.
+**Archivos:**
+- `RecordConfirmControl.astro`; fichas FC/NC/FP/NC proveedor
+- `web/tests/shell-ui.test.mjs`
+**Cambios:** `RecordConfirmControl` acepta una acción configurable (por defecto `confirm`); cada ficha muestra «Volver a borrador» y «Anular» solo para estado `posted` con pago `not_paid`.
+**Verificación:** `cd web; npm test`; `npm run build`.
+**Automatización:** control de confirmación con acción reutilizable para las próximas operaciones allowlisted.
+
 ### 2026-07-25 — Número Factura Web obligatorio en ficha y bulk (P1.5)
 
 **Área:** contabilidad | web | BFF

@@ -3,6 +3,7 @@ import RecordConfirmControl from '../../../../components/RecordConfirmControl.as
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordInvoicePdfControl from '../../../../components/RecordInvoicePdfControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { isInvoiceLifecycleReady } from '../../../../lib/shell/invoice-lifecycle.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
 
@@ -26,7 +27,9 @@ function fieldValue(key: string): string {
 }
 
 const state = fieldValue('state');
+const paymentState = fieldValue('payment_state');
 const showPublish = isConfirmableState('accounting/vendor-refunds', state);
+const showResetCancel = isInvoiceLifecycleReady(state, paymentState);
 ---
 
 <ShellLayout title={`${detail?.title || 'NC proveedor'} | Servigas`} active="accounting" userName={userName}>
@@ -63,6 +66,30 @@ const showPublish = isConfirmableState('accounting/vendor-refunds', state);
 					confirmMessage="¿Publicar esta nota de crédito de proveedor?"
 					pendingLabel="Publicando…"
 					okLabel="Publicada"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/vendor-refunds"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-refunds"
+					action="reset_invoice_draft"
+					label="Volver a borrador"
+					confirmMessage="¿Volver esta nota de crédito de proveedor a borrador?"
+					pendingLabel="Revirtiendo…"
+					okLabel="En borrador"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/vendor-refunds"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-refunds"
+					action="cancel_invoice"
+					label="Anular"
+					confirmMessage="¿Anular esta nota de crédito de proveedor? Esta acción no se deshace desde aquí."
+					pendingLabel="Anulando…"
+					okLabel="Anulada"
 				/>
 			) : null}
 		</div>
