@@ -94,6 +94,16 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<{ ok: true; state: string | null }>;
+  resetInvoiceDraft(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; state: string | null }>;
+  cancelInvoice(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; state: string | null }>;
   createInvoiceFromOrder(
     odooSessionId: string,
     listKey: string,

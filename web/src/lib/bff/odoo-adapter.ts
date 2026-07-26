@@ -94,6 +94,12 @@ import {
   INVOICE_PDF_REPORT,
   invoicePdfFilename,
 } from "../shell/invoice-pdf.ts";
+import {
+  canCancelInvoice,
+  canResetInvoiceDraft,
+  getInvoiceLifecycleMoveType,
+  isInvoiceLifecycleReady,
+} from "../shell/invoice-lifecycle.ts";
 
 /** Never requested from Odoo; computed in the BFF. */
 const COMPUTED_LIST_FIELDS = new Set(["sg_doc_type_short"]);
@@ -1622,6 +1628,105 @@ export class OdooAdapter implements BackendClient {
     const [after] = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       actionDef.model,
+      "read",
+      [[id], ["state"]]
+    );
+    return {
+      ok: true,
+      state: after?.state == null ? null : String(after.state),
+    };
+  }
+
+  async resetInvoiceDraft(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; state: string | null }> {
+    if (!canResetInvoiceDraft(listKey)) {
+      throw new BffError("not_found", 404, "Reset no permitido");
+    }
+    const move = await this.#getLifecycleMove(
+      odooSessionId,
+      listKey,
+      id,
+      "Solo se puede volver a borrador si está publicado y sin cobros/pagos"
+    );
+
+    await this.#callKw(odooSessionId, "account.move", "button_draft", [[id]]);
+    if (move.sg_fw_loaded) {
+      await this.#callKw(odooSessionId, "account.move", "write", [
+        [id],
+        {
+          sg_fw_loaded: false,
+          sg_fw_number: false,
+          sg_fw_loaded_at: false,
+        },
+      ]);
+    }
+    return this.#readInvoiceLifecycleState(odooSessionId, id);
+  }
+
+  async cancelInvoice(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; state: string | null }> {
+    if (!canCancelInvoice(listKey)) {
+      throw new BffError("not_found", 404, "Anulación no permitida");
+    }
+    await this.#getLifecycleMove(
+      odooSessionId,
+      listKey,
+      id,
+      "Solo se puede anular si está publicado y sin cobros/pagos"
+    );
+    await this.#callKw(odooSessionId, "account.move", "button_cancel", [[id]]);
+    return this.#readInvoiceLifecycleState(odooSessionId, id);
+  }
+
+  async #getLifecycleMove(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    notReadyMessage: string
+  ): Promise<Record<string, unknown>> {
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Comprobante no encontrado");
+    }
+    const expectedType = getInvoiceLifecycleMoveType(listKey);
+    const [move] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
+      "read",
+      [[id], ["state", "move_type", "payment_state", "sg_fw_loaded", "name"]]
+    );
+    if (!move) {
+      throw new BffError("not_found", 404, "Comprobante no encontrado");
+    }
+    if (String(move.move_type || "") !== expectedType) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Tipo de comprobante no coincide con la lista"
+      );
+    }
+    if (!isInvoiceLifecycleReady(move.state as string, move.payment_state as string)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        notReadyMessage
+      );
+    }
+    return move;
+  }
+
+  async #readInvoiceLifecycleState(
+    odooSessionId: string,
+    id: number
+  ): Promise<{ ok: true; state: string | null }> {
+    const [after] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "account.move",
       "read",
       [[id], ["state"]]
     );

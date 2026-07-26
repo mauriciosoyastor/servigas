@@ -2634,3 +2634,119 @@ describe("OdooAdapter.updateLogin", () => {
     assert.equal(fetchImpl.mock.calls.length, 0);
   });
 });
+
+describe("OdooAdapter.resetInvoiceDraft / cancelInvoice", () => {
+  it("resets posted unpaid FC to draft and clears FW flags", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const method = body.params?.method;
+      if (method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("payment_state")) {
+          return Response.json({
+            result: [
+              {
+                id: 55,
+                state: "posted",
+                move_type: "out_invoice",
+                payment_state: "not_paid",
+                sg_fw_loaded: true,
+              },
+            ],
+          });
+        }
+        return Response.json({ result: [{ id: 55, state: "draft" }] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.resetInvoiceDraft(
+      "sess",
+      "accounting/customer-invoices",
+      55
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.state, "draft");
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    assert.ok(bodies.some((body) => body.params?.method === "button_draft"));
+    const writeBody = bodies.find((body) => body.params?.method === "write");
+    assert.equal(writeBody.params.args[1].sg_fw_loaded, false);
+    assert.equal(writeBody.params.args[1].sg_fw_number, false);
+    assert.equal(writeBody.params.args[1].sg_fw_loaded_at, false);
+  });
+
+  it("rejects reset when payment_state is paid", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          result: [
+            {
+              id: 55,
+              state: "posted",
+              move_type: "out_invoice",
+              payment_state: "paid",
+              sg_fw_loaded: false,
+            },
+          ],
+        }),
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.resetInvoiceDraft("sess", "accounting/customer-invoices", 55),
+      (err) => err?.code === "validation_error"
+    );
+  });
+
+  it("cancels posted unpaid vendor bill", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const method = body.params?.method;
+      if (method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("payment_state")) {
+          return Response.json({
+            result: [
+              {
+                id: 9,
+                state: "posted",
+                move_type: "in_invoice",
+                payment_state: "not_paid",
+              },
+            ],
+          });
+        }
+        return Response.json({ result: [{ id: 9, state: "cancel" }] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.cancelInvoice(
+      "sess",
+      "accounting/vendor-bills",
+      9
+    );
+
+    assert.equal(result.ok, true);
+    assert.equal(result.state, "cancel");
+    const methods = fetchImpl.mock.calls.map(
+      (call) => JSON.parse(call.arguments[1].body).params.method
+    );
+    assert.ok(methods.includes("button_cancel"));
+  });
+});

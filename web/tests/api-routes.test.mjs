@@ -459,6 +459,88 @@ describe("BFF API routes", () => {
     }
   });
 
+  it("resets an allowlisted invoice to draft", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      resetInvoiceDraft: async (sessionId, listKey, id) => {
+        called = { sessionId, listKey, id };
+        return { ok: true, state: "draft" };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: "accounting/customer-invoices" },
+        request: new Request(
+          "http://localhost/api/records/accounting/customer-invoices",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ action: "reset_invoice_draft", id: 55 }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true, state: "draft" });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "accounting/customer-invoices",
+        id: 55,
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
+  it("cancels an allowlisted invoice", async () => {
+    const cookies = new FakeCookies();
+    const bffSid = sessionStore.create("odoo", {
+      uid: 1,
+      name: "A",
+      login: "a",
+    });
+    cookies.values.set(BFF_COOKIE, bffSid);
+    let called = null;
+    __setBackendForTests({
+      cancelInvoice: async (sessionId, listKey, id) => {
+        called = { sessionId, listKey, id };
+        return { ok: true, state: "cancel" };
+      },
+    });
+    try {
+      const response = await postRecord({
+        cookies,
+        params: { slug: ["accounting", "vendor-bills"] },
+        request: new Request(
+          "http://localhost/api/records/accounting/vendor-bills",
+          {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ action: "cancel_invoice", id: 9 }),
+          }
+        ),
+      });
+      assert.equal(response.status, 200);
+      assert.deepEqual(await response.json(), { ok: true, state: "cancel" });
+      assert.deepEqual(called, {
+        sessionId: "odoo",
+        listKey: "accounting/vendor-bills",
+        id: 9,
+      });
+    } finally {
+      __setBackendForTests(undefined);
+      sessionStore.destroy(bffSid);
+    }
+  });
+
   it("marks FC as loaded in Factura Web", async () => {
     const cookies = new FakeCookies();
     const bffSid = sessionStore.create("odoo", {

@@ -488,6 +488,32 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /Cargar FP/);
   });
 
+  it("wires reset and cancel invoice actions only for lifecycle-ready fichas", async () => {
+    const control = await source("components/RecordConfirmControl.astro");
+    const pages = await Promise.all([
+      source("pages/lists/accounting/customer-invoices/[id].astro"),
+      source("pages/lists/accounting/credit-notes/[id].astro"),
+      source("pages/lists/accounting/vendor-bills/[id].astro"),
+      source("pages/lists/accounting/vendor-refunds/[id].astro"),
+    ]);
+
+    assert.match(control, /action\?:\s*string/);
+    assert.match(control, /action\s*=\s*['"]confirm['"]/);
+    assert.match(control, /data-action=\{action\}/);
+    assert.match(
+      control,
+      /querySelectorAll(?:<HTMLElement>)?\(\s*['"]\[data-record-confirm\]['"]\s*\)/
+    );
+    assert.match(control, /action:\s*btn\.dataset\.action\s*\|\|\s*['"]confirm['"]/);
+    for (const page of pages) {
+      assert.match(page, /isInvoiceLifecycleReady/);
+      assert.match(page, /reset_invoice_draft/);
+      assert.match(page, /cancel_invoice/);
+      assert.match(page, /Volver a borrador/);
+      assert.match(page, /Anular/);
+    }
+  });
+
   it("wires vendor bill create with attachment and publish UI", async () => {
     const billNew = await source(
       "pages/lists/accounting/vendor-bills/new.astro"

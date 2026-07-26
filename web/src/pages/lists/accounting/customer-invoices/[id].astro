@@ -6,6 +6,7 @@ import RecordMarkFwLoadedControl from '../../../../components/RecordMarkFwLoaded
 import RecordRegisterPaymentControl from '../../../../components/RecordRegisterPaymentControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { isFwMarkableState } from '../../../../lib/shell/fw-bridge.ts';
+import { isInvoiceLifecycleReady } from '../../../../lib/shell/invoice-lifecycle.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isPaymentRegisterableState } from '../../../../lib/shell/payment-registers.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
@@ -36,6 +37,7 @@ const fwLoaded = fieldValue('sg_fw_loaded');
 const showPublish = isConfirmableState('accounting/customer-invoices', state);
 const showPay = isPaymentRegisterableState(state, paymentState);
 const showMarkFw = isFwMarkableState(state, fwLoaded);
+const showResetCancel = isInvoiceLifecycleReady(state, paymentState);
 ---
 
 <ShellLayout title={`${detail?.title || 'Factura'} | Servigas`} active="accounting" userName={userName}>
@@ -83,6 +85,30 @@ const showMarkFw = isFwMarkableState(state, fwLoaded);
 					label="Registrar cobro"
 					directionLabel="cobro"
 					defaultPaymentMethod="cash"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					apiPath="/api/records/accounting/customer-invoices"
+					action="reset_invoice_draft"
+					label="Volver a borrador"
+					confirmMessage="¿Volver esta factura a borrador?"
+					pendingLabel="Revirtiendo…"
+					okLabel="En borrador"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/customer-invoices"
+					recordId={id}
+					apiPath="/api/records/accounting/customer-invoices"
+					action="cancel_invoice"
+					label="Anular"
+					confirmMessage="¿Anular esta factura? Esta acción no se deshace desde aquí."
+					pendingLabel="Anulando…"
+					okLabel="Anulada"
 				/>
 			) : null}
 			{detail && !error && showMarkFw ? (

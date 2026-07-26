@@ -4,6 +4,7 @@ import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordInvoicePdfControl from '../../../../components/RecordInvoicePdfControl.astro';
 import RecordRegisterPaymentControl from '../../../../components/RecordRegisterPaymentControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { isInvoiceLifecycleReady } from '../../../../lib/shell/invoice-lifecycle.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isPaymentRegisterableState } from '../../../../lib/shell/payment-registers.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
@@ -32,6 +33,7 @@ const paymentState = fieldValue('payment_state');
 const residual = fieldValue('amount_residual');
 const showPublish = isConfirmableState('accounting/vendor-bills', state);
 const showPay = isPaymentRegisterableState(state, paymentState);
+const showResetCancel = isInvoiceLifecycleReady(state, paymentState);
 ---
 
 <ShellLayout title={`${detail?.title || 'Factura proveedor'} | Servigas`} active="accounting" userName={userName}>
@@ -78,6 +80,30 @@ const showPay = isPaymentRegisterableState(state, paymentState);
 					defaultAmount={residual}
 					label="Registrar pago"
 					directionLabel="pago a proveedor"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/vendor-bills"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-bills"
+					action="reset_invoice_draft"
+					label="Volver a borrador"
+					confirmMessage="¿Volver esta factura de proveedor a borrador?"
+					pendingLabel="Revirtiendo…"
+					okLabel="En borrador"
+				/>
+			) : null}
+			{detail && !error && showResetCancel ? (
+				<RecordConfirmControl
+					listKey="accounting/vendor-bills"
+					recordId={id}
+					apiPath="/api/records/accounting/vendor-bills"
+					action="cancel_invoice"
+					label="Anular"
+					confirmMessage="¿Anular esta factura de proveedor? Esta acción no se deshace desde aquí."
+					pendingLabel="Anulando…"
+					okLabel="Anulada"
 				/>
 			) : null}
 		</div>

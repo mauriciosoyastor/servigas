@@ -18,6 +18,10 @@ import {
 } from "../../../lib/shell/fw-bridge.ts";
 import { canUpdateInvoiceDraft } from "../../../lib/shell/invoice-updates.ts";
 import {
+  canCancelInvoice,
+  canResetInvoiceDraft,
+} from "../../../lib/shell/invoice-lifecycle.ts";
+import {
   canArchiveRecord,
   canCreateRecord,
   getRecordWriteDef,
@@ -32,7 +36,9 @@ type RecordAction =
   | "register_payment"
   | "mark_fw_loaded"
   | "mark_fw_loaded_bulk"
-  | "update_invoice_draft";
+  | "update_invoice_draft"
+  | "reset_invoice_draft"
+  | "cancel_invoice";
 
 export const POST: APIRoute = async ({ cookies, params, request }) => {
   try {
@@ -73,6 +79,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         "mark_fw_loaded",
         "mark_fw_loaded_bulk",
         "update_invoice_draft",
+        "reset_invoice_draft",
+        "cancel_invoice",
       ].includes(body.action)
     ) {
       throw new BffError("validation_error", 400, "Acción inválida");
@@ -88,6 +96,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       (action === "mark_fw_loaded" && canMarkFwLoaded(slug)) ||
       (action === "mark_fw_loaded_bulk" && canMarkFwLoadedBulk(slug)) ||
       (action === "update_invoice_draft" && canUpdateInvoiceDraft(slug)) ||
+      (action === "reset_invoice_draft" && canResetInvoiceDraft(slug)) ||
+      (action === "cancel_invoice" && canCancelInvoice(slug)) ||
       (action === "create" &&
         (canCreateOrder(slug) || canCreateInvoice(slug)));
     if (!canAct) {
@@ -198,6 +208,26 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         id,
         values
       );
+      return json(result);
+    }
+
+    if (action === "reset_invoice_draft") {
+      if (!canResetInvoiceDraft(slug)) {
+        throw new BffError("not_found", 404, "Reset no permitido");
+      }
+      const result = await getBackend().resetInvoiceDraft(
+        odooSessionId,
+        slug,
+        id
+      );
+      return json(result);
+    }
+
+    if (action === "cancel_invoice") {
+      if (!canCancelInvoice(slug)) {
+        throw new BffError("not_found", 404, "Anulación no permitida");
+      }
+      const result = await getBackend().cancelInvoice(odooSessionId, slug, id);
       return json(result);
     }
 
