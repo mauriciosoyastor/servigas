@@ -500,6 +500,10 @@ describe("shell UI contracts", () => {
     assert.match(control, /action\?:\s*string/);
     assert.match(control, /action\s*=\s*['"]confirm['"]/);
     assert.match(control, /data-action=\{action\}/);
+    assert.match(
+      control,
+      /querySelectorAll(?:<HTMLElement>)?\(\s*['"]\[data-record-confirm\]['"]\s*\)/
+    );
     assert.match(control, /action:\s*btn\.dataset\.action\s*\|\|\s*['"]confirm['"]/);
     for (const page of pages) {
       assert.match(page, /isInvoiceLifecycleReady/);
