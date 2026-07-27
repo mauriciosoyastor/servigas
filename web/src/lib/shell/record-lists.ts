@@ -22,6 +22,7 @@ export type RecordListKey =
   | "inventory/categories"
   | "sales/orders"
   | "sales/quotations"
+  | "sales/quotations-history"
   | "sales/to-invoice"
   | "sales/upselling"
   | "sales/ventas-caja"
@@ -246,7 +247,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/variants": {
     key: "inventory/variants",
     path: "/lists/inventory/variants",
-    title: "Variantes",
+    title: "Ítems de stock",
     hint: "Referencias de inventario — nombre, código o barras",
     model: "product.product",
     domain: [["active", "=", true]],
@@ -539,10 +540,26 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/quotations": {
     key: "sales/quotations",
     path: "/lists/sales/quotations",
-    title: "Cotizaciones abiertas",
+    title: "Cotizaciones",
     hint: "Borradores y enviadas",
     model: "sale.order",
     domain: [["state", "in", ["draft", "sent"]]],
+    fields: ["name", "partner_id", "date_order", "amount_total", "state"],
+    columns: orderCols(),
+    limit: 50,
+    order: "date_order desc",
+    hubBack: "/hubs/sales",
+    detailPath: "/lists/sales/quotations/:id",
+    railApp: "sales",
+    searchFields: ["name", "client_order_ref"],
+  },
+  "sales/quotations-history": {
+    key: "sales/quotations-history",
+    path: "/lists/sales/quotations-history",
+    title: "Historial de cotizaciones",
+    hint: "Todas las cotizaciones y pedidos",
+    model: "sale.order",
+    domain: [],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
     columns: orderCols(),
     limit: 50,
@@ -842,8 +859,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "purchase/solicitudes": {
     key: "purchase/solicitudes",
     path: "/lists/purchase/solicitudes",
-    title: "Pedidos a proveedor abiertos",
-    hint: "Borradores y enviados a proveedores",
+    title: "Pedidos abiertos",
+    hint: "Borradores + enviados",
     model: "purchase.order",
     domain: [["state", "in", ["draft", "sent"]]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -858,8 +875,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "purchase/solicitudes-borrador": {
     key: "purchase/solicitudes-borrador",
     path: "/lists/purchase/solicitudes-borrador",
-    title: "Pedidos a proveedor (borrador)",
-    hint: "Todavía no enviados al proveedor",
+    title: "Borradores",
+    hint: "Todavía no enviados",
     model: "purchase.order",
     domain: [["state", "=", "draft"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -874,8 +891,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "purchase/solicitudes-enviadas": {
     key: "purchase/solicitudes-enviadas",
     path: "/lists/purchase/solicitudes-enviadas",
-    title: "Pedidos a proveedor (enviados)",
-    hint: "Ya enviados, a la espera de respuesta",
+    title: "Enviados al proveedor",
+    hint: "Esperando respuesta o confirmación",
     model: "purchase.order",
     domain: [["state", "=", "sent"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -891,7 +908,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/to-approve",
     path: "/lists/purchase/to-approve",
     title: "Por aprobar",
-    hint: "Pedidos a proveedor pendientes de aprobación",
+    hint: "Pendientes de aprobación",
     model: "purchase.order",
     domain: [["state", "=", "to approve"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -1855,6 +1872,11 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "sale.order",
+    patterns: [/historial.*cotizaci/i, /cotizaci.*historial/i],
+    path: "/lists/sales/quotations-history",
+  },
+  {
+    model: "sale.order",
     patterns: [/upsell/i],
     path: "/lists/sales/upselling",
   },
@@ -1910,12 +1932,12 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "purchase.order",
-    patterns: [/borrador.*rfq/i, /rfq.*borrador/i],
+    patterns: [/borrador.*rfq/i, /rfq.*borrador/i, /^borradores$/i],
     path: "/lists/purchase/solicitudes-borrador",
   },
   {
     model: "purchase.order",
-    patterns: [/rfq enviada/i, /enviada/i],
+    patterns: [/rfq enviada/i, /enviados al proveedor/i, /enviada/i],
     path: "/lists/purchase/solicitudes-enviadas",
   },
   {
@@ -1935,7 +1957,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "purchase.order",
-    patterns: [/solicitud/i, /rfq/i, /cotizaci.n/i],
+    patterns: [/pedidos abiertos/i, /solicitud/i, /rfq/i, /cotizaci.n/i],
     path: "/lists/purchase/solicitudes",
   },
   {
@@ -2196,6 +2218,11 @@ const ROUTE_RULES: RouteRule[] = [
     model: "sale.order",
     path: "/lists/sales/upselling",
     match: (d) => domainHas(d, "upselling"),
+  },
+  {
+    model: "sale.order",
+    path: "/lists/sales/quotations-history",
+    match: (d) => isEmptyDomain(d),
   },
   {
     model: "sale.order",

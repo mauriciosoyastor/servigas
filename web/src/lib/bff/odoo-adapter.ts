@@ -121,6 +121,39 @@ import {
   invoicePdfFilename,
 } from "../shell/invoice-pdf.ts";
 import {
+  canFetchPurchaseOrderPdf,
+  canSendPurchaseOrderEmail,
+  missingVendorContactHint,
+  normalizeWhatsappPhone,
+  purchaseOrderPdfFilename,
+  purchaseOrderPdfPath,
+  purchaseOrderWhatsappMessage,
+  purchaseOrderWhatsappUrl,
+  PURCHASE_ORDER_EMAIL_TEMPLATE,
+  PURCHASE_ORDER_PDF_REPORT,
+  type PurchaseOrderShareMeta,
+} from "../shell/purchase-order-share.ts";
+import {
+  mapPurchaseOrderReceiptRow,
+  receiptStatusLabel,
+  type PurchaseOrderReceiptsPayload,
+} from "../shell/purchase-order-receipts.ts";
+import {
+  canFetchSaleOrderPdf,
+  canSendSaleOrderEmail,
+  missingCustomerContactHint,
+  normalizeWhatsappPhone as normalizeSaleWhatsappPhone,
+  saleOrderDocumentLabel,
+  saleOrderPdfFilename,
+  saleOrderPdfPath,
+  saleOrderWhatsappMessage,
+  saleOrderWhatsappUrl,
+  shouldMarkQuotationSentAfterEmail,
+  SALE_ORDER_EMAIL_TEMPLATE,
+  SALE_ORDER_PDF_REPORT,
+  type SaleOrderShareMeta,
+} from "../shell/sale-order-share.ts";
+import {
   canCancelInvoice,
   canResetInvoiceDraft,
   getInvoiceLifecycleMoveType,
@@ -3734,6 +3767,534 @@ export class OdooAdapter implements BackendClient {
     } catch (cause) {
       this.#mapFetchFailure(cause);
     }
+  }
+
+  async fetchPurchaseOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }> {
+    if (!canFetchPurchaseOrderPdf(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "PDF no permitido");
+    }
+
+    let title: string | null = null;
+    try {
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "purchase.order",
+        "read",
+        [[id], ["name", "display_name"]]
+      );
+      if (!row) {
+        throw new BffError("not_found", 404, "Orden de compra no encontrada");
+      }
+      title = String(row.display_name || row.name || "") || null;
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      this.#mapFetchFailure(cause);
+    }
+
+    try {
+      const response = await this.#fetch(
+        `${this.#baseUrl}/report/pdf/${PURCHASE_ORDER_PDF_REPORT}/${id}`,
+        {
+          headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
+        }
+      );
+      if (!response.ok) {
+        if (response.status === 422) {
+          throw new BffError(
+            "action_failed",
+            503,
+            "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor"
+          );
+        }
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo generar el PDF de la orden de compra"
+        );
+      }
+      const contentType =
+        response.headers.get("content-type") || "application/pdf";
+      const body = await response.arrayBuffer();
+      const head = new Uint8Array(body.slice(0, 5));
+      const isPdf =
+        head.length >= 5 &&
+        head[0] === 0x25 &&
+        head[1] === 0x50 &&
+        head[2] === 0x44 &&
+        head[3] === 0x46 &&
+        head[4] === 0x2d;
+      if (!isPdf) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "Odoo no devolvió un PDF válido"
+        );
+      }
+      return {
+        body,
+        contentType: contentType.includes("pdf")
+          ? contentType
+          : "application/pdf",
+        filename: purchaseOrderPdfFilename(title, id),
+      };
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+  }
+
+  async getPurchaseOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<PurchaseOrderShareMeta> {
+    if (!canFetchPurchaseOrderPdf(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Orden no encontrada");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "purchase.order",
+      "read",
+      [[id], ["name", "partner_id"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Orden de compra no encontrada");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    const orderName = String(order.name || `OC-${id}`);
+    let partnerName = this.#cellValue(order.partner_id);
+    partnerName =
+      typeof partnerName === "string" && partnerName
+        ? partnerName
+        : "Proveedor";
+
+    let email: string | null = null;
+    let phone: string | null = null;
+    if (partnerId > 0) {
+      const [partner] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "res.partner",
+        "read",
+        [[partnerId], ["name", "email", "phone", "mobile"]]
+      );
+      if (partner) {
+        partnerName = String(partner.name || partnerName);
+        const rawEmail = partner.email;
+        email =
+          typeof rawEmail === "string" && rawEmail.trim()
+            ? rawEmail.trim()
+            : null;
+        const rawMobile =
+          typeof partner.mobile === "string" ? partner.mobile : "";
+        const rawPhone = typeof partner.phone === "string" ? partner.phone : "";
+        phone = normalizeWhatsappPhone(rawMobile || rawPhone);
+      }
+    }
+
+    const message = purchaseOrderWhatsappMessage(orderName, partnerName);
+    return {
+      orderName,
+      partnerName,
+      email,
+      phone,
+      whatsappUrl: purchaseOrderWhatsappUrl(phone, message),
+      pdfPath: purchaseOrderPdfPath(listKey, id),
+      missingContactHint: missingVendorContactHint({ phone, email }),
+    };
+  }
+
+  async getPurchaseOrderReceipts(
+    odooSessionId: string,
+    orderId: number
+  ): Promise<PurchaseOrderReceiptsPayload> {
+    if (!Number.isFinite(orderId) || orderId <= 0) {
+      throw new BffError("not_found", 404, "Orden de compra no encontrada");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "purchase.order",
+      "read",
+      [[orderId], ["name", "receipt_status", "picking_ids"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Orden de compra no encontrada");
+    }
+
+    const orderName = String(order.name || `OC-${orderId}`);
+    const receiptStatusRaw = order.receipt_status;
+    const receiptStatus =
+      typeof receiptStatusRaw === "string" && receiptStatusRaw
+        ? receiptStatusRaw
+        : null;
+    const pickingIds = this.#idsFromM2m(order.picking_ids);
+    if (pickingIds.length === 0) {
+      return {
+        orderId,
+        orderName,
+        receiptStatus,
+        receiptStatusLabel: receiptStatusLabel(receiptStatus),
+        pickings: [],
+      };
+    }
+
+    const rows = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "stock.picking",
+      "read",
+      [
+        pickingIds,
+        [
+          "name",
+          "partner_id",
+          "origin",
+          "state",
+          "scheduled_date",
+          "picking_type_code",
+        ],
+      ]
+    );
+
+    const pickings = rows
+      .map((row) => {
+        const id = Number(row.id);
+        if (!Number.isFinite(id) || id <= 0) return null;
+        const partner = this.#cellValue(row.partner_id);
+        const origin = this.#cellValue(row.origin);
+        const scheduled = this.#cellValue(row.scheduled_date);
+        return mapPurchaseOrderReceiptRow({
+          id,
+          name: String(row.name || `WH/${id}`),
+          partnerName:
+            typeof partner === "string" && partner ? partner : "Proveedor",
+          origin: typeof origin === "string" ? origin : null,
+          state: String(row.state || ""),
+          scheduledDate: typeof scheduled === "string" ? scheduled : null,
+        });
+      })
+      .filter((row): row is NonNullable<typeof row> => Boolean(row))
+      .sort((a, b) => {
+        // Pending validations first, then by id desc
+        if (a.canValidate !== b.canValidate) return a.canValidate ? -1 : 1;
+        return b.id - a.id;
+      });
+
+    return {
+      orderId,
+      orderName,
+      receiptStatus,
+      receiptStatusLabel: receiptStatusLabel(receiptStatus),
+      pickings,
+    };
+  }
+
+  async sendPurchaseOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; email: string; orderName: string }> {
+    if (!canSendPurchaseOrderEmail(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Envío no permitido");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "purchase.order",
+      "read",
+      [[id], ["name", "state", "partner_id"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Orden de compra no encontrada");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    if (partnerId <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del proveedor"
+      );
+    }
+
+    const [partner] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "res.partner",
+      "read",
+      [[partnerId], ["email", "name"]]
+    );
+    const email =
+      typeof partner?.email === "string" && partner.email.trim()
+        ? partner.email.trim()
+        : null;
+    if (!email) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del proveedor"
+      );
+    }
+
+    const templateId = await this.#callKw<number>(
+      odooSessionId,
+      "ir.model.data",
+      "xmlid_to_res_id",
+      [PURCHASE_ORDER_EMAIL_TEMPLATE]
+    );
+    if (!Number.isFinite(templateId) || templateId <= 0) {
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se encontró la plantilla de correo de compra"
+      );
+    }
+
+    await this.#callKw(odooSessionId, "mail.template", "send_mail", [
+      templateId,
+      id,
+    ], { force_send: true });
+
+    return {
+      ok: true,
+      email,
+      orderName: String(order.name || `OC-${id}`),
+    };
+  }
+
+  async fetchSaleOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }> {
+    if (!canFetchSaleOrderPdf(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "PDF no permitido");
+    }
+
+    let title: string | null = null;
+    try {
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "sale.order",
+        "read",
+        [[id], ["name", "display_name"]]
+      );
+      if (!row) {
+        throw new BffError("not_found", 404, "Pedido no encontrado");
+      }
+      title = String(row.display_name || row.name || "") || null;
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      this.#mapFetchFailure(cause);
+    }
+
+    try {
+      const response = await this.#fetch(
+        `${this.#baseUrl}/report/pdf/${SALE_ORDER_PDF_REPORT}/${id}`,
+        {
+          headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
+        }
+      );
+      if (!response.ok) {
+        if (response.status === 422) {
+          throw new BffError(
+            "action_failed",
+            503,
+            "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor"
+          );
+        }
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo generar el PDF del pedido"
+        );
+      }
+      const contentType =
+        response.headers.get("content-type") || "application/pdf";
+      const body = await response.arrayBuffer();
+      const head = new Uint8Array(body.slice(0, 5));
+      const isPdf =
+        head.length >= 5 &&
+        head[0] === 0x25 &&
+        head[1] === 0x50 &&
+        head[2] === 0x44 &&
+        head[3] === 0x46 &&
+        head[4] === 0x2d;
+      if (!isPdf) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "Odoo no devolvió un PDF válido"
+        );
+      }
+      return {
+        body,
+        contentType: contentType.includes("pdf")
+          ? contentType
+          : "application/pdf",
+        filename: saleOrderPdfFilename(title, id),
+      };
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+  }
+
+  async getSaleOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<SaleOrderShareMeta> {
+    if (!canFetchSaleOrderPdf(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Pedido no encontrado");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sale.order",
+      "read",
+      [[id], ["name", "partner_id"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Pedido no encontrado");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    const orderName = String(order.name || `S-${id}`);
+    let partnerName = this.#cellValue(order.partner_id);
+    partnerName =
+      typeof partnerName === "string" && partnerName ? partnerName : "Cliente";
+
+    let email: string | null = null;
+    let phone: string | null = null;
+    if (partnerId > 0) {
+      const [partner] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "res.partner",
+        "read",
+        [[partnerId], ["name", "email", "phone", "mobile"]]
+      );
+      if (partner) {
+        partnerName = String(partner.name || partnerName);
+        const rawEmail = partner.email;
+        email =
+          typeof rawEmail === "string" && rawEmail.trim()
+            ? rawEmail.trim()
+            : null;
+        const rawMobile =
+          typeof partner.mobile === "string" ? partner.mobile : "";
+        const rawPhone = typeof partner.phone === "string" ? partner.phone : "";
+        phone = normalizeSaleWhatsappPhone(rawMobile || rawPhone);
+      }
+    }
+
+    const message = saleOrderWhatsappMessage(orderName, partnerName, listKey);
+    return {
+      orderName,
+      partnerName,
+      email,
+      phone,
+      whatsappUrl: saleOrderWhatsappUrl(phone, message),
+      pdfPath: saleOrderPdfPath(listKey, id),
+      missingContactHint: missingCustomerContactHint({ phone, email }),
+      documentLabel: saleOrderDocumentLabel(listKey),
+    };
+  }
+
+  async sendSaleOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{
+    ok: true;
+    email: string;
+    orderName: string;
+    markedSent: boolean;
+  }> {
+    if (!canSendSaleOrderEmail(listKey) || !Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Envío no permitido");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sale.order",
+      "read",
+      [[id], ["name", "state", "partner_id"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "Pedido no encontrado");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    if (partnerId <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del cliente"
+      );
+    }
+
+    const [partner] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "res.partner",
+      "read",
+      [[partnerId], ["email", "name"]]
+    );
+    const email =
+      typeof partner?.email === "string" && partner.email.trim()
+        ? partner.email.trim()
+        : null;
+    if (!email) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del cliente"
+      );
+    }
+
+    const templateId = await this.#callKw<number>(
+      odooSessionId,
+      "ir.model.data",
+      "xmlid_to_res_id",
+      [SALE_ORDER_EMAIL_TEMPLATE]
+    );
+    if (!Number.isFinite(templateId) || templateId <= 0) {
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se encontró la plantilla de correo de venta"
+      );
+    }
+
+    await this.#callKw(
+      odooSessionId,
+      "mail.template",
+      "send_mail",
+      [templateId, id],
+      { force_send: true }
+    );
+
+    let markedSent = false;
+    if (shouldMarkQuotationSentAfterEmail(order.state as string)) {
+      await this.#callKw(
+        odooSessionId,
+        "sale.order",
+        "action_quotation_sent",
+        [[id]]
+      );
+      markedSent = true;
+    }
+
+    return {
+      ok: true,
+      email,
+      orderName: String(order.name || `S-${id}`),
+      markedSent,
+    };
   }
 
   async fetchAttachment(

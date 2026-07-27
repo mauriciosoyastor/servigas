@@ -245,14 +245,135 @@ class SgHubCard(models.Model):
     @api.model
     def setup_inventory_hub_card_accents(self):
         self._setup_hub_card_accents_for_app("inventory")
+        self.apply_inventory_hub_copy()
+
+    @api.model
+    def apply_inventory_hub_copy(self):
+        """Force-update inventory hub copy (noupdate XML cards)."""
+        updates = {
+            "servigas_core.hub_card_inv_summary_variants": {
+                "label": "Ítems de stock",
+                "enter_label": "Ver ítems →",
+            },
+            "servigas_core.hub_card_inv_products_variants": {
+                "label": "Ítems de stock",
+            },
+        }
+        for xmlid, values in updates.items():
+            card = self.env.ref(xmlid, raise_if_not_found=False)
+            if not card:
+                continue
+            to_write = {
+                field: value
+                for field, value in values.items()
+                if card[field] != value
+            }
+            if to_write:
+                card.write(to_write)
 
     @api.model
     def setup_sales_hub_card_accents(self):
         self._setup_hub_card_accents_for_app("sales")
+        self.apply_sales_hub_copy()
+
+    @api.model
+    def apply_sales_hub_copy(self):
+        """Force-update sales hub copy + Cotizaciones tab (noupdate XML)."""
+        Section = self.env["sg.hub.section"]
+        section_updates = {
+            "servigas_core.hub_section_sales_quotations": {
+                "name": "Cotizaciones",
+                "sequence": 2,
+                "active": True,
+            },
+            "servigas_core.hub_section_sales_orders": {"sequence": 3},
+            "servigas_core.hub_section_sales_customers": {"sequence": 4},
+            "servigas_core.hub_section_sales_reporting": {"sequence": 5},
+            "servigas_core.hub_section_sales_config": {"sequence": 6},
+        }
+        for xmlid, values in section_updates.items():
+            section = self.env.ref(xmlid, raise_if_not_found=False)
+            if not section:
+                continue
+            to_write = {
+                field: value
+                for field, value in values.items()
+                if section[field] != value
+            }
+            if to_write:
+                section.write(to_write)
+
+        updates = {
+            "servigas_core.hub_card_sales_quotations_open": {
+                "label": "Cotizaciones",
+                "hint": "Borradores y enviadas",
+                "enter_label": "Ver cotizaciones →",
+                "section": "quotations",
+                "active": True,
+            },
+            "servigas_core.hub_card_sales_quotations_history": {
+                "label": "Historial de cotizaciones",
+                "hint": "Todas las cotizaciones y pedidos",
+                "enter_label": "Ver historial →",
+                "section": "quotations",
+                "active": True,
+            },
+            # Redundant with Cotizaciones (draft ⊂ draft+sent).
+            "servigas_core.hub_card_sales_quotations_draft": {"active": False},
+            "servigas_core.hub_card_sales_orders_draft": {"active": False},
+            "servigas_core.hub_card_sales_summary_quotations": {
+                "label": "Cotizaciones",
+                "hint": "Borradores y enviadas",
+                "enter_label": "Ver cotizaciones →",
+            },
+        }
+        for xmlid, values in updates.items():
+            card = self.env.ref(xmlid, raise_if_not_found=False)
+            if not card:
+                continue
+            to_write = {
+                field: value
+                for field, value in values.items()
+                if card[field] != value
+            }
+            if to_write:
+                card.write(to_write)
 
     @api.model
     def setup_purchase_hub_card_accents(self):
         self._setup_hub_card_accents_for_app("purchase")
+        self.apply_purchase_hub_copy()
+
+    @api.model
+    def apply_purchase_hub_copy(self):
+        """Force-update purchase hub copy (noupdate XML cards)."""
+        updates = {
+            "servigas_core.hub_card_purchase_summary_rfq": {
+                "label": "Pedidos abiertos",
+                "hint": "Borradores + enviados",
+                "enter_label": "Ver pedidos →",
+            },
+            "servigas_core.hub_card_purchase_orders_rfq": {
+                "label": "Pedidos abiertos",
+            },
+            "servigas_core.hub_card_purchase_orders_draft": {
+                "label": "Borradores",
+            },
+            "servigas_core.hub_card_purchase_orders_sent": {
+                "label": "Enviados al proveedor",
+            },
+        }
+        for xmlid, values in updates.items():
+            card = self.env.ref(xmlid, raise_if_not_found=False)
+            if not card:
+                continue
+            to_write = {
+                field: value
+                for field, value in values.items()
+                if card[field] != value
+            }
+            if to_write:
+                card.write(to_write)
 
     @api.model
     def setup_accounting_hub_card_accents(self):

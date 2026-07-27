@@ -17,7 +17,7 @@
             <field name="active" eval="False"/>
         </record>
 
-        <!-- Acentos flame/ember distintos por KPI (upgrade seguro; noupdate cards). -->
+        <!-- Acentos flame/ember distintos por KPI + copy force-update (noupdate cards). -->
         <function model="sg.hub.card" name="setup_all_hub_card_accents"/>
     </data>
 </odoo>

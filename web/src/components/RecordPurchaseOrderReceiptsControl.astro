@@ -1,0 +1,145 @@
+---
+import type { PurchaseOrderReceiptsPayload } from '../lib/shell/purchase-order-receipts.ts';
+
+interface Props {
+	receipts: PurchaseOrderReceiptsPayload;
+}
+
+const { receipts } = Astro.props;
+---
+
+<section class="sg-po-receipts" data-po-receipts>
+	<p class="sg-po-receipts-title">Recepciones de inventario</p>
+	<p class="sg-po-receipts-status">
+		Estado OC: <strong>{receipts.receiptStatusLabel}</strong>
+	</p>
+
+	{receipts.pickings.length === 0 ? (
+		<p class="sg-po-receipts-empty">
+			Todavía no hay remitos de ingreso para esta orden. Se generan al confirmar la OC
+			(productos almacenables).
+		</p>
+	) : (
+		<ul class="sg-po-receipts-list">
+			{receipts.pickings.map((picking) => (
+				<li class="sg-po-receipts-item">
+					<div class="sg-po-receipts-item-main">
+						<strong>{picking.name}</strong>
+						<span class="sg-po-receipts-partner">Proveedor: {picking.partnerName}</span>
+						<span class="sg-po-receipts-meta">
+							{picking.stateLabel}
+							{picking.origin ? ` · ${picking.origin}` : ''}
+						</span>
+					</div>
+					<a
+						class:list={[
+							'sg-po-receipts-cta',
+							'sg-focus-ring',
+							picking.canValidate ? 'is-validate' : '',
+						]}
+						href={picking.detailPath}
+					>
+						{picking.canValidate ? 'Validar recepción →' : 'Ver recepción →'}
+					</a>
+				</li>
+			))}
+		</ul>
+	)}
+</section>
+
+<style>
+	.sg-po-receipts {
+		display: grid;
+		gap: 0.55rem;
+		margin-bottom: 1rem;
+		padding: 0.85rem 0.95rem;
+		border-radius: var(--sg-radius-md, 12px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.sg-po-receipts-title {
+		margin: 0;
+		font-size: 0.78rem;
+		font-weight: 650;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-po-receipts-status {
+		margin: 0;
+		font-size: 0.84rem;
+		color: var(--sg-text-on-dark, #eef3f8);
+	}
+
+	.sg-po-receipts-status strong {
+		color: #ffd9a8;
+		font-weight: 650;
+	}
+
+	.sg-po-receipts-empty {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-po-receipts-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.55rem;
+	}
+
+	.sg-po-receipts-item {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		justify-content: space-between;
+		gap: 0.55rem 0.75rem;
+		padding: 0.65rem 0.7rem;
+		border-radius: 10px;
+		border: 1px solid rgba(255, 255, 255, 0.08);
+		background: rgba(0, 0, 0, 0.18);
+	}
+
+	.sg-po-receipts-item-main {
+		display: grid;
+		gap: 0.15rem;
+		min-width: 0;
+	}
+
+	.sg-po-receipts-item-main strong {
+		font-size: 0.9rem;
+		color: var(--sg-text-on-dark, #eef3f8);
+	}
+
+	.sg-po-receipts-partner,
+	.sg-po-receipts-meta {
+		font-size: 0.76rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-po-receipts-partner {
+		color: #9dffc0;
+	}
+
+	.sg-po-receipts-cta {
+		border: 1px solid rgba(155, 200, 255, 0.45);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.45rem 0.85rem;
+		color: #b7d7ff;
+		background: rgba(25, 45, 75, 0.45);
+		font-size: 0.78rem;
+		font-weight: 650;
+		text-decoration: none;
+		white-space: nowrap;
+	}
+
+	.sg-po-receipts-cta.is-validate {
+		border-color: rgba(255, 180, 80, 0.5);
+		color: #ffd9a8;
+		background: rgba(60, 40, 15, 0.45);
+	}
+</style>

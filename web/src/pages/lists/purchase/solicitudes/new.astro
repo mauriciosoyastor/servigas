@@ -16,9 +16,19 @@ try {
 
 <ShellLayout title="Nuevo pedido a proveedor | Servigas" active="purchase" userName={userName}>
 	<main class="sg-create-page">
-		<header>
-			<p>Compras</p>
-			<h1>Nuevo pedido a proveedor</h1>
+		<header class="sg-create-heading">
+			<div>
+				<p>Compras</p>
+				<h1>Nuevo pedido a proveedor</h1>
+			</div>
+			<nav class="sg-create-heading-meta" aria-label="Historial de compras">
+				<a class="sg-list-back sg-focus-ring" href="/lists/purchase/solicitudes">
+					Ver borradores
+				</a>
+				<a class="sg-list-back sg-focus-ring" href="/lists/purchase/orders">
+					Ver órdenes
+				</a>
+			</nav>
 		</header>
 		<OrderCreateForm
 			apiPath="/api/records/purchase/solicitudes"

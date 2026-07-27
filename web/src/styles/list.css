@@ -719,3 +719,29 @@
 	font-weight: 600;
 	letter-spacing: -0.04em;
 }
+
+.sg-create-heading {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	justify-content: space-between;
+	gap: 0.85rem 1.25rem;
+}
+
+.sg-create-heading-meta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.55rem;
+	align-items: center;
+}
+
+.sg-create-heading-meta .sg-list-back {
+	border: 1px solid var(--sg-glass-border);
+	border-radius: var(--sg-radius-pill);
+	padding: 0.55rem 0.9rem;
+	color: var(--sg-text-on-dark);
+	background: var(--sg-glass-fill);
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-decoration: none;
+}
