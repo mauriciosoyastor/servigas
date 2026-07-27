@@ -45,7 +45,10 @@ export const sgLauncherService = {
                 }
                 const tile = tilesCache.find((t) => {
                     if (tag === QUICK_NAV_TAGS.pos) {
-                        return t.label === "Punto de venta";
+                        return (
+                            t.label === "Mostrador" ||
+                            t.label === "Punto de venta"
+                        );
                     }
                     return t.client_tag === tag;
                 });

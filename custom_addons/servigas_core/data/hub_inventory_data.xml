@@ -59,10 +59,10 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">20</field>
-            <field name="label">Ítems de stock</field>
-            <field name="hint">Referencias de inventario</field>
+            <field name="label">Variantes</field>
+            <field name="hint">Variantes de producto</field>
             <field name="icon">fa-tags</field>
-            <field name="enter_label">Ver ítems →</field>
+            <field name="enter_label">Ver variantes →</field>
             <field name="action_id" ref="stock.stock_product_normal_action"/>
             <field name="metric_model">product.product</field>
             <field name="metric_domain">[('active', '=', True)]</field>
@@ -89,10 +89,10 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">40</field>
-            <field name="label">Transferencias</field>
+            <field name="label">Movimientos de stock</field>
             <field name="hint">Operaciones no finalizadas</field>
             <field name="icon">fa-truck</field>
-            <field name="enter_label">Ver transferencias →</field>
+            <field name="enter_label">Ver movimientos →</field>
             <field name="action_id" ref="stock.action_picking_tree_all"/>
             <field name="domain">[('state', 'in', ('confirmed', 'assigned', 'waiting'))]</field>
             <field name="metric_model">stock.picking</field>
@@ -141,7 +141,7 @@
             <field name="app">inventory</field>
             <field name="section">products</field>
             <field name="sequence">20</field>
-            <field name="label">Ítems de stock</field>
+            <field name="label">Variantes</field>
             <field name="icon">fa-tags</field>
             <field name="enter_label">Ingresar →</field>
             <field name="action_id" ref="stock.stock_product_normal_action"/>
@@ -181,7 +181,7 @@
             <field name="app">inventory</field>
             <field name="section">operations</field>
             <field name="sequence">10</field>
-            <field name="label">Todas las transferencias</field>
+            <field name="label">Todos los movimientos</field>
             <field name="icon">fa-list</field>
             <field name="action_id" ref="stock.action_picking_tree_all"/>
             <field name="metric_model">stock.picking</field>
@@ -192,7 +192,7 @@
             <field name="app">inventory</field>
             <field name="section">operations</field>
             <field name="sequence">20</field>
-            <field name="label">Transferencias internas</field>
+            <field name="label">Movimientos internos</field>
             <field name="icon">fa-random</field>
             <field name="action_id" ref="stock.action_picking_tree_internal"/>
             <field name="metric_model">stock.picking</field>
@@ -225,7 +225,7 @@
             <field name="app">inventory</field>
             <field name="section">operations</field>
             <field name="sequence">50</field>
-            <field name="label">Existencias (quants)</field>
+            <field name="label">Existencias</field>
             <field name="hint">Ajustes y ubicaciones</field>
             <field name="icon">fa-table</field>
             <field name="action_id" ref="stock.stock_quant_action"/>
@@ -250,7 +250,7 @@
             <field name="app">inventory</field>
             <field name="section">reporting</field>
             <field name="sequence">20</field>
-            <field name="label">Reglas reabastecimiento</field>
+            <field name="label">Reglas de reabastecimiento</field>
             <field name="icon">fa-refresh</field>
             <field name="action_id" ref="stock.action_orderpoint"/>
             <field name="metric_model">stock.warehouse.orderpoint</field>

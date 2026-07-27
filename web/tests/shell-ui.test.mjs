@@ -44,8 +44,8 @@ describe("shell UI contracts", () => {
     assert.match(railNav, /href: "\/hubs\/purchase"/);
     assert.match(railNav, /href: "\/hubs\/accounting"/);
     assert.doesNotMatch(railNav, /hubs\/sales/);
-    assert.match(railNav, /label: "Stock"/);
-    assert.match(railNav, /label: "Cobros"/);
+    assert.match(railNav, /AREA_LABELS\.inventory|label: "Stock"/);
+    assert.match(railNav, /AREA_LABELS\.accounting|label: "Cobros"/);
     assert.match(rail, /data-tour=\{`rail-\$\{item\.app\}`\}/);
     assert.match(rail, /servigas-mark\.png/);
     assert.match(rail, /sg-brand-name/);
@@ -503,7 +503,7 @@ describe("shell UI contracts", () => {
     assert.match(listPage, /factura-web-export/);
     assert.match(listPage, /FwBulkMarkBar/);
     assert.match(listPage, /rowSelect=\{showFwBulk\}/);
-    assert.match(listPage, /Nueva NC proveedor/);
+    assert.match(listPage, /Nueva nota de crédito proveedor/);
     assert.match(fwExport, /exportFwPendingCsv/);
     assert.match(markCtrl, /mark_fw_loaded/);
     assert.match(markCtrl, /N° Factura Web/);
@@ -556,7 +556,7 @@ describe("shell UI contracts", () => {
     assert.match(payControl, /paymentMethod|data-pay-method/);
     assert.match(payControl, /PAYMENT_METHOD_OPTIONS/);
     assert.match(listPage, /Nueva nota de crédito/);
-    assert.match(listPage, /Cargar FP/);
+    assert.match(listPage, /Cargar factura de proveedor/);
   });
 
   it("wires reset and cancel invoice actions only for lifecycle-ready fichas", async () => {
@@ -604,7 +604,7 @@ describe("shell UI contracts", () => {
     assert.match(billDetail, /RecordConfirmControl/);
     assert.match(billDetail, /Publicar/);
     assert.match(detailBody, /sg-detail-attachments|Comprobante/);
-    assert.match(listPage, /Cargar FP/);
+    assert.match(listPage, /Cargar factura de proveedor/);
   });
 
   it("styles bill-source origin picker for dark contrast", async () => {

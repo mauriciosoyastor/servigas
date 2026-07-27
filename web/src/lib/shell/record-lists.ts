@@ -115,10 +115,12 @@ function productCols(
   ];
 }
 
-function orderCols(): RecordListColumnDef[] {
+function orderCols(
+  partnerLabel: "Cliente" | "Proveedor" = "Cliente"
+): RecordListColumnDef[] {
   return [
     { key: "name", label: "Número" },
-    { key: "partner_id", label: "Contacto" },
+    { key: "partner_id", label: partnerLabel },
     { key: "date_order", label: "Fecha" },
     { key: "amount_total", label: "Total" },
     { key: "state", label: "Estado" },
@@ -127,18 +129,22 @@ function orderCols(): RecordListColumnDef[] {
 
 function posOrderCols(): RecordListColumnDef[] {
   return [
-    ...orderCols(),
+    ...orderCols("Cliente"),
     { key: "payment_method", label: "Tipo de pago" },
   ];
 }
 
 function moveCols(
   includeInvoiceDest = false,
-  opts?: { due?: boolean; residual?: boolean }
+  opts?: {
+    due?: boolean;
+    residual?: boolean;
+    partnerLabel?: "Cliente" | "Proveedor" | "Contacto";
+  }
 ): RecordListColumnDef[] {
   const cols: RecordListColumnDef[] = [
     { key: "name", label: "Número" },
-    { key: "partner_id", label: "Contacto" },
+    { key: "partner_id", label: opts?.partnerLabel || "Contacto" },
   ];
   if (includeInvoiceDest) {
     cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
@@ -247,8 +253,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/variants": {
     key: "inventory/variants",
     path: "/lists/inventory/variants",
-    title: "Ítems de stock",
-    hint: "Referencias de inventario — nombre, código o barras",
+    title: "Variantes",
+    hint: "Variantes de producto — nombre, código o barras",
     model: "product.product",
     domain: [["active", "=", true]],
     fields: [
@@ -347,7 +353,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/transfers": {
     key: "inventory/transfers",
     path: "/lists/inventory/transfers",
-    title: "Transferencias",
+    title: "Movimientos de stock",
     hint: "Operaciones no finalizadas",
     model: "stock.picking",
     domain: [["state", "in", ["confirmed", "assigned", "waiting"]]],
@@ -369,7 +375,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "inventory/transfers-all": {
     key: "inventory/transfers-all",
     path: "/lists/inventory/transfers-all",
-    title: "Todas las transferencias",
+    title: "Todos los movimientos",
     hint: "Operaciones de inventario",
     model: "stock.picking",
     domain: [],
@@ -459,7 +465,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "inventory/warehouses",
     path: "/lists/inventory/warehouses",
     title: "Almacenes",
-    hint: "Depósitos configurados",
+    hint: "Almacenes configurados",
     model: "stock.warehouse",
     domain: [],
     fields: ["name", "code", "partner_id"],
@@ -660,7 +666,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "sales/customers-with-orders",
     path: "/lists/sales/customers-with-orders",
     title: "Clientes con pedidos",
-    hint: "Contactos con al menos un pedido de venta",
+    hint: "Clientes con al menos un pedido de venta",
     model: "res.partner",
     domain: [["sale_order_count", ">", 0]],
     fields: [
@@ -834,7 +840,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/orders",
     path: "/lists/purchase/orders",
     title: "Órdenes de compra",
-    hint: "OC confirmadas",
+    hint: "Órdenes de compra confirmadas",
     model: "purchase.order",
     domain: [["state", "=", "purchase"]],
     fields: [
@@ -846,7 +852,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "receipt_status",
     ],
     columns: [
-      ...orderCols(),
+      ...orderCols("Proveedor"),
       { key: "receipt_status", label: "Recepción" },
     ],
     limit: 50,
@@ -859,12 +865,12 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "purchase/solicitudes": {
     key: "purchase/solicitudes",
     path: "/lists/purchase/solicitudes",
-    title: "Pedidos abiertos",
+    title: "Pedidos a proveedor",
     hint: "Borradores + enviados",
     model: "purchase.order",
     domain: [["state", "in", ["draft", "sent"]]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
-    columns: orderCols(),
+    columns: orderCols("Proveedor"),
     limit: 50,
     order: "date_order desc",
     hubBack: "/hubs/purchase",
@@ -880,7 +886,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     model: "purchase.order",
     domain: [["state", "=", "draft"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
-    columns: orderCols(),
+    columns: orderCols("Proveedor"),
     limit: 50,
     order: "date_order desc",
     hubBack: "/hubs/purchase",
@@ -896,7 +902,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     model: "purchase.order",
     domain: [["state", "=", "sent"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
-    columns: orderCols(),
+    columns: orderCols("Proveedor"),
     limit: 50,
     order: "date_order desc",
     hubBack: "/hubs/purchase",
@@ -912,7 +918,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     model: "purchase.order",
     domain: [["state", "=", "to approve"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
-    columns: orderCols(),
+    columns: orderCols("Proveedor"),
     limit: 50,
     order: "date_order desc",
     hubBack: "/hubs/purchase",
@@ -924,7 +930,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/to-receive",
     path: "/lists/purchase/to-receive",
     title: "Por recibir",
-    hint: "OC con recepción pendiente",
+    hint: "Órdenes con recepción pendiente",
     model: "purchase.order",
     domain: [
       ["state", "=", "purchase"],
@@ -939,7 +945,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "receipt_status",
     ],
     columns: [
-      ...orderCols(),
+      ...orderCols("Proveedor"),
       { key: "receipt_status", label: "Recepción" },
     ],
     limit: 50,
@@ -953,7 +959,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/partial",
     path: "/lists/purchase/partial",
     title: "Recepción parcial",
-    hint: "OC con recepción incompleta",
+    hint: "Órdenes con recepción incompleta",
     model: "purchase.order",
     domain: [["receipt_status", "=", "partial"]],
     fields: [
@@ -965,7 +971,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "receipt_status",
     ],
     columns: [
-      ...orderCols(),
+      ...orderCols("Proveedor"),
       { key: "receipt_status", label: "Recepción" },
     ],
     limit: 50,
@@ -979,7 +985,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/order-lines",
     path: "/lists/purchase/order-lines",
     title: "Líneas de compra",
-    hint: "Historial de líneas de OC",
+    hint: "Historial de líneas de orden de compra",
     model: "purchase.order.line",
     domain: [],
     fields: ["order_id", "product_id", "product_qty", "price_unit", "price_subtotal"],
@@ -1016,7 +1022,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/vendors-with-po",
     path: "/lists/purchase/vendors-with-po",
     title: "Proveedores con OC",
-    hint: "Contactos con al menos una orden de compra",
+    hint: "Proveedores con al menos una orden de compra",
     model: "res.partner",
     domain: [["purchase_order_count", ">", 0]],
     fields: [
@@ -1139,7 +1145,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(true),
-    columns: moveCols(true, { due: true, residual: true }),
+    columns: moveCols(true, { due: true, residual: true, partnerLabel: "Cliente" }),
     limit: 50,
     order: "invoice_date_due asc, invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1151,7 +1157,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/receivable-overdue",
     path: "/lists/accounting/receivable-overdue",
     title: "Vencidas por cobrar",
-    hint: "FC con vencimiento pasado",
+    hint: "Facturas de cliente con vencimiento pasado",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1159,7 +1165,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(true),
-    columns: moveCols(true, { due: true, residual: true }),
+    columns: moveCols(true, { due: true, residual: true, partnerLabel: "Cliente" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1172,7 +1178,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/receivable-due-today",
     path: "/lists/accounting/receivable-due-today",
     title: "Vence hoy por cobrar",
-    hint: "FC que vencen hoy",
+    hint: "Facturas de cliente que vencen hoy",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1180,7 +1186,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(true),
-    columns: moveCols(true, { due: true, residual: true }),
+    columns: moveCols(true, { due: true, residual: true, partnerLabel: "Cliente" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1193,7 +1199,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/receivable-due-week",
     path: "/lists/accounting/receivable-due-week",
     title: "Vence esta semana por cobrar",
-    hint: "FC con vencimiento en los próximos 7 días",
+    hint: "Facturas de cliente con vencimiento en los próximos 7 días",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1201,7 +1207,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(true),
-    columns: moveCols(true, { due: true, residual: true }),
+    columns: moveCols(true, { due: true, residual: true, partnerLabel: "Cliente" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1222,7 +1228,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(),
-    columns: moveCols(false, { due: true, residual: true }),
+    columns: moveCols(false, { due: true, residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date_due asc, invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1234,7 +1240,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/payable-overdue",
     path: "/lists/accounting/payable-overdue",
     title: "Vencidas por pagar",
-    hint: "FP con vencimiento pasado",
+    hint: "Facturas de proveedor con vencimiento pasado",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1242,7 +1248,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(),
-    columns: moveCols(false, { due: true, residual: true }),
+    columns: moveCols(false, { due: true, residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1255,7 +1261,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/payable-due-today",
     path: "/lists/accounting/payable-due-today",
     title: "Vence hoy por pagar",
-    hint: "FP que vencen hoy",
+    hint: "Facturas de proveedor que vencen hoy",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1263,7 +1269,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(),
-    columns: moveCols(false, { due: true, residual: true }),
+    columns: moveCols(false, { due: true, residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1276,7 +1282,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/payable-due-week",
     path: "/lists/accounting/payable-due-week",
     title: "Vence esta semana por pagar",
-    hint: "FP con vencimiento en los próximos 7 días",
+    hint: "Facturas de proveedor con vencimiento en los próximos 7 días",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1284,7 +1290,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
     ],
     fields: unpaidMoveFields(),
-    columns: moveCols(false, { due: true, residual: true }),
+    columns: moveCols(false, { due: true, residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date_due asc",
     hubBack: "/hubs/accounting",
@@ -1318,7 +1324,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "move_type",
     ],
     columns: [
-      ...moveCols(true),
+      ...moveCols(true, { partnerLabel: "Contacto" }),
       { key: "move_type", label: "Tipo" },
     ],
     limit: 50,
@@ -1332,7 +1338,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/customer-invoices",
     path: "/lists/accounting/customer-invoices",
     title: "Facturas de cliente",
-    hint: "FC emitidas",
+    hint: "Facturas de cliente emitidas",
     model: "account.move",
     domain: [["move_type", "=", "out_invoice"]],
     fields: [
@@ -1349,7 +1355,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "sg_fw_number",
     ],
     columns: [
-      ...moveCols(true, { due: true, residual: true }),
+      ...moveCols(true, { due: true, residual: true, partnerLabel: "Cliente" }),
       { key: "sg_fw_loaded", label: "Factura Web" },
     ],
     limit: 50,
@@ -1363,7 +1369,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/vendor-bills",
     path: "/lists/accounting/vendor-bills",
     title: "Facturas de proveedor",
-    hint: "FP recibidas",
+    hint: "Facturas de proveedor recibidas",
     model: "account.move",
     domain: [["move_type", "=", "in_invoice"]],
     fields: [
@@ -1377,7 +1383,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "state",
       "sg_bill_source",
     ],
-    columns: moveCols(false, { due: true, residual: true }),
+    columns: moveCols(false, { due: true, residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1389,7 +1395,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/credit-notes",
     path: "/lists/accounting/credit-notes",
     title: "Notas de crédito",
-    hint: "NC a clientes",
+    hint: "Notas de crédito a clientes",
     model: "account.move",
     domain: [["move_type", "=", "out_refund"]],
     fields: [
@@ -1402,7 +1408,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "payment_state",
       "state",
     ],
-    columns: moveCols(true, { residual: true }),
+    columns: moveCols(true, { residual: true, partnerLabel: "Cliente" }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1414,7 +1420,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/vendor-refunds",
     path: "/lists/accounting/vendor-refunds",
     title: "Notas de crédito proveedor",
-    hint: "NC de proveedores",
+    hint: "Notas de crédito de proveedores",
     model: "account.move",
     domain: [["move_type", "=", "in_refund"]],
     fields: [
@@ -1426,7 +1432,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "payment_state",
       "state",
     ],
-    columns: moveCols(false, { residual: true }),
+    columns: moveCols(false, { residual: true, partnerLabel: "Proveedor" }),
     limit: 50,
     order: "invoice_date desc",
     hubBack: "/hubs/accounting",
@@ -1580,7 +1586,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/factura-web-pending",
     path: "/lists/accounting/factura-web-pending",
     title: "Pendientes Factura Web",
-    hint: "FC publicadas aún no cargadas en Factura Web",
+    hint: "Facturas de cliente publicadas aún no cargadas en Factura Web",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1832,12 +1838,18 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "stock.picking",
-    patterns: [/todas las transferencias/i],
+    patterns: [/todos los movimientos/i, /todas las transferencias/i],
     path: "/lists/inventory/transfers-all",
   },
   {
     model: "stock.picking",
-    patterns: [/transferencia/i, /recepci/i, /entrega/i],
+    patterns: [
+      /movimientos? de stock/i,
+      /movimientos? internos?/i,
+      /transferencia/i,
+      /recepci/i,
+      /entrega/i,
+    ],
     path: "/lists/inventory/transfers",
   },
   {
@@ -1877,7 +1889,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "sale.order",
-    patterns: [/upsell/i],
+    patterns: [/upsell/i, /venta pendiente/i],
     path: "/lists/sales/upselling",
   },
   {
@@ -1957,7 +1969,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "purchase.order",
-    patterns: [/pedidos abiertos/i, /solicitud/i, /rfq/i, /cotizaci.n/i],
+    patterns: [/pedidos a proveedor/i, /pedidos abiertos/i, /solicitud/i, /rfq/i],
     path: "/lists/purchase/solicitudes",
   },
   {

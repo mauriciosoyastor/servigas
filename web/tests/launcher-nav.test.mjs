@@ -37,6 +37,20 @@ describe("launcher-nav", () => {
     );
   });
 
+  it("renames Punto de venta→Mostrador on action tiles", () => {
+    assert.equal(
+      displayLauncherLabel(
+        tile({
+          label: "Punto de venta",
+          target_type: "action",
+          client_tag: "",
+          action: { type: "ir.actions.act_window", res_model: "pos.config" },
+        })
+      ),
+      "Mostrador"
+    );
+  });
+
   it("puts hub tiles in areas and action tiles in more", () => {
     const { areas, more } = partitionLauncherTiles([
       tile({
@@ -67,7 +81,7 @@ describe("launcher-nav", () => {
     assert.equal(areas[0].label, "Ventas");
     assert.deepEqual(
       more.map((t) => t.label),
-      ["Punto de venta", "Ajustes"]
+      ["Mostrador", "Ajustes"]
     );
   });
 });

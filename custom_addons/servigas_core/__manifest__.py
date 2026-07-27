@@ -1,6 +1,6 @@
 {
     "name": "Servigas Core",
-    "summary": "Tema Liquid Glass v2, hubs Inventario/Ventas/Compras/Facturación",
+    "summary": "Tema Liquid Glass v2, hubs Stock/Ventas/Compras/Cobros",
     "description": """
 Módulo base de Servigas: assets SCSS (marca llama, tipografía Montserrat),
 personalización POS y backend Odoo 19, hubs KPI cards de ingreso por sección.

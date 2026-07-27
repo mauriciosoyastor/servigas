@@ -8,10 +8,10 @@ class SgHubSection(models.Model):
 
     app = fields.Selection(
         [
-            ("inventory", "Inventario"),
+            ("inventory", "Stock"),
             ("sales", "Ventas"),
             ("purchase", "Compras"),
-            ("accounting", "Facturación"),
+            ("accounting", "Cobros"),
         ],
         required=True,
         index=True,

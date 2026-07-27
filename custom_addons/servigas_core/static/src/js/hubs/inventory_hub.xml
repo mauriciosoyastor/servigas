@@ -13,7 +13,7 @@
             />
             <div class="sg-app-shell__main">
                 <header class="sg-app-shell__header">
-                    <h1 class="sg-app-shell__title">Inventario</h1>
+                    <h1 class="sg-app-shell__title">Stock</h1>
                     <p class="sg-app-shell__subtitle" t-esc="sectionLabel"/>
                 </header>
                 <div class="sg-app-shell__scroll sg-view-enter">

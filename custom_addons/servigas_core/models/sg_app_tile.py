@@ -258,6 +258,35 @@ class SgAppTile(models.Model):
             tile.write({"target_type": "action", "action_id": action.id})
 
     @api.model
+    def apply_launcher_tile_copy(self):
+        """Force-update launcher labels to work language (noupdate XML)."""
+        updates = {
+            "servigas_core.launcher_tile_inventory": {
+                "label": "Stock",
+                "hint": "Productos, stock y operaciones",
+            },
+            "servigas_core.launcher_tile_accounting": {
+                "label": "Cobros",
+                "hint": "Facturas, pagos y cobros",
+            },
+            "servigas_core.launcher_tile_pos": {
+                "label": "Mostrador",
+                "hint": "Ventas de caja Servigas",
+            },
+        }
+        for xmlid, values in updates.items():
+            tile = self.env.ref(xmlid, raise_if_not_found=False)
+            if not tile:
+                continue
+            to_write = {
+                field: value
+                for field, value in values.items()
+                if tile[field] != value
+            }
+            if to_write:
+                tile.write(to_write)
+
+    @api.model
     def setup_launcher_tile_accents(self):
         """Asigna accent_key preestablecido por xmlid (upgrade seguro)."""
         mapping = {
@@ -278,6 +307,7 @@ class SgAppTile(models.Model):
         if tableros:
             tableros.write({"accent_key": "bg-charcoal"})
         self.setup_pos_launcher_entry()
+        self.apply_launcher_tile_copy()
 
     @api.model
     def setup_launcher_home_for_users(self):

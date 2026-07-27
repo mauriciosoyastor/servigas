@@ -41,7 +41,7 @@ function renderShell(step) {
           <div class="tiles" data-hint=".sg-launcher-shell--root">
             <div class="tile" data-hint=".sg-launcher-shell--hub">Ventas</div>
             <div class="tile">Inventario</div>
-            <div class="tile" data-hint="tile.punto_de_venta">Punto de venta</div>
+            <div class="tile" data-hint="tile.punto_de_venta">Mostrador</div>
             <div class="tile" data-hint="hub.kpi_card">KPI / card</div>
             <div class="tile">Compras</div>
             <div class="tile">Facturación</div>

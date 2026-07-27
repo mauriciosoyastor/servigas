@@ -15,7 +15,7 @@
         </record>
 
         <record id="launcher_tile_inventory" model="sg.app.tile">
-            <field name="label">Inventario</field>
+            <field name="label">Stock</field>
             <field name="hint">Productos, stock y operaciones</field>
             <field name="icon">fa-cubes</field>
             <field name="sequence">20</field>
@@ -41,8 +41,8 @@
         </record>
 
         <record id="launcher_tile_accounting" model="sg.app.tile">
-            <field name="label">Facturación</field>
-            <field name="hint">Facturas, pagos y contabilidad</field>
+            <field name="label">Cobros</field>
+            <field name="hint">Facturas, pagos y cobros</field>
             <field name="icon">fa-file-text-o</field>
             <field name="sequence">40</field>
             <field name="accent_key">flame-rust</field>
@@ -54,8 +54,8 @@
         </record>
 
         <record id="launcher_tile_pos" model="sg.app.tile">
-            <field name="label">Punto de venta</field>
-            <field name="hint">Mostrador Servigas</field>
+            <field name="label">Mostrador</field>
+            <field name="hint">Ventas de caja Servigas</field>
             <field name="icon">fa-shopping-basket</field>
             <field name="sequence">50</field>
             <field name="accent_key">bg-mid</field>

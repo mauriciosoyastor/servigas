@@ -83,7 +83,7 @@ describe("shell path (ADR 0007)", () => {
 
         const queryAll = (sel) =>
             sel === ".sg-launcher-tile"
-                ? [{ textContent: "Punto de venta" }]
+                ? [{ textContent: "Mostrador" }]
                 : [];
         const posEntry = evaluateCheckpoint(queryAll, byId["shell.pos_entry"]);
         assert.equal(posEntry.found, true);

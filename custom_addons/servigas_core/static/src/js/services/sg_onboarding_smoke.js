@@ -89,9 +89,10 @@ export function findTourTarget(queryAll, targetHint) {
     for (const sel of selectors) {
         const nodes = [...(queryAll(sel) || [])];
         if (targetHint === "tile.punto_de_venta") {
-            const match = nodes.find((node) =>
-                String(node.textContent || "").includes("Punto de venta")
-            );
+            const match = nodes.find((node) => {
+                const text = String(node.textContent || "");
+                return text.includes("Mostrador") || text.includes("Punto de venta");
+            });
             if (match) {
                 return match;
             }

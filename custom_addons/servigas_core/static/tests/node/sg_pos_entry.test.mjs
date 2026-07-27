@@ -8,14 +8,14 @@ import {
 } from "../../src/js/services/sg_pos_entry.js";
 
 describe("POS launcher entry (ADR 0004)", () => {
-    it("does not open Punto de venta via menu reload action", () => {
+    it("does not open Mostrador via menu reload action", () => {
         const reload = {
             type: "ir.actions.client",
             tag: "reload",
             params: { menu_id: 42 },
         };
         const resolved = resolveLauncherTileAction({
-            label: "Punto de venta",
+            label: "Mostrador",
             action: reload,
         });
 
@@ -23,7 +23,7 @@ describe("POS launcher entry (ADR 0004)", () => {
         assert.equal(isPosMenuReloadAction(resolved), false);
     });
 
-    it("opens Punto de venta via pos.config act_window", () => {
+    it("opens Mostrador via pos.config act_window", () => {
         const kanban = {
             type: "ir.actions.act_window",
             res_model: "pos.config",
@@ -31,7 +31,7 @@ describe("POS launcher entry (ADR 0004)", () => {
             name: "Point of Sale",
         };
         const resolved = resolveLauncherTileAction({
-            label: "Punto de venta",
+            label: "Mostrador",
             action: kanban,
         });
 

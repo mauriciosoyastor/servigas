@@ -52,7 +52,7 @@ const APP_STEPS = [
         id: "app.pos_entry",
         track: "app",
         title: "Mostrador",
-        body: "Entrá por Punto de venta → Mostrador Servigas → Abrir. No hay hub de POS.",
+        body: "Entrá por Mostrador en el inicio o en el menú lateral. No hay hub aparte.",
         badge: "Mostrador",
         targetHint: "tile.punto_de_venta",
         next: null,

@@ -10,7 +10,7 @@ const loaded = await loadRecordDetail(
 	Astro.cookies,
 	'inventory/transfers',
 	id,
-	'No encontramos esta transferencia.'
+	'No encontramos este movimiento de stock.'
 );
 if (loaded.kind === 'redirect') {
 	return Astro.redirect(loaded.path);
@@ -28,12 +28,12 @@ const state = fieldValue('state');
 const showValidate = isConfirmableState('inventory/transfers', state);
 ---
 
-<ShellLayout title={`${detail?.title || 'Transferencia'} | Servigas`} active="inventory" userName={userName}>
+<ShellLayout title={`${detail?.title || 'Movimiento de stock'} | Servigas`} active="inventory" userName={userName}>
 	<RecordDetailBody
 		detail={detail}
 		error={error}
-		eyebrow="Ficha de transferencia"
-		fallbackTitle="Transferencia"
+		eyebrow="Ficha de movimiento"
+		fallbackTitle="Movimiento de stock"
 		fallbackListPath="/lists/inventory/transfers"
 	/>
 	{detail && !error && showValidate ? (

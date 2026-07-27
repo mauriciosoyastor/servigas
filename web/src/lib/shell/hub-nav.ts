@@ -4,13 +4,14 @@
 
 import type { HubApp } from "./hub-apps.ts";
 import type { HubCard, HubGroup, HubSection } from "../bff/types.ts";
+import { AREA_LABELS } from "./ui-glossary.ts";
 
 /** Display labels (work language, not raw Odoo module names). */
 export const HUB_LABELS: Record<HubApp, string> = {
-  inventory: "Stock",
-  sales: "Ventas",
-  purchase: "Compras",
-  accounting: "Cobros",
+  inventory: AREA_LABELS.inventory,
+  sales: AREA_LABELS.sales,
+  purchase: AREA_LABELS.purchase,
+  accounting: AREA_LABELS.accounting,
 };
 
 /** Sections shown as primary pills; everything else goes under «Más». */

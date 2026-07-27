@@ -13,7 +13,7 @@ const loaded = await loadRecordDetail(
 	Astro.cookies,
 	listKey,
 	id,
-	'No encontramos esta NC de proveedor.'
+	'No encontramos esta nota de crédito de proveedor.'
 );
 if (loaded.kind === 'redirect') {
 	return Astro.redirect(loaded.path);
@@ -31,11 +31,11 @@ const initialLines = linesFromInvoiceDetail(detail);
 const detailPath = `/lists/${listKey}/${id}`;
 ---
 
-<ShellLayout title={`Editar NC proveedor | Servigas`} active="accounting" userName={userName}>
+<ShellLayout title={`Editar nota de crédito proveedor | Servigas`} active="accounting" userName={userName}>
 	<main class="sg-create-page">
 		<header>
-			<p>Contabilidad</p>
-			<h1>Editar borrador de NC proveedor</h1>
+			<p>Cobros</p>
+			<h1>Editar borrador de nota de crédito proveedor</h1>
 		</header>
 		{error || !detail ? (
 			<section class="sg-list-state sg-glass" role="alert">
