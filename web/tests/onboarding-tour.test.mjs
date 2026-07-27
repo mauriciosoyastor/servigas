@@ -31,19 +31,21 @@ function memoryStorage(initial = {}) {
 }
 
 describe("onboarding-tour", () => {
-  it("defines the full home → hub → pos path", () => {
+  it("defines the home → rail Mostrador → pos path", () => {
     assert.equal(TOUR_STEPS[0].id, "home-ops");
     assert.equal(TOUR_STEPS.at(-1).id, "pos-cobrar");
-    assert.ok(TOUR_STEPS.some((s) => s.path.startsWith("/hubs")));
+    assert.equal(TOUR_STEPS.length, 5);
+    assert.ok(!TOUR_STEPS.some((s) => s.path.startsWith("/hubs")));
     assert.ok(TOUR_STEPS.some((s) => s.path === "/pos"));
+    const rail = TOUR_STEPS.find((s) => s.id === "home-rail");
+    assert.equal(rail?.target, "rail-pos");
+    assert.equal(rail?.navigateTo, "/pos");
   });
 
-  it("matches paths for home, hubs and pos", () => {
+  it("matches paths for home and pos", () => {
     const home = TOUR_STEPS.find((s) => s.id === "home-ops");
-    const hub = TOUR_STEPS.find((s) => s.id === "hub-card");
     const pos = TOUR_STEPS.find((s) => s.id === "pos-ticket");
     assert.equal(pathMatchesStep("/", home), true);
-    assert.equal(pathMatchesStep("/hubs/inventory", hub), true);
     assert.equal(pathMatchesStep("/pos", pos), true);
     assert.equal(pathMatchesStep("/lists/sales/customers", home), false);
   });
@@ -71,27 +73,27 @@ describe("onboarding-tour", () => {
     const step = resolveInitialStep(
       "/",
       local,
-      (t) => t === "home-tile" || t === "rail-inventory"
+      (t) => t === "home-tile" || t === "rail-pos"
     );
     assert.equal(step?.id, "home-tile");
   });
 
   it("resumes stored step when path and target match", () => {
-    const local = memoryStorage({ [TOUR_STEP_KEY]: "hub-card" });
+    const local = memoryStorage({ [TOUR_STEP_KEY]: "pos-ticket" });
     const step = resolveInitialStep(
-      "/hubs/inventory",
+      "/pos",
       local,
-      (t) => t === "hub-card"
+      (t) => t === "pos-ticket"
     );
-    assert.equal(step?.id, "hub-card");
+    assert.equal(step?.id, "pos-ticket");
   });
 
   it("advances to navigate when step has navigateTo", () => {
     const rail = TOUR_STEPS.find((s) => s.id === "home-rail");
     const result = advanceTour(rail, "/", () => true);
     assert.equal(result.kind, "navigate");
-    assert.equal(result.href, "/hubs/inventory");
-    assert.equal(result.nextStepId, "hub-card");
+    assert.equal(result.href, "/pos");
+    assert.equal(result.nextStepId, "pos-ticket");
   });
 
   it("advances within pos and finishes on last step", () => {
@@ -113,8 +115,8 @@ describe("onboarding-tour", () => {
   });
 
   it("builds progress label in Spanish", () => {
-    assert.equal(tourProgressLabel("home-ops"), "Paso 1 de 7");
-    assert.equal(tourProgressLabel("pos-cobrar"), "Paso 7 de 7");
+    assert.equal(tourProgressLabel("home-ops"), "Paso 1 de 5");
+    assert.equal(tourProgressLabel("pos-cobrar"), "Paso 5 de 5");
   });
 
   it("keeps tip inside viewport when hole is near the bottom (pos-cobrar)", () => {

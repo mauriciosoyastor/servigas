@@ -1,5 +1,7 @@
 ---
 import type { HubSection } from '../lib/bff/types.ts';
+import { isHubApp, type HubApp } from '../lib/shell/hub-apps.ts';
+import { splitHubSections } from '../lib/shell/hub-nav.ts';
 
 interface Props {
 	app: string;
@@ -8,12 +10,17 @@ interface Props {
 }
 
 const { app, sections, active } = Astro.props;
+const hubApp: HubApp | null = isHubApp(app) ? app : null;
+const split = hubApp
+	? splitHubSections(hubApp, sections)
+	: { primary: sections, more: [] as HubSection[] };
+const moreActive = split.more.some((section) => section.code === active);
 ---
 
 {sections.length > 1 ? (
 	<nav class="sg-hub-subnav" aria-label="Secciones">
 		<div class="sg-hub-subnav-track" role="tablist">
-			{sections.map((section) => {
+			{split.primary.map((section) => {
 				const href =
 					section.code === 'summary'
 						? `/hubs/${app}`
@@ -30,6 +37,27 @@ const { app, sections, active } = Astro.props;
 					</a>
 				);
 			})}
+			{split.more.length ? (
+				<details class:list={['sg-hub-subnav-more', { 'is-active': moreActive }]}>
+					<summary class="sg-hub-subnav-pill sg-focus-ring">Más</summary>
+					<div class="sg-hub-subnav-more-menu" role="list">
+						{split.more.map((section) => {
+							const href = `/hubs/${app}?section=${encodeURIComponent(section.code)}`;
+							const isActive = section.code === active;
+							return (
+								<a
+									class:list={['sg-hub-subnav-more-link', 'sg-focus-ring', { 'is-active': isActive }]}
+									href={href}
+									role="listitem"
+									aria-current={isActive ? 'page' : undefined}
+								>
+									{section.name}
+								</a>
+							);
+						})}
+					</div>
+				</details>
+			) : null}
 		</div>
 	</nav>
 ) : null}
@@ -41,6 +69,7 @@ const { app, sections, active } = Astro.props;
 	.sg-hub-subnav-track {
 		display: flex;
 		flex-wrap: wrap;
+		align-items: flex-start;
 		gap: 0.5rem;
 	}
 	.sg-hub-subnav-pill {
@@ -52,10 +81,46 @@ const { app, sections, active } = Astro.props;
 		font-size: 0.78rem;
 		font-weight: 600;
 		text-decoration: none;
+		cursor: pointer;
+		list-style: none;
 	}
-	.sg-hub-subnav-pill.is-active {
+	.sg-hub-subnav-pill::-webkit-details-marker {
+		display: none;
+	}
+	.sg-hub-subnav-pill.is-active,
+	.sg-hub-subnav-more.is-active > summary {
 		color: var(--sg-text-on-dark);
 		border-color: color-mix(in srgb, var(--sg-flame-orange), white 20%);
 		background: color-mix(in srgb, var(--sg-flame-orange) 28%, transparent);
+	}
+	.sg-hub-subnav-more {
+		position: relative;
+	}
+	.sg-hub-subnav-more-menu {
+		position: absolute;
+		z-index: 5;
+		top: calc(100% + 0.35rem);
+		left: 0;
+		min-width: 10rem;
+		display: grid;
+		gap: 0.25rem;
+		padding: 0.45rem;
+		border-radius: 0.85rem;
+		border: 1px solid var(--sg-glass-border);
+		background: color-mix(in srgb, var(--sg-bg-deep) 88%, transparent);
+		box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+	}
+	.sg-hub-subnav-more-link {
+		border-radius: 0.55rem;
+		padding: 0.45rem 0.65rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-hub-subnav-more-link:hover,
+	.sg-hub-subnav-more-link.is-active {
+		color: var(--sg-text-on-dark);
+		background: rgba(255, 255, 255, 0.08);
 	}
 </style>

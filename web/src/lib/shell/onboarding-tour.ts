@@ -10,8 +10,6 @@ export type TourStepId =
   | "home-ops"
   | "home-tile"
   | "home-rail"
-  | "hub-card"
-  | "hub-to-pos"
   | "pos-ticket"
   | "pos-cobrar";
 
@@ -40,29 +38,14 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/",
     target: "home-tile",
     title: "Tus áreas",
-    body: "Desde acá entrás a cada área del negocio (inventario, ventas, compras…).",
+    body: "Abajo están las áreas del negocio (Stock, Ventas, Compras, Cobros). Lo del día a día está en los atajos de arriba.",
   },
   {
     id: "home-rail",
     path: "/",
-    target: "rail-inventory",
+    target: "rail-pos",
     title: "Menú lateral",
-    body: "Este menú te lleva a las secciones. Tocá Siguiente para mirar Inventario.",
-    navigateTo: "/hubs/inventory",
-  },
-  {
-    id: "hub-card",
-    path: "/hubs/",
-    target: "hub-card",
-    title: "Tarjetas del día",
-    body: "Estas tarjetas abren listados y datos que usás en el día a día.",
-  },
-  {
-    id: "hub-to-pos",
-    path: "/hubs/",
-    target: "pos-entry",
-    title: "El mostrador",
-    body: "Cuando atiendas al cliente, cobrás acá. Antes tenés que tener la caja abierta.",
+    body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras y Cobros. Tocá Siguiente para ir al Mostrador.",
     navigateTo: "/pos",
   },
   {

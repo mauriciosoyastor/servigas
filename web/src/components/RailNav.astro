@@ -1,16 +1,12 @@
 ---
+import { RAIL_ITEMS } from '../lib/shell/rail-nav.ts';
+
 interface Props {
 	active?: string;
 }
 
 const { active = 'home' } = Astro.props;
-const items = [
-	{ href: '/', label: 'Inicio', app: 'home', icon: 'M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z' },
-	{ href: '/hubs/inventory', label: 'Inventario', app: 'inventory', icon: 'm4 7 8-4 8 4-8 4zm0 4 8 4 8-4M4 15l8 4 8-4' },
-	{ href: '/hubs/sales', label: 'Ventas', app: 'sales', icon: 'M5 6h16l-2 8H8L5 3H2m7 16h.01M18 19h.01' },
-	{ href: '/hubs/purchase', label: 'Compras', app: 'purchase', icon: 'M6 8h12l1 12H5zm3 0V6a3 3 0 0 1 6 0v2' },
-	{ href: '/hubs/accounting', label: 'Contabilidad', app: 'accounting', icon: 'M4 19V9m5 10V5m6 14v-7m5 7V3' },
-];
+const items = RAIL_ITEMS;
 ---
 
 <aside class="sg-rail sg-glass" aria-label="Navegación principal">
@@ -84,16 +80,16 @@ const items = [
 	.sg-rail-nav {
 		display: grid;
 		width: 100%;
-		gap: 0.45rem;
+		gap: 0.35rem;
 		margin-top: auto;
 		margin-bottom: auto;
 	}
 	.sg-rail-link {
 		display: grid;
 		justify-items: center;
-		gap: 0.25rem;
+		gap: 0.2rem;
 		border-radius: 1rem;
-		padding: 0.75rem 0.2rem;
+		padding: 0.55rem 0.15rem;
 		color: var(--sg-text-muted-dark);
 		text-decoration: none;
 		transition: background-color 180ms ease, color 180ms ease, transform 180ms ease;
@@ -109,7 +105,7 @@ const items = [
 		box-shadow: inset 3px 0 var(--sg-flame-orange);
 	}
 	.sg-rail-link svg {
-		width: 1.25rem;
+		width: 1.15rem;
 		fill: none;
 		stroke: currentColor;
 		stroke-linecap: round;
@@ -117,29 +113,35 @@ const items = [
 		stroke-width: 1.8;
 	}
 	.sg-rail-link span {
-		font-size: 0.58rem;
+		font-size: 0.52rem;
 		font-weight: 500;
+		text-align: center;
+		line-height: 1.15;
 	}
 	@media (max-width: 720px) {
 		.sg-rail {
-			inset: auto 0.75rem 0.75rem;
+			inset: auto 0.5rem 0.75rem;
 			width: auto;
 			flex-direction: row;
 			border-radius: 1.25rem;
-			padding: 0.45rem;
+			padding: 0.4rem;
 		}
 		.sg-brand {
 			display: none;
 		}
 		.sg-rail-nav {
-			grid-template-columns: repeat(5, 1fr);
+			grid-template-columns: repeat(6, 1fr);
 			margin: 0;
+			gap: 0.2rem;
 		}
 		.sg-rail-link {
-			padding: 0.55rem 0.1rem;
+			padding: 0.45rem 0.05rem;
 		}
 		.sg-rail-link.is-active {
 			box-shadow: inset 0 -3px var(--sg-flame-orange);
+		}
+		.sg-rail-link span {
+			font-size: 0.48rem;
 		}
 	}
 </style>
