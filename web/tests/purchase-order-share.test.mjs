@@ -219,12 +219,13 @@ describe("OdooAdapter purchase order PDF + email", () => {
       }
       if (
         body.params.model === "ir.model.data" &&
-        body.params.method === "xmlid_to_res_id"
+        body.params.method === "search_read"
       ) {
-        assert.deepEqual(body.params.args, [
-          PURCHASE_ORDER_EMAIL_TEMPLATE,
+        assert.deepEqual(body.params.args?.[0], [
+          ["module", "=", "purchase"],
+          ["name", "=", "email_template_edi_purchase_done"],
         ]);
-        return Response.json({ result: 99 });
+        return Response.json({ result: [{ id: 1, res_id: 99 }] });
       }
       if (
         body.params.model === "mail.template" &&

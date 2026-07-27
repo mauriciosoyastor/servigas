@@ -791,8 +791,8 @@ export class OdooAdapter implements BackendClient {
       city: "Ciudad",
       email: "Email",
       phone: "Teléfono",
-      sg_invoice_dest: "Destino fiscal",
-      sg_doc_type_short: "Tipo sug.",
+      sg_invoice_dest: "Factura como",
+      sg_doc_type_short: "Tipo sugerido",
       sg_bill_source: "Origen del comprobante",
       invoice_status: "Estado factura",
       invoice_date_due: "Vence",
@@ -1148,6 +1148,13 @@ export class OdooAdapter implements BackendClient {
       partner_id: filtered.partnerId,
       invoice_line_ids,
     };
+    // Odoo 19 exige invoice_date para publicar FP/NC proveedor.
+    if (
+      invoiceDef.moveType === "in_invoice" ||
+      invoiceDef.moveType === "in_refund"
+    ) {
+      createVals.invoice_date = new Date().toISOString().slice(0, 10);
+    }
     if (filtered.billSource) {
       createVals.sg_bill_source = filtered.billSource;
     }
@@ -1741,6 +1748,20 @@ export class OdooAdapter implements BackendClient {
       const moveType = row?.move_type == null ? null : String(row.move_type);
       if (moveType === "out_invoice" || moveType === "out_refund") {
         await this.#assertPartnerOkToPublishInvoice(odooSessionId, row);
+      }
+      if (moveType === "in_invoice" || moveType === "in_refund") {
+        const [full] = await this.#callKw<Record<string, unknown>[]>(
+          odooSessionId,
+          "account.move",
+          "read",
+          [[id], ["invoice_date"]]
+        );
+        if (!full?.invoice_date) {
+          await this.#callKw(odooSessionId, "account.move", "write", [
+            [id],
+            { invoice_date: new Date().toISOString().slice(0, 10) },
+          ]);
+        }
       }
     }
 
@@ -2952,13 +2973,15 @@ export class OdooAdapter implements BackendClient {
       });
     }
 
+    // create_date (datetime), not accounting `date` (day): day-only leaks
+    // earlier cobros into a later caja abierta el mismo día.
     const payments = await this.#searchRead(
       odooSessionId,
       "account.payment",
       [
         ["state", "=", "paid"],
-        ["date", ">=", from.slice(0, 10)],
-        ["date", "<=", to.slice(0, 10)],
+        ["create_date", ">=", from],
+        ["create_date", "<=", to],
       ],
       [
         "amount",
@@ -2971,9 +2994,23 @@ export class OdooAdapter implements BackendClient {
       ],
       200,
       0,
-      "date desc, id desc"
+      "create_date desc, id desc"
+    );
+    const sessionFromMs = Date.parse(this.#odooDateToIso(session.openedAt));
+    const sessionToMs = Date.parse(
+      this.#odooDateToIso(session.closedAt || new Date().toISOString())
     );
     for (const row of payments) {
+      const at = this.#odooDateToIso(row.create_date || row.date);
+      const atMs = Date.parse(at);
+      if (
+        Number.isFinite(sessionFromMs) &&
+        Number.isFinite(atMs) &&
+        (atMs < sessionFromMs ||
+          (Number.isFinite(sessionToMs) && atMs > sessionToMs))
+      ) {
+        continue;
+      }
       const journal = Array.isArray(row.journal_id) ? row.journal_id : [];
       const journalName = journal[1] != null ? String(journal[1]) : "";
       const partner = Array.isArray(row.partner_id) ? row.partner_id : [];
@@ -2981,7 +3018,7 @@ export class OdooAdapter implements BackendClient {
       const inbound = String(row.payment_type || "") === "inbound";
       items.push({
         id: `pay-${row.id}`,
-        at: this.#odooDateToIso(row.create_date || row.date),
+        at,
         kind: inbound ? "payment_in" : "payment_out",
         medium: classifyJournalMedium(
           // journal type not in row; classify by name (cash/caja/banco/tarjeta)
@@ -3881,7 +3918,7 @@ export class OdooAdapter implements BackendClient {
         odooSessionId,
         "res.partner",
         "read",
-        [[partnerId], ["name", "email", "phone", "mobile"]]
+        [[partnerId], ["name", "email", "phone"]]
       );
       if (partner) {
         partnerName = String(partner.name || partnerName);
@@ -3890,10 +3927,8 @@ export class OdooAdapter implements BackendClient {
           typeof rawEmail === "string" && rawEmail.trim()
             ? rawEmail.trim()
             : null;
-        const rawMobile =
-          typeof partner.mobile === "string" ? partner.mobile : "";
         const rawPhone = typeof partner.phone === "string" ? partner.phone : "";
-        phone = normalizeWhatsappPhone(rawMobile || rawPhone);
+        phone = normalizeWhatsappPhone(rawPhone);
       }
     }
 
@@ -4040,11 +4075,9 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
-    const templateId = await this.#callKw<number>(
+    const templateId = await this.#resolveXmlId(
       odooSessionId,
-      "ir.model.data",
-      "xmlid_to_res_id",
-      [PURCHASE_ORDER_EMAIL_TEMPLATE]
+      PURCHASE_ORDER_EMAIL_TEMPLATE
     );
     if (!Number.isFinite(templateId) || templateId <= 0) {
       throw new BffError(
@@ -4176,7 +4209,7 @@ export class OdooAdapter implements BackendClient {
         odooSessionId,
         "res.partner",
         "read",
-        [[partnerId], ["name", "email", "phone", "mobile"]]
+        [[partnerId], ["name", "email", "phone"]]
       );
       if (partner) {
         partnerName = String(partner.name || partnerName);
@@ -4185,10 +4218,8 @@ export class OdooAdapter implements BackendClient {
           typeof rawEmail === "string" && rawEmail.trim()
             ? rawEmail.trim()
             : null;
-        const rawMobile =
-          typeof partner.mobile === "string" ? partner.mobile : "";
         const rawPhone = typeof partner.phone === "string" ? partner.phone : "";
-        phone = normalizeSaleWhatsappPhone(rawMobile || rawPhone);
+        phone = normalizeSaleWhatsappPhone(rawPhone);
       }
     }
 
@@ -4256,11 +4287,9 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
-    const templateId = await this.#callKw<number>(
+    const templateId = await this.#resolveXmlId(
       odooSessionId,
-      "ir.model.data",
-      "xmlid_to_res_id",
-      [SALE_ORDER_EMAIL_TEMPLATE]
+      SALE_ORDER_EMAIL_TEMPLATE
     );
     if (!Number.isFinite(templateId) || templateId <= 0) {
       throw new BffError(
@@ -4498,6 +4527,33 @@ export class OdooAdapter implements BackendClient {
     return String(value);
   }
 
+  /**
+   * Odoo 19 no expone `xmlid_to_res_id` por call_kw; resolvemos vía ir.model.data.
+   */
+  async #resolveXmlId(
+    odooSessionId: string,
+    xmlid: string
+  ): Promise<number> {
+    const raw = String(xmlid || "").trim();
+    const dot = raw.indexOf(".");
+    if (dot <= 0 || dot === raw.length - 1) return 0;
+    const module = raw.slice(0, dot);
+    const name = raw.slice(dot + 1);
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "ir.model.data",
+      [
+        ["module", "=", module],
+        ["name", "=", name],
+      ],
+      ["res_id"],
+      1,
+      0,
+      "id asc"
+    );
+    return Number(rows[0]?.res_id) || 0;
+  }
+
   async #callKw<T>(
     sessionId: string,
     model: string,
@@ -4531,12 +4587,9 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
-    if (payload.result === undefined) {
-      throw new BffError(
-        "odoo_unavailable",
-        503,
-        "Odoo devolvió una respuesta JSON-RPC sin resultado"
-      );
+    // Odoo 19 void methods (button_draft, button_cancel, …) omit `result`.
+    if (!("result" in payload) || payload.result === undefined) {
+      return null as T;
     }
 
     return payload.result;

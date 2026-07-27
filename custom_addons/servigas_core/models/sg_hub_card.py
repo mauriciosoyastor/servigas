@@ -351,12 +351,17 @@ class SgHubCard(models.Model):
                 "label": "Por facturar",
             },
             "servigas_core.hub_card_sales_orders_upselling": {
-                "label": "Pedidos con venta pendiente",
+                "label": "Pedidos con más por facturar",
             },
             "servigas_core.hub_card_sales_orders_pos": {
                 "label": "Ventas de caja",
                 "hint": "Historial mostrador",
                 "enter_label": "Ver ventas de caja →",
+            },
+            # Odoo 19: sale_order_count is non-stored; search/metric need sale_order_ids.
+            "servigas_core.hub_card_sales_customers_with_orders": {
+                "domain": "[('sale_order_ids', '!=', False)]",
+                "metric_domain": "[('sale_order_ids', '!=', False)]",
             },
         }
         for xmlid, values in updates.items():
@@ -398,6 +403,11 @@ class SgHubCard(models.Model):
             },
             "servigas_core.hub_card_purchase_orders_sent": {
                 "label": "Enviados al proveedor",
+            },
+            # Odoo 19: purchase_order_count is non-stored; use purchase_line_ids.
+            "servigas_core.hub_card_purchase_vendors_with_po": {
+                "domain": "[('purchase_line_ids', '!=', False)]",
+                "metric_domain": "[('purchase_line_ids', '!=', False)]",
             },
         }
         for xmlid, values in updates.items():

@@ -98,6 +98,70 @@ describe("aging helpers", () => {
     );
   });
 
+  it("disambiguates shared unpaid domains by aging hub labels", () => {
+    const unpaidOut = [
+      ["move_type", "=", "out_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ];
+    const unpaidIn = [
+      ["move_type", "=", "in_invoice"],
+      ["state", "=", "posted"],
+      ["payment_state", "in", ["not_paid", "partial", "in_payment"]],
+    ];
+    const action = (domain) => ({
+      type: "ir.actions.act_window",
+      res_model: "account.move",
+      domain,
+    });
+
+    assert.equal(
+      resolveRecordListPath(action(unpaidOut), {
+        label: "Vencidas por cobrar",
+      }),
+      "/lists/accounting/receivable-overdue"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidOut), {
+        label: "Vence hoy por cobrar",
+      }),
+      "/lists/accounting/receivable-due-today"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidOut), {
+        label: "Vence esta semana por cobrar",
+      }),
+      "/lists/accounting/receivable-due-week"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidOut), { label: "Por cobrar" }),
+      "/lists/accounting/receivable"
+    );
+
+    assert.equal(
+      resolveRecordListPath(action(unpaidIn), {
+        label: "Vencidas por pagar",
+      }),
+      "/lists/accounting/payable-overdue"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidIn), {
+        label: "Vence hoy por pagar",
+      }),
+      "/lists/accounting/payable-due-today"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidIn), {
+        label: "Vence esta semana por pagar",
+      }),
+      "/lists/accounting/payable-due-week"
+    );
+    assert.equal(
+      resolveRecordListPath(action(unpaidIn), { label: "Por pagar" }),
+      "/lists/accounting/payable"
+    );
+  });
+
   it("keeps week end 7 days ahead", () => {
     const parts = agingDateParts(new Date(2026, 6, 24));
     assert.equal(parts.today, "2026-07-24");

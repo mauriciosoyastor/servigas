@@ -170,4 +170,21 @@ describe("resolveTileNavigation", () => {
       { kind: "route", path: "/settings" }
     );
   });
+
+  it("routes price-list import wizard to Astro import page", () => {
+    assert.deepEqual(
+      resolveTileNavigation({
+        target_type: "action",
+        client_tag: "",
+        label: "Cargar lista de precios",
+        action: {
+          type: "ir.actions.act_window",
+          res_model: "sg.price.list.import.wizard",
+          view_mode: "form",
+          target: "new",
+        },
+      }),
+      { kind: "route", path: "/lists/inventory/products/import" }
+    );
+  });
 });

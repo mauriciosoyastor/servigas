@@ -8,7 +8,7 @@ import { getBackend } from '../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
 import type { HubCard, HubGroup, HubSection } from '../../lib/bff/types.ts';
 import { isHubApp, type HubApp } from '../../lib/shell/hub-apps.ts';
-import { HUB_LABELS, thinHubPayload } from '../../lib/shell/hub-nav.ts';
+import { HUB_LABELS, labelHubSections, thinHubPayload } from '../../lib/shell/hub-nav.ts';
 
 const app = Astro.params.app ?? '';
 const validApp = isHubApp(app);
@@ -37,9 +37,12 @@ if (!validApp) {
 
 	try {
 		const payload = await getBackend().getHub(odooSessionId, app, requestedSection);
-		sections = payload.sections?.length
-			? payload.sections
-			: [{ code: 'summary', name: 'Resumen', icon: 'fa-th-large' }];
+		sections = labelHubSections(
+			app as HubApp,
+			payload.sections?.length
+				? payload.sections
+				: [{ code: 'summary', name: 'Resumen', icon: 'fa-th-large' }]
+		);
 		activeSection = payload.section || requestedSection;
 		if (!sections.some((section) => section.code === activeSection)) {
 			activeSection = sections[0]?.code || 'summary';
@@ -78,10 +81,6 @@ const sectionName =
 				<div>
 					<p>{sectionName}</p>
 					<h1>{HUB_LABELS[app]}</h1>
-				</div>
-				<div class="sg-hub-heading-meta">
-					<span>{cards.length} {cards.length === 1 ? 'acceso' : 'accesos'}</span>
-					<a class="sg-hub-pos-entry sg-focus-ring" href="/pos" data-tour="pos-entry">Ir al mostrador</a>
 				</div>
 			</header>
 
@@ -224,28 +223,6 @@ const sectionName =
 		font-weight: 600;
 		letter-spacing: -0.045em;
 		line-height: 1.05;
-	}
-	.sg-hub-heading-meta {
-		display: flex;
-		flex-wrap: wrap;
-		align-items: center;
-		gap: 0.5rem;
-	}
-	.sg-hub-heading-meta > span,
-	.sg-hub-pos-entry {
-		flex: none;
-		border: 1px solid var(--sg-glass-border);
-		border-radius: var(--sg-radius-pill);
-		padding: 0.55rem 0.8rem;
-		color: var(--sg-text-muted-dark);
-		background: var(--sg-glass-fill);
-		font-size: 0.7rem;
-		font-weight: 600;
-		text-decoration: none;
-	}
-	.sg-hub-pos-entry {
-		color: var(--sg-text-on-dark);
-		background: color-mix(in srgb, var(--sg-flame-orange) 28%, var(--sg-glass-fill));
 	}
 	.sg-hub-groups {
 		display: grid;

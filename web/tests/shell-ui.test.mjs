@@ -129,10 +129,13 @@ describe("shell UI contracts", () => {
     assert.match(hub, /accentIndex=/);
     assert.match(hub, /resolveTileNavigation/);
     assert.match(hub, /destination\.kind === ['"]list['"]/);
-    assert.match(hub, /Ir al mostrador/);
+    assert.match(hub, /labelHubSections/);
+    assert.doesNotMatch(hub, /Ir al mostrador/);
+    assert.doesNotMatch(hub, /sg-hub-pos-entry/);
     assert.doesNotMatch(hub, /Ir a la caja/);
     const subnav = await source("components/HubSubnav.astro");
     assert.match(subnav, /splitHubSections/);
+    assert.match(subnav, /labelHubSections/);
     assert.match(subnav, />Más</);
   });
 
@@ -406,7 +409,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /\/api\/records\/sales\/customers/);
     assert.match(page, /phone|email/);
     assert.match(page, /vat|CUIT/);
-    assert.match(page, /sg_invoice_dest|Destino fiscal/);
+    assert.match(page, /sg_invoice_dest|Factura como/);
     assert.match(page, /street|city/);
     assert.match(page, /RecordArchiveControl|data-record-archive/);
     assert.match(page, /slot=["']notes["']/);
@@ -424,7 +427,7 @@ describe("shell UI contracts", () => {
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(customerNew, /RecordCreateForm/);
     assert.match(customerNew, /vat|CUIT/);
-    assert.match(customerNew, /sg_invoice_dest|Destino fiscal/);
+    assert.match(customerNew, /sg_invoice_dest|Factura como/);
     assert.match(customerNew, /Consumidor final|Con CUIT/);
     assert.match(createForm, /action:\s*['"]create['"]/);
     assert.match(createForm, /select/);

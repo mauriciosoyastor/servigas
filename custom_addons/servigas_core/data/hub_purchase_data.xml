@@ -227,9 +227,9 @@
             <field name="label">Con órdenes de compra</field>
             <field name="icon">fa-handshake-o</field>
             <field name="action_id" ref="account.res_partner_action_supplier"/>
-            <field name="domain">[('purchase_order_count', '>', 0)]</field>
+            <field name="domain">[('purchase_line_ids', '!=', False)]</field>
             <field name="metric_model">res.partner</field>
-            <field name="metric_domain">[('purchase_order_count', '>', 0)]</field>
+            <field name="metric_domain">[('purchase_line_ids', '!=', False)]</field>
             <field name="metric_aggregate">count</field>
         </record>
 

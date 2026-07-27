@@ -22,12 +22,41 @@ export const HUB_PRIMARY_SECTIONS: Record<HubApp, readonly string[]> = {
   accounting: ["summary", "receivables", "payables"],
 };
 
+/** Override Odoo section names with work language. */
+const HUB_SECTION_LABELS: Partial<
+  Record<HubApp, Partial<Record<string, string>>>
+> = {
+  accounting: {
+    receivables: "Por cobrar",
+    payables: "Por pagar",
+  },
+};
+
+/** Back-office cards demoted from accounting summary (reachable via Más → Informes). */
+const ACCOUNTING_SUMMARY_SECONDARY = new Set([
+  "Pendientes Factura Web",
+  "Tablero contable",
+  "Resumen de diarios",
+]);
+
 export const HUB_SUMMARY_CARD_LIMIT = 5;
 
 export type SplitHubSections = {
   primary: HubSection[];
   more: HubSection[];
 };
+
+export function labelHubSections(
+  app: HubApp,
+  sections: HubSection[]
+): HubSection[] {
+  const overrides = HUB_SECTION_LABELS[app];
+  if (!overrides) return sections;
+  return sections.map((section) => {
+    const name = overrides[section.code];
+    return name && name !== section.name ? { ...section, name } : section;
+  });
+}
 
 export function splitHubSections(
   app: HubApp,
@@ -67,6 +96,24 @@ export function limitHubGroups(
   return out;
 }
 
+function demoteSecondarySummaryCards<T extends HubCard>(
+  app: HubApp,
+  cards: T[]
+): T[] {
+  if (app !== "accounting") return cards;
+  return cards.filter((card) => !ACCOUNTING_SUMMARY_SECONDARY.has(card.label));
+}
+
+function demoteSecondarySummaryGroups(app: HubApp, groups: HubGroup[]): HubGroup[] {
+  if (app !== "accounting") return groups;
+  return groups
+    .map((group) => ({
+      ...group,
+      cards: demoteSecondarySummaryCards(app, group.cards),
+    }))
+    .filter((group) => group.cards.length > 0);
+}
+
 /** Apply thin-hub limits only on the summary section. */
 export function thinHubPayload(input: {
   app: HubApp;
@@ -77,8 +124,10 @@ export function thinHubPayload(input: {
   if (input.section !== "summary") {
     return { cards: input.cards, groups: input.groups };
   }
-  if (input.groups.length) {
-    return { cards: input.cards, groups: limitHubGroups(input.groups) };
+  const cards = demoteSecondarySummaryCards(input.app, input.cards);
+  const groups = demoteSecondarySummaryGroups(input.app, input.groups);
+  if (groups.length) {
+    return { cards, groups: limitHubGroups(groups) };
   }
-  return { cards: limitHubCards(input.cards), groups: input.groups };
+  return { cards: limitHubCards(cards), groups };
 }

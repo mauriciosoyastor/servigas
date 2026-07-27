@@ -65,4 +65,34 @@ describe("ui glossary (canonical labels)", () => {
       "Almacenes configurados"
     );
   });
+
+  it("uses plain work copy for columns, UoM, upselling and aging titles", () => {
+    const customerCols = getRecordListDef("sales/customers")?.columns || [];
+    assert.equal(
+      customerCols.find((c) => c.key === "sg_invoice_dest")?.label,
+      "Factura como"
+    );
+    assert.equal(
+      customerCols.find((c) => c.key === "sg_doc_type_short")?.label,
+      "Tipo sugerido"
+    );
+    assert.equal(
+      getRecordListDef("purchase/uom")?.hint,
+      "Unidades de medida del catálogo"
+    );
+    assert.equal(
+      getRecordListDef("sales/upselling")?.title,
+      "Pedidos con más por facturar"
+    );
+    assert.equal(getRecordListDef("accounting/receivable-due-today")?.title, "Vence hoy");
+    assert.equal(
+      getRecordListDef("accounting/receivable-due-today")?.hint,
+      "Por cobrar: facturas de cliente que vencen hoy"
+    );
+    assert.equal(getRecordListDef("accounting/payable-overdue")?.title, "Vencidas");
+    assert.equal(
+      getRecordListDef("accounting/payable-overdue")?.hint,
+      "Por pagar: facturas de proveedor con vencimiento pasado"
+    );
+  });
 });
