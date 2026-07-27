@@ -13,14 +13,14 @@
         <record id="hub_section_accounting_receivables" model="sg.hub.section">
             <field name="app">accounting</field>
             <field name="code">receivables</field>
-            <field name="name">Clientes</field>
+            <field name="name">Por cobrar</field>
             <field name="icon">fa-user</field>
             <field name="sequence">2</field>
         </record>
         <record id="hub_section_accounting_payables" model="sg.hub.section">
             <field name="app">accounting</field>
             <field name="code">payables</field>
-            <field name="name">Proveedores</field>
+            <field name="name">Por pagar</field>
             <field name="icon">fa-truck</field>
             <field name="sequence">3</field>
         </record>
@@ -107,7 +107,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">45</field>
             <field name="label">Pendientes Factura Web</field>
-            <field name="hint">Facturas de cliente publicadas sin cargar en Factura Web</field>
+            <field name="hint">Facturas de cliente confirmadas sin cargar en Factura Web</field>
             <field name="icon">fa-external-link</field>
             <field name="variant">warning</field>
             <field name="enter_label">Exportar / marcar →</field>
@@ -123,7 +123,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">50</field>
             <field name="label">Facturado hoy</field>
-            <field name="hint">Total facturas de cliente publicadas hoy</field>
+            <field name="hint">Total facturas de cliente confirmadas hoy</field>
             <field name="icon">fa-line-chart</field>
             <field name="enter_label">Ver facturas →</field>
             <field name="action_id" ref="account.action_move_out_invoice"/>
@@ -141,8 +141,8 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">60</field>
-            <field name="label">Tablero contable</field>
-            <field name="hint">Dashboard de diarios</field>
+            <field name="label">Resumen de diarios</field>
+            <field name="hint">Vista de diarios contables</field>
             <field name="icon">fa-dashboard</field>
             <field name="enter_label">Abrir tablero →</field>
             <field name="action_id" ref="account.open_account_journal_dashboard_kanban"/>
@@ -372,6 +372,34 @@
         </record>
 
         <!-- Cards — Informes -->
+        <record id="hub_card_acc_report_fw_pending" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">reporting</field>
+            <field name="sequence">5</field>
+            <field name="label">Pendientes Factura Web</field>
+            <field name="hint">Facturas de cliente confirmadas sin cargar en Factura Web</field>
+            <field name="icon">fa-external-link</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Exportar / marcar →</field>
+            <field name="action_id" ref="account.action_move_out_invoice"/>
+            <field name="domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('sg_fw_loaded', '=', False)]</field>
+            <field name="metric_model">account.move</field>
+            <field name="metric_domain">[('move_type', '=', 'out_invoice'), ('state', '=', 'posted'), ('sg_fw_loaded', '=', False)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_acc_report_journal_dashboard" model="sg.hub.card">
+            <field name="app">accounting</field>
+            <field name="section">reporting</field>
+            <field name="sequence">8</field>
+            <field name="label">Resumen de diarios</field>
+            <field name="hint">Vista de diarios contables</field>
+            <field name="icon">fa-dashboard</field>
+            <field name="enter_label">Abrir →</field>
+            <field name="action_id" ref="account.open_account_journal_dashboard_kanban"/>
+            <field name="metric_model">account.journal</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
         <record id="hub_card_acc_report_invoice_analysis" model="sg.hub.card">
             <field name="app">accounting</field>
             <field name="section">reporting</field>

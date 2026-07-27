@@ -34,7 +34,6 @@ try {
 }
 
 const { areas, more } = partitionLauncherTiles(tiles);
-const accessCount = areas.length + more.length;
 ---
 
 <ShellLayout title="Inicio | Servigas" active="home" userName={userName}>
@@ -44,7 +43,6 @@ const accessCount = areas.length + more.length;
 				<p>Panel principal</p>
 				<h1>¿Qué querés gestionar hoy?</h1>
 			</div>
-			<span>{accessCount} {accessCount === 1 ? 'acceso' : 'accesos'}</span>
 		</header>
 
 		<nav class="sg-ops-strip" aria-label="Atajos del día" data-tour="ops-strip">
@@ -59,7 +57,7 @@ const accessCount = areas.length + more.length;
 				<strong>No se pudieron cargar los accesos</strong>
 				<p>{launcherError}</p>
 			</section>
-		) : accessCount ? (
+		) : areas.length || more.length ? (
 			<>
 				{areas.length ? (
 					<section class="sg-launcher-zone" aria-label="Áreas del negocio">
@@ -198,16 +196,6 @@ const accessCount = areas.length + more.length;
 		font-weight: 600;
 		letter-spacing: -0.045em;
 		line-height: 1.05;
-	}
-	.sg-launcher-heading > span {
-		flex: none;
-		border: 1px solid var(--sg-glass-border);
-		border-radius: var(--sg-radius-pill);
-		padding: 0.55rem 0.8rem;
-		color: var(--sg-text-muted-dark);
-		background: var(--sg-glass-fill);
-		font-size: 0.7rem;
-		font-weight: 600;
 	}
 	.sg-launcher-zone {
 		margin-bottom: 1.25rem;

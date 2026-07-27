@@ -147,7 +147,7 @@ function moveCols(
     { key: "partner_id", label: opts?.partnerLabel || "Contacto" },
   ];
   if (includeInvoiceDest) {
-    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
+    cols.push({ key: "sg_invoice_dest", label: "Factura como" });
   }
   cols.push({ key: "invoice_date", label: "Fecha" });
   if (opts?.due) {
@@ -184,8 +184,8 @@ function partnerCols(includeInvoiceDest = false): RecordListColumnDef[] {
     { key: "name", label: "Nombre" },
   ];
   if (includeInvoiceDest) {
-    cols.push({ key: "sg_invoice_dest", label: "Destino fiscal" });
-    cols.push({ key: "sg_doc_type_short", label: "Tipo sug." });
+    cols.push({ key: "sg_invoice_dest", label: "Factura como" });
+    cols.push({ key: "sg_doc_type_short", label: "Tipo sugerido" });
   }
   cols.push(
     { key: "vat", label: "CUIT" },
@@ -601,8 +601,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/upselling": {
     key: "sales/upselling",
     path: "/lists/sales/upselling",
-    title: "Pedidos con venta pendiente",
-    hint: "Pedidos con venta pendiente de facturar",
+    title: "Pedidos con más por facturar",
+    hint: "Pedidos con más por facturar",
     model: "sale.order",
     domain: [["invoice_status", "=", "upselling"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -668,7 +668,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     title: "Clientes con pedidos",
     hint: "Clientes con al menos un pedido de venta",
     model: "res.partner",
-    domain: [["sale_order_count", ">", 0]],
+    // Odoo 19: sale_order_count is non-stored; cannot search/filter on it.
+    domain: [["sale_order_ids", "!=", false]],
     fields: [
       "name",
       "sg_invoice_dest",
@@ -1024,7 +1025,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     title: "Proveedores con OC",
     hint: "Proveedores con al menos una orden de compra",
     model: "res.partner",
-    domain: [["purchase_order_count", ">", 0]],
+    // Odoo 19: purchase_order_count is non-stored; no purchase_order_ids on partner.
+    domain: [["purchase_line_ids", "!=", false]],
     fields: [
       "name",
       "vat",
@@ -1087,7 +1089,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "purchase/uom",
     path: "/lists/purchase/uom",
     title: "Unidades de medida",
-    hint: "UdM del catálogo",
+    hint: "Unidades de medida del catálogo",
     model: "uom.uom",
     domain: [],
     fields: ["name", "relative_uom_id", "factor"],
@@ -1156,8 +1158,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/receivable-overdue": {
     key: "accounting/receivable-overdue",
     path: "/lists/accounting/receivable-overdue",
-    title: "Vencidas por cobrar",
-    hint: "Facturas de cliente con vencimiento pasado",
+    title: "Vencidas",
+    hint: "Por cobrar: facturas de cliente con vencimiento pasado",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1177,8 +1179,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/receivable-due-today": {
     key: "accounting/receivable-due-today",
     path: "/lists/accounting/receivable-due-today",
-    title: "Vence hoy por cobrar",
-    hint: "Facturas de cliente que vencen hoy",
+    title: "Vence hoy",
+    hint: "Por cobrar: facturas de cliente que vencen hoy",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1198,8 +1200,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/receivable-due-week": {
     key: "accounting/receivable-due-week",
     path: "/lists/accounting/receivable-due-week",
-    title: "Vence esta semana por cobrar",
-    hint: "Facturas de cliente con vencimiento en los próximos 7 días",
+    title: "Vence esta semana",
+    hint: "Por cobrar: facturas de cliente con vencimiento en los próximos 7 días",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1239,8 +1241,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/payable-overdue": {
     key: "accounting/payable-overdue",
     path: "/lists/accounting/payable-overdue",
-    title: "Vencidas por pagar",
-    hint: "Facturas de proveedor con vencimiento pasado",
+    title: "Vencidas",
+    hint: "Por pagar: facturas de proveedor con vencimiento pasado",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1260,8 +1262,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/payable-due-today": {
     key: "accounting/payable-due-today",
     path: "/lists/accounting/payable-due-today",
-    title: "Vence hoy por pagar",
-    hint: "Facturas de proveedor que vencen hoy",
+    title: "Vence hoy",
+    hint: "Por pagar: facturas de proveedor que vencen hoy",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1281,8 +1283,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "accounting/payable-due-week": {
     key: "accounting/payable-due-week",
     path: "/lists/accounting/payable-due-week",
-    title: "Vence esta semana por pagar",
-    hint: "Facturas de proveedor con vencimiento en los próximos 7 días",
+    title: "Vence esta semana",
+    hint: "Por pagar: facturas de proveedor con vencimiento en los próximos 7 días",
     model: "account.move",
     domain: [
       ["move_type", "=", "in_invoice"],
@@ -1303,7 +1305,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/drafts",
     path: "/lists/accounting/drafts",
     title: "Borradores",
-    hint: "Facturas sin publicar",
+    hint: "Facturas sin confirmar",
     model: "account.move",
     domain: [
       ["state", "=", "draft"],
@@ -1444,7 +1446,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/payments",
     path: "/lists/accounting/payments",
     title: "Pagos registrados",
-    hint: "Pagos publicados",
+    hint: "Pagos confirmados",
     model: "account.payment",
     domain: [["state", "=", "posted"]],
     fields: ["name", "partner_id", "amount", "date", "state"],
@@ -1586,7 +1588,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "accounting/factura-web-pending",
     path: "/lists/accounting/factura-web-pending",
     title: "Pendientes Factura Web",
-    hint: "Facturas de cliente publicadas aún no cargadas en Factura Web",
+    hint: "Facturas de cliente confirmadas aún no cargadas en Factura Web",
     model: "account.move",
     domain: [
       ["move_type", "=", "out_invoice"],
@@ -1609,8 +1611,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     columns: [
       { key: "name", label: "Número" },
       { key: "partner_id", label: "Cliente" },
-      { key: "sg_invoice_dest", label: "Destino fiscal" },
-      { key: "sg_doc_type_short", label: "Tipo sug." },
+      { key: "sg_invoice_dest", label: "Factura como" },
+      { key: "sg_doc_type_short", label: "Tipo sugerido" },
       { key: "invoice_date", label: "Fecha" },
       { key: "amount_total", label: "Total" },
       { key: "payment_state", label: "Pago" },
@@ -1788,6 +1790,15 @@ function isAmbiguousDomain(model: string, domain: unknown): boolean {
   }
   if (model === "account.move") {
     if (text === "[]") return true;
+    // Aging hub cards share unpaid out/in_invoice domains; bucket is only in the label
+    // (metric_date_scope lives on sg.hub.card, not in act_window domain).
+    if (
+      domainHas(domain, "payment_state") &&
+      (domainHas(domain, "out_invoice") || domainHas(domain, "in_invoice")) &&
+      !domainHas(domain, "invoice_date_due")
+    ) {
+      return true;
+    }
     // Solo state=posted (sin move_type) — card «Todos los asientos»
     if (
       domainHas(domain, "posted") &&
@@ -1889,7 +1900,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "sale.order",
-    patterns: [/upsell/i, /venta pendiente/i],
+    patterns: [/upsell/i, /venta pendiente/i, /m[aá]s por facturar/i],
     path: "/lists/sales/upselling",
   },
   {
@@ -2255,12 +2266,14 @@ const ROUTE_RULES: RouteRule[] = [
   {
     model: "res.partner",
     path: "/lists/sales/customers-with-orders",
-    match: (d) => domainHas(d, "sale_order_count"),
+    match: (d) =>
+      domainHas(d, "sale_order_ids") || domainHas(d, "sale_order_count"),
   },
   {
     model: "res.partner",
     path: "/lists/purchase/vendors-with-po",
-    match: (d) => domainHas(d, "purchase_order_count"),
+    match: (d) =>
+      domainHas(d, "purchase_line_ids") || domainHas(d, "purchase_order_count"),
   },
   {
     model: "res.partner",

@@ -212,7 +212,7 @@
             <field name="app">sales</field>
             <field name="section">orders</field>
             <field name="sequence">50</field>
-            <field name="label">Pedidos con venta pendiente</field>
+            <field name="label">Pedidos con más por facturar</field>
             <field name="icon">fa-level-up</field>
             <field name="action_id" ref="sale.action_orders_upselling"/>
             <field name="metric_model">sale.order</field>
@@ -251,9 +251,9 @@
             <field name="label">Con pedidos de venta</field>
             <field name="icon">fa-handshake-o</field>
             <field name="action_id" ref="account.res_partner_action_customer"/>
-            <field name="domain">[('sale_order_count', '>', 0)]</field>
+            <field name="domain">[('sale_order_ids', '!=', False)]</field>
             <field name="metric_model">res.partner</field>
-            <field name="metric_domain">[('sale_order_count', '>', 0)]</field>
+            <field name="metric_domain">[('sale_order_ids', '!=', False)]</field>
             <field name="metric_aggregate">count</field>
         </record>
 

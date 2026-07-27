@@ -35,6 +35,9 @@ export function resolveTileNavigation(tile: TileNavInput): TileNavResult {
       if (model === "res.config.settings") {
         return { kind: "route", path: "/settings" };
       }
+      if (model === "sg.price.list.import.wizard") {
+        return { kind: "route", path: "/lists/inventory/products/import" };
+      }
     }
 
     const listPath = resolveRecordListPath(tile.action, {

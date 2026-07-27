@@ -6,13 +6,13 @@
 const STATE_LABELS: Record<string, string> = {
   draft: "Borrador",
   sent: "Enviado",
-  sale: "Pedido de venta",
+  sale: "Confirmado",
   done: "Hecho",
   cancel: "Cancelado",
   cancelled: "Cancelado",
   paid: "Pagado",
   invoiced: "Facturado",
-  posted: "Publicado",
+  posted: "Confirmado",
   waiting: "En espera",
   confirmed: "Confirmado",
   assigned: "Listo",
@@ -31,7 +31,7 @@ const PAYMENT_STATE_LABELS: Record<string, string> = {
   paid: "Pagado",
   partial: "Parcial",
   reversed: "Revertido",
-  invoicing_legacy: "Legacy",
+  invoicing_legacy: "Antiguo",
 };
 
 /** purchase.order receipt_status (purchase_stock). */

@@ -581,4 +581,62 @@ describe("record-lists allowlist", () => {
     assert.ok(!def.fields.includes("category_id"));
     assert.ok(!def.fields.includes("uom_type"));
   });
+
+  it("filters customers-with-orders via sale_order_ids (stored), not sale_order_count", () => {
+    const def = getRecordListDef("sales/customers-with-orders");
+    assert.ok(def);
+    const domainJson = JSON.stringify(def.domain);
+    assert.match(domainJson, /sale_order_ids/);
+    assert.doesNotMatch(domainJson, /sale_order_count/);
+  });
+
+  it("filters vendors-with-po via purchase_line_ids (stored), not purchase_order_count", () => {
+    const def = getRecordListDef("purchase/vendors-with-po");
+    assert.ok(def);
+    const domainJson = JSON.stringify(def.domain);
+    assert.match(domainJson, /purchase_line_ids/);
+    assert.doesNotMatch(domainJson, /purchase_order_count/);
+  });
+
+  it("routes partner actions with sale_order_ids or sale_order_count to customers-with-orders", () => {
+    const base = {
+      type: "ir.actions.act_window",
+      res_model: "res.partner",
+    };
+    assert.equal(
+      resolveRecordListPath({
+        ...base,
+        domain: [["sale_order_ids", "!=", false]],
+      }),
+      "/lists/sales/customers-with-orders"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        ...base,
+        domain: [["sale_order_count", ">", 0]],
+      }),
+      "/lists/sales/customers-with-orders"
+    );
+  });
+
+  it("routes partner actions with purchase_line_ids or purchase_order_count to vendors-with-po", () => {
+    const base = {
+      type: "ir.actions.act_window",
+      res_model: "res.partner",
+    };
+    assert.equal(
+      resolveRecordListPath({
+        ...base,
+        domain: [["purchase_line_ids", "!=", false]],
+      }),
+      "/lists/purchase/vendors-with-po"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        ...base,
+        domain: [["purchase_order_count", ">", 0]],
+      }),
+      "/lists/purchase/vendors-with-po"
+    );
+  });
 });

@@ -1,7 +1,7 @@
 ---
 import type { HubSection } from '../lib/bff/types.ts';
 import { isHubApp, type HubApp } from '../lib/shell/hub-apps.ts';
-import { splitHubSections } from '../lib/shell/hub-nav.ts';
+import { labelHubSections, splitHubSections } from '../lib/shell/hub-nav.ts';
 
 interface Props {
 	app: string;
@@ -11,9 +11,10 @@ interface Props {
 
 const { app, sections, active } = Astro.props;
 const hubApp: HubApp | null = isHubApp(app) ? app : null;
+const labeled = hubApp ? labelHubSections(hubApp, sections) : sections;
 const split = hubApp
-	? splitHubSections(hubApp, sections)
-	: { primary: sections, more: [] as HubSection[] };
+	? splitHubSections(hubApp, labeled)
+	: { primary: labeled, more: [] as HubSection[] };
 const moreActive = split.more.some((section) => section.code === active);
 ---
 
