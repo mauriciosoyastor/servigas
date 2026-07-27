@@ -6,6 +6,8 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   output: "server",
   adapter: node({ mode: "standalone" }),
+  // E2E / preview: toolbar intercepta clicks. Desactivar con ASTRO_TOOLBAR=0.
+  devToolbar: { enabled: process.env.ASTRO_TOOLBAR !== "0" },
   vite: { plugins: [tailwindcss()] },
   redirects: {
     "/lists/purchase/rfq": "/lists/purchase/solicitudes",
