@@ -174,20 +174,16 @@ describe("OdooAdapter.getLauncher", () => {
     );
   });
 
-  it("rejects JSON-RPC responses without a result", async () => {
+  it("treats JSON-RPC void responses (no result key) as null", async () => {
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
       db: "servigas_dev",
-      fetchImpl: async () => Response.json({ jsonrpc: "2.0" }),
+      fetchImpl: async () => Response.json({ jsonrpc: "2.0", id: 1 }),
     });
 
-    await assert.rejects(
-      () => adapter.getLauncher("sess"),
-      (err) =>
-        err instanceof BffError &&
-        err.code === "odoo_unavailable" &&
-        err.status === 503
-    );
+    // Odoo 19 button_* often omits `result`; must not map to 503.
+    const out = await adapter.getLauncher("sess");
+    assert.equal(out, null);
   });
 });
 
@@ -1392,6 +1388,89 @@ describe("OdooAdapter cash session", () => {
     assert.ok(hub.feed.some((item) => item.kind === "manual_out"));
   });
 
+  it("scopes account.payment feed to session create_date window", async () => {
+    let paymentDomain = null;
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.cash.movement" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "pos.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "account.payment" && method === "search_read") {
+          paymentDomain = body?.params?.args?.[0] || [];
+          return Response.json({
+            result: [
+              {
+                id: 3,
+                amount: 345,
+                date: "2026-07-26",
+                create_date: "2026-07-26 09:00:00",
+                payment_type: "inbound",
+                journal_id: [1, "Efectivo"],
+                partner_id: [10, "Cliente viejo"],
+                name: "PAY/OLD",
+                state: "paid",
+              },
+              {
+                id: 4,
+                amount: 50,
+                date: "2026-07-26",
+                create_date: "2026-07-26 11:00:00",
+                payment_type: "inbound",
+                journal_id: [1, "Efectivo"],
+                partner_id: [11, "Cliente nuevo"],
+                name: "PAY/NEW",
+                state: "paid",
+              },
+            ],
+          });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const hub = await adapter.getCashHub("sess");
+    assert.ok(
+      paymentDomain.some(
+        (clause) =>
+          Array.isArray(clause) &&
+          clause[0] === "create_date" &&
+          clause[1] === ">="
+      ),
+      `expected create_date >= in domain, got ${JSON.stringify(paymentDomain)}`
+    );
+    assert.ok(
+      !paymentDomain.some(
+        (clause) =>
+          Array.isArray(clause) &&
+          clause[0] === "date" &&
+          String(clause[2] || "").length === 10
+      ),
+      "must not filter account.payment by day-only date"
+    );
+    assert.equal(
+      hub.feed.some((item) => item.id === "pay-3"),
+      false,
+      "payment before session open must stay out"
+    );
+    assert.ok(
+      hub.feed.some((item) => item.id === "pay-4" && item.amount === 50)
+    );
+    assert.equal(hub.summary?.cashIn, 50);
+    assert.equal(hub.summary?.expectedCash, 1050);
+  });
+
   it("loads closed session detail and rejects close without difference note", async () => {
     const closedRow = {
       ...OPEN_CASH_SESSION_ROW,
@@ -1759,14 +1838,16 @@ describe("OdooAdapter.createRecord", () => {
 
     const moveBody = JSON.parse(fetchImpl.mock.calls[0].arguments[1].body);
     assert.equal(moveBody.params.model, "account.move");
-    assert.deepEqual(moveBody.params.args[0], {
-      move_type: "in_invoice",
-      partner_id: 8,
-      sg_bill_source: "mail",
-      invoice_line_ids: [
-        [0, 0, { product_id: 42, quantity: 1, price_unit: 200 }],
-      ],
-    });
+    assert.equal(moveBody.params.args[0].move_type, "in_invoice");
+    assert.equal(moveBody.params.args[0].partner_id, 8);
+    assert.equal(moveBody.params.args[0].sg_bill_source, "mail");
+    assert.match(
+      String(moveBody.params.args[0].invoice_date || ""),
+      /^\d{4}-\d{2}-\d{2}$/
+    );
+    assert.deepEqual(moveBody.params.args[0].invoice_line_ids, [
+      [0, 0, { product_id: 42, quantity: 1, price_unit: 200 }],
+    ]);
 
     const attBody = JSON.parse(fetchImpl.mock.calls[1].arguments[1].body);
     assert.equal(attBody.params.model, "ir.attachment");
@@ -3275,6 +3356,10 @@ describe("OdooAdapter.resetInvoiceDraft / cancelInvoice", () => {
         }
         return Response.json({ result: [{ id: 9, state: "cancel" }] });
       }
+      // Odoo 19 void: no result key
+      if (method === "button_cancel") {
+        return Response.json({ jsonrpc: "2.0", id: 1 });
+      }
       return Response.json({ result: true });
     });
     const adapter = new OdooAdapter({
@@ -3295,5 +3380,44 @@ describe("OdooAdapter.resetInvoiceDraft / cancelInvoice", () => {
       (call) => JSON.parse(call.arguments[1].body).params.method
     );
     assert.ok(methods.includes("button_cancel"));
+  });
+
+  it("accepts void JSON-RPC responses from button_draft", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const method = body.params?.method;
+      if (method === "read") {
+        const fields = body.params?.args?.[1] || [];
+        if (fields.includes("payment_state")) {
+          return Response.json({
+            result: [
+              {
+                id: 55,
+                state: "posted",
+                move_type: "out_invoice",
+                payment_state: "not_paid",
+                sg_fw_loaded: false,
+              },
+            ],
+          });
+        }
+        return Response.json({ result: [{ id: 55, state: "draft" }] });
+      }
+      if (method === "button_draft") {
+        return Response.json({ jsonrpc: "2.0", id: 1 });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.resetInvoiceDraft(
+      "sess",
+      "accounting/customer-invoices",
+      55
+    );
+    assert.equal(result.state, "draft");
   });
 });

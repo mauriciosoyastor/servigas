@@ -164,9 +164,15 @@ describe("OdooAdapter sale order PDF + email", () => {
           result: [{ id: 9, name: "Ana", email: "ana@x.com" }],
         });
       }
-      if (body.params.method === "xmlid_to_res_id") {
-        assert.deepEqual(body.params.args, [SALE_ORDER_EMAIL_TEMPLATE]);
-        return Response.json({ result: 55 });
+      if (
+        body.params.model === "ir.model.data" &&
+        body.params.method === "search_read"
+      ) {
+        assert.deepEqual(body.params.args?.[0], [
+          ["module", "=", "sale"],
+          ["name", "=", "email_template_edi_sale"],
+        ]);
+        return Response.json({ result: [{ id: 1, res_id: 55 }] });
       }
       if (body.params.method === "send_mail") {
         assert.deepEqual(body.params.args, [55, 4]);
@@ -211,8 +217,11 @@ describe("OdooAdapter sale order PDF + email", () => {
           result: [{ id: 9, name: "Ana", email: "ana@x.com" }],
         });
       }
-      if (body.params.method === "xmlid_to_res_id") {
-        return Response.json({ result: 55 });
+      if (
+        body.params.model === "ir.model.data" &&
+        body.params.method === "search_read"
+      ) {
+        return Response.json({ result: [{ id: 1, res_id: 55 }] });
       }
       if (body.params.method === "send_mail") {
         return Response.json({ result: 1 });
