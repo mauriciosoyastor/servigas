@@ -646,6 +646,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /OrderCreateForm/);
     assert.match(page, /partnerListKey=["']sales\/customers["']/);
     assert.match(page, /productListKey=["']inventory\/variants["']/);
+    assert.match(page, /Ver historial/);
+    assert.match(page, /quotations-history/);
     assert.doesNotMatch(page, /showBillSource|requireAttachment/);
     assert.match(form, /data-order-picker/);
     assert.match(form, /data-picker-query/);
@@ -665,6 +667,9 @@ describe("shell UI contracts", () => {
     assert.match(page, /purchase\/solicitudes/);
     assert.match(page, /partnerListKey=["']purchase\/vendors["']/);
     assert.match(page, /Proveedor|Nuevo pedido a proveedor/);
+    assert.match(page, /Ver borradores/);
+    assert.match(page, /Ver órdenes|Ver ordenes/);
+    assert.match(page, /\/lists\/purchase\/orders/);
   });
 
   it("does not keep option B proxy/work surfaces", async () => {

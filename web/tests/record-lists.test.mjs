@@ -218,6 +218,26 @@ describe("record-lists allowlist", () => {
       resolveRecordListPath({
         type: "ir.actions.act_window",
         res_model: "sale.order",
+        domain: [],
+      }, { label: "Historial de cotizaciones" }),
+      "/lists/sales/quotations-history"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "sale.order",
+        domain: [],
+      }),
+      "/lists/sales/quotations-history"
+    );
+    assert.equal(
+      getRecordListDef("sales/quotations-history")?.title,
+      "Historial de cotizaciones"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "sale.order",
         domain: [["invoice_status", "=", "to invoice"]],
       }),
       "/lists/sales/to-invoice"

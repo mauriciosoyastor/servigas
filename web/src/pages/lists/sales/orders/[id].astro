@@ -2,14 +2,24 @@
 import RecordCreateInvoiceControl from '../../../../components/RecordCreateInvoiceControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
+import RecordSaleOrderShareControl from '../../../../components/RecordSaleOrderShareControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getBackend } from '../../../../lib/bff/get-backend.ts';
+import { requireOdooSession } from '../../../../lib/bff/http.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isOrderReadyToInvoice } from '../../../../lib/shell/order-invoice.ts';
+import {
+	missingCustomerContactHint,
+	saleOrderDocumentLabel,
+	saleOrderPdfPath,
+	type SaleOrderShareMeta,
+} from '../../../../lib/shell/sale-order-share.ts';
 
+const listKey = 'sales/orders';
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
 	Astro.cookies,
-	'sales/orders',
+	listKey,
 	id,
 	'No encontramos este pedido.'
 );
@@ -26,6 +36,29 @@ function fieldValue(key: string): string {
 }
 
 const showCreateInvoice = isOrderReadyToInvoice(fieldValue('invoice_status'));
+
+const pdfPath = saleOrderPdfPath(listKey, id);
+const fallbackShare: SaleOrderShareMeta = {
+	orderName: detail?.title || `S-${id}`,
+	partnerName: fieldValue('partner_id') || 'Cliente',
+	email: null,
+	phone: null,
+	whatsappUrl: null,
+	pdfPath,
+	missingContactHint: missingCustomerContactHint({ phone: null, email: null }),
+	documentLabel: saleOrderDocumentLabel(listKey),
+};
+
+let share: SaleOrderShareMeta | null = pdfPath ? fallbackShare : null;
+if (detail && !error && share) {
+	try {
+		const { odooSessionId } = requireOdooSession(Astro.cookies);
+		share = await getBackend().getSaleOrderShareMeta(odooSessionId, listKey, id);
+	} catch (cause) {
+		console.warn('[sales/orders] share meta fallback', cause);
+		share = fallbackShare;
+	}
+}
 ---
 
 <ShellLayout title={`${detail?.title || 'Pedido'} | Servigas`} active="sales" userName={userName}>
@@ -38,16 +71,26 @@ const showCreateInvoice = isOrderReadyToInvoice(fieldValue('invoice_status'));
 		recordId={id}
 	>
 		{detail && !error ? (
-			<RecordNotes slot="notes" listKey="sales/orders" recordId={id} />
+			<div slot="secondary">
+				{share ? (
+					<RecordSaleOrderShareControl
+						listKey={listKey}
+						recordId={id}
+						share={share}
+					/>
+				) : null}
+				{showCreateInvoice ? (
+					<RecordCreateInvoiceControl
+						listKey={listKey}
+						recordId={id}
+						apiPath="/api/records/sales/orders"
+						label="Crear FC"
+					/>
+				) : null}
+			</div>
 		) : null}
-		{detail && !error && showCreateInvoice ? (
-			<RecordCreateInvoiceControl
-				slot="secondary"
-				listKey="sales/orders"
-				recordId={id}
-				apiPath="/api/records/sales/orders"
-				label="Crear FC"
-			/>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey={listKey} recordId={id} />
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>

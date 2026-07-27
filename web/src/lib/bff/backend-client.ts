@@ -211,6 +211,47 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }>;
+  fetchPurchaseOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }>;
+  getPurchaseOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<import("../shell/purchase-order-share.ts").PurchaseOrderShareMeta>;
+  getPurchaseOrderReceipts(
+    odooSessionId: string,
+    orderId: number
+  ): Promise<
+    import("../shell/purchase-order-receipts.ts").PurchaseOrderReceiptsPayload
+  >;
+  fetchSaleOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }>;
+  getSaleOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<import("../shell/sale-order-share.ts").SaleOrderShareMeta>;
+  sendSaleOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{
+    ok: true;
+    email: string;
+    orderName: string;
+    markedSent: boolean;
+  }>;
+  sendPurchaseOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; email: string; orderName: string }>;
   fetchAttachment(
     odooSessionId: string,
     attachmentId: number

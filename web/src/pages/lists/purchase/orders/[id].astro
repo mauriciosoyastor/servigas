@@ -2,9 +2,19 @@
 import RecordConfirmControl from '../../../../components/RecordConfirmControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import RecordNotes from '../../../../components/RecordNotes.astro';
+import RecordPurchaseOrderReceiptsControl from '../../../../components/RecordPurchaseOrderReceiptsControl.astro';
+import RecordPurchaseOrderShareControl from '../../../../components/RecordPurchaseOrderShareControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getBackend } from '../../../../lib/bff/get-backend.ts';
+import { requireOdooSession } from '../../../../lib/bff/http.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
+import type { PurchaseOrderReceiptsPayload } from '../../../../lib/shell/purchase-order-receipts.ts';
+import {
+	missingVendorContactHint,
+	purchaseOrderPdfPath,
+	type PurchaseOrderShareMeta,
+} from '../../../../lib/shell/purchase-order-share.ts';
 
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
@@ -28,6 +38,47 @@ function fieldValue(key: string): string {
 const state = fieldValue('state');
 // Confirm uses purchase/solicitudes allowlist even when opened from orders detail path
 const showConfirm = isConfirmableState('purchase/solicitudes', state);
+
+const pdfPath = purchaseOrderPdfPath('purchase/orders', id);
+const fallbackShare: PurchaseOrderShareMeta = {
+	orderName: detail?.title || `OC-${id}`,
+	partnerName: fieldValue('partner_id') || 'Proveedor',
+	email: null,
+	phone: null,
+	whatsappUrl: null,
+	pdfPath,
+	missingContactHint: missingVendorContactHint({ phone: null, email: null }),
+};
+
+let share: PurchaseOrderShareMeta | null = pdfPath ? fallbackShare : null;
+let receipts: PurchaseOrderReceiptsPayload | null = null;
+
+if (detail && !error && Number.isFinite(id) && id > 0) {
+	try {
+		const { odooSessionId } = requireOdooSession(Astro.cookies);
+		const backend = getBackend();
+		if (share) {
+			try {
+				share = await backend.getPurchaseOrderShareMeta(
+					odooSessionId,
+					'purchase/orders',
+					id
+				);
+			} catch (cause) {
+				console.warn('[purchase/orders] share meta fallback', cause);
+				share = fallbackShare;
+			}
+		}
+		try {
+			receipts = await backend.getPurchaseOrderReceipts(odooSessionId, id);
+		} catch (cause) {
+			console.warn('[purchase/orders] receipts load failed', cause);
+			receipts = null;
+		}
+	} catch (cause) {
+		console.warn('[purchase/orders] session for share/receipts', cause);
+	}
+}
 ---
 
 <ShellLayout title={`${detail?.title || 'Orden de compra'} | Servigas`} active="purchase" userName={userName}>
@@ -40,16 +91,29 @@ const showConfirm = isConfirmableState('purchase/solicitudes', state);
 		recordId={id}
 	>
 		{detail && !error ? (
-			<RecordNotes slot="notes" listKey="purchase/orders" recordId={id} />
+			<div slot="secondary">
+				{share ? (
+					<RecordPurchaseOrderShareControl
+						listKey="purchase/orders"
+						recordId={id}
+						share={share}
+					/>
+				) : null}
+				{receipts ? (
+					<RecordPurchaseOrderReceiptsControl receipts={receipts} />
+				) : null}
+				{showConfirm ? (
+					<RecordConfirmControl
+						listKey="purchase/solicitudes"
+						recordId={id}
+						apiPath="/api/records/purchase/solicitudes"
+						label="Confirmar OC"
+					/>
+				) : null}
+			</div>
 		) : null}
-		{detail && !error && showConfirm ? (
-			<RecordConfirmControl
-				slot="secondary"
-				listKey="purchase/solicitudes"
-				recordId={id}
-				apiPath="/api/records/purchase/solicitudes"
-				label="Confirmar OC"
-			/>
+		{detail && !error ? (
+			<RecordNotes slot="notes" listKey="purchase/orders" recordId={id} />
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>

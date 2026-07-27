@@ -59,10 +59,10 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">20</field>
-            <field name="label">Variantes SKU</field>
+            <field name="label">Ítems de stock</field>
             <field name="hint">Referencias de inventario</field>
             <field name="icon">fa-tags</field>
-            <field name="enter_label">Ver variantes →</field>
+            <field name="enter_label">Ver ítems →</field>
             <field name="action_id" ref="stock.stock_product_normal_action"/>
             <field name="metric_model">product.product</field>
             <field name="metric_domain">[('active', '=', True)]</field>
@@ -141,7 +141,7 @@
             <field name="app">inventory</field>
             <field name="section">products</field>
             <field name="sequence">20</field>
-            <field name="label">Variantes</field>
+            <field name="label">Ítems de stock</field>
             <field name="icon">fa-tags</field>
             <field name="enter_label">Ingresar →</field>
             <field name="action_id" ref="stock.stock_product_normal_action"/>

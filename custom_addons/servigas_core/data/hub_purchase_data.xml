@@ -60,10 +60,10 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">20</field>
-            <field name="label">Solicitudes abiertas</field>
-            <field name="hint">RFQ borrador y enviadas</field>
+            <field name="label">Pedidos abiertos</field>
+            <field name="hint">Borradores + enviados</field>
             <field name="icon">fa-file-text-o</field>
-            <field name="enter_label">Ver RFQ →</field>
+            <field name="enter_label">Ver pedidos →</field>
             <field name="action_id" ref="purchase.purchase_rfq"/>
             <field name="domain">[('state', 'in', ('draft', 'sent'))]</field>
             <field name="metric_model">purchase.order</field>
@@ -141,7 +141,7 @@
             <field name="app">purchase</field>
             <field name="section">orders</field>
             <field name="sequence">10</field>
-            <field name="label">Solicitudes de cotización</field>
+            <field name="label">Pedidos abiertos</field>
             <field name="icon">fa-file-text-o</field>
             <field name="action_id" ref="purchase.purchase_rfq"/>
             <field name="metric_model">purchase.order</field>
@@ -163,7 +163,7 @@
             <field name="app">purchase</field>
             <field name="section">orders</field>
             <field name="sequence">30</field>
-            <field name="label">Borradores RFQ</field>
+            <field name="label">Borradores</field>
             <field name="icon">fa-pencil</field>
             <field name="variant">warning</field>
             <field name="action_id" ref="purchase.purchase_rfq"/>
@@ -176,7 +176,7 @@
             <field name="app">purchase</field>
             <field name="section">orders</field>
             <field name="sequence">40</field>
-            <field name="label">RFQ enviadas</field>
+            <field name="label">Enviados al proveedor</field>
             <field name="icon">fa-paper-plane</field>
             <field name="action_id" ref="purchase.purchase_rfq"/>
             <field name="domain">[('state', '=', 'sent')]</field>

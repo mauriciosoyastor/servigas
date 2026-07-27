@@ -10,33 +10,40 @@
             <field name="icon">fa-th-large</field>
             <field name="sequence">1</field>
         </record>
+        <record id="hub_section_sales_quotations" model="sg.hub.section">
+            <field name="app">sales</field>
+            <field name="code">quotations</field>
+            <field name="name">Cotizaciones</field>
+            <field name="icon">fa-file-text-o</field>
+            <field name="sequence">2</field>
+        </record>
         <record id="hub_section_sales_orders" model="sg.hub.section">
             <field name="app">sales</field>
             <field name="code">orders</field>
             <field name="name">Pedidos</field>
             <field name="icon">fa-shopping-cart</field>
-            <field name="sequence">2</field>
+            <field name="sequence">3</field>
         </record>
         <record id="hub_section_sales_customers" model="sg.hub.section">
             <field name="app">sales</field>
             <field name="code">customers</field>
             <field name="name">Clientes</field>
             <field name="icon">fa-users</field>
-            <field name="sequence">3</field>
+            <field name="sequence">4</field>
         </record>
         <record id="hub_section_sales_reporting" model="sg.hub.section">
             <field name="app">sales</field>
             <field name="code">reporting</field>
             <field name="name">Informes</field>
             <field name="icon">fa-bar-chart</field>
-            <field name="sequence">4</field>
+            <field name="sequence">5</field>
         </record>
         <record id="hub_section_sales_config" model="sg.hub.section">
             <field name="app">sales</field>
             <field name="code">config</field>
             <field name="name">Configuración</field>
             <field name="icon">fa-cog</field>
-            <field name="sequence">5</field>
+            <field name="sequence">6</field>
         </record>
 
         <!-- Cards — Resumen -->
@@ -60,7 +67,7 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">20</field>
-            <field name="label">Cotizaciones abiertas</field>
+            <field name="label">Cotizaciones</field>
             <field name="hint">Borrador y enviadas</field>
             <field name="icon">fa-file-text-o</field>
             <field name="enter_label">Ver cotizaciones →</field>
@@ -104,7 +111,7 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">50</field>
-            <field name="label">Ventas POS hoy</field>
+            <field name="label">Ventas de hoy</field>
             <field name="hint">Pedidos de mostrador del día</field>
             <field name="icon">fa-desktop</field>
             <field name="enter_label">Ver POS →</field>
@@ -136,6 +143,36 @@
             <field name="metric_suffix"> $</field>
         </record>
 
+        <!-- Cards — Cotizaciones -->
+        <record id="hub_card_sales_quotations_open" model="sg.hub.card">
+            <field name="app">sales</field>
+            <field name="section">quotations</field>
+            <field name="sequence">10</field>
+            <field name="label">Cotizaciones</field>
+            <field name="hint">Borradores y enviadas</field>
+            <field name="icon">fa-file-text-o</field>
+            <field name="enter_label">Ver cotizaciones →</field>
+            <field name="action_id" ref="sale.action_quotations"/>
+            <field name="domain">[('state', 'in', ('draft', 'sent'))]</field>
+            <field name="metric_model">sale.order</field>
+            <field name="metric_domain">[('state', 'in', ('draft', 'sent'))]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_sales_quotations_history" model="sg.hub.card">
+            <field name="app">sales</field>
+            <field name="section">quotations</field>
+            <field name="sequence">20</field>
+            <field name="label">Historial de cotizaciones</field>
+            <field name="hint">Todas las cotizaciones y pedidos</field>
+            <field name="icon">fa-history</field>
+            <field name="enter_label">Ver historial →</field>
+            <field name="action_id" ref="sale.action_quotations_with_onboarding"/>
+            <field name="domain">[]</field>
+            <field name="metric_model">sale.order</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
         <!-- Cards — Pedidos -->
         <record id="hub_card_sales_orders_quotations" model="sg.hub.card">
             <field name="app">sales</field>
@@ -157,19 +194,6 @@
             <field name="action_id" ref="sale.action_orders"/>
             <field name="metric_model">sale.order</field>
             <field name="metric_domain">[('state', '=', 'sale')]</field>
-            <field name="metric_aggregate">count</field>
-        </record>
-        <record id="hub_card_sales_orders_draft" model="sg.hub.card">
-            <field name="app">sales</field>
-            <field name="section">orders</field>
-            <field name="sequence">30</field>
-            <field name="label">Borradores</field>
-            <field name="icon">fa-pencil</field>
-            <field name="variant">warning</field>
-            <field name="action_id" ref="sale.action_quotations"/>
-            <field name="domain">[('state', '=', 'draft')]</field>
-            <field name="metric_model">sale.order</field>
-            <field name="metric_domain">[('state', '=', 'draft')]</field>
             <field name="metric_aggregate">count</field>
         </record>
         <record id="hub_card_sales_orders_to_invoice" model="sg.hub.card">

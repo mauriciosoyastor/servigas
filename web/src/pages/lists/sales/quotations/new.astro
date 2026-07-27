@@ -16,9 +16,19 @@ try {
 
 <ShellLayout title="Nueva cotización | Servigas" active="sales" userName={userName}>
 	<main class="sg-create-page">
-		<header>
-			<p>Ventas</p>
-			<h1>Nueva cotización</h1>
+		<header class="sg-create-heading">
+			<div>
+				<p>Ventas</p>
+				<h1>Nueva cotización</h1>
+			</div>
+			<nav class="sg-create-heading-meta" aria-label="Historial de cotizaciones">
+				<a class="sg-list-back sg-focus-ring" href="/lists/sales/quotations">
+					Ver cotizaciones
+				</a>
+				<a class="sg-list-back sg-focus-ring" href="/lists/sales/quotations-history">
+					Ver historial
+				</a>
+			</nav>
 		</header>
 		<OrderCreateForm
 			apiPath="/api/records/sales/quotations"
