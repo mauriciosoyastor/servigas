@@ -6,6 +6,7 @@ import { BffError } from '../lib/bff/errors.ts';
 import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 import type { LauncherTile } from '../lib/bff/types.ts';
+import { partitionLauncherTiles } from '../lib/shell/launcher-nav.ts';
 
 let odooSessionId: string;
 let userName = '';
@@ -31,6 +32,9 @@ try {
 	}
 	launcherError = 'No pudimos cargar los accesos. Intentá nuevamente en unos minutos.';
 }
+
+const { areas, more } = partitionLauncherTiles(tiles);
+const accessCount = areas.length + more.length;
 ---
 
 <ShellLayout title="Inicio | Servigas" active="home" userName={userName}>
@@ -40,7 +44,7 @@ try {
 				<p>Panel principal</p>
 				<h1>¿Qué querés gestionar hoy?</h1>
 			</div>
-			<span>{tiles.length} {tiles.length === 1 ? 'acceso' : 'accesos'}</span>
+			<span>{accessCount} {accessCount === 1 ? 'acceso' : 'accesos'}</span>
 		</header>
 
 		<nav class="sg-ops-strip" aria-label="Atajos del día" data-tour="ops-strip">
@@ -55,12 +59,29 @@ try {
 				<strong>No se pudieron cargar los accesos</strong>
 				<p>{launcherError}</p>
 			</section>
-		) : tiles.length ? (
-			<section class="sg-launcher-grid" aria-label="Aplicaciones disponibles">
-				{tiles.map((tile, index) => (
-					<TileCard tile={tile} tourTarget={index === 0 ? 'home-tile' : undefined} />
-				))}
-			</section>
+		) : accessCount ? (
+			<>
+				{areas.length ? (
+					<section class="sg-launcher-zone" aria-label="Áreas del negocio">
+						<h2 class="sg-launcher-zone-title">Áreas del negocio</h2>
+						<div class="sg-launcher-grid">
+							{areas.map((tile, index) => (
+								<TileCard tile={tile} tourTarget={index === 0 ? 'home-tile' : undefined} />
+							))}
+						</div>
+					</section>
+				) : null}
+				{more.length ? (
+					<details class="sg-launcher-more sg-glass">
+						<summary class="sg-launcher-more-summary">Más accesos</summary>
+						<div class="sg-launcher-grid sg-launcher-more-grid" aria-label="Más accesos">
+							{more.map((tile) => (
+								<TileCard tile={tile} />
+							))}
+						</div>
+					</details>
+				) : null}
+			</>
 		) : (
 			<section class="sg-launcher-state sg-glass">
 				<strong>Todavía no hay accesos configurados</strong>
@@ -188,10 +209,38 @@ try {
 		font-size: 0.7rem;
 		font-weight: 600;
 	}
+	.sg-launcher-zone {
+		margin-bottom: 1.25rem;
+	}
+	.sg-launcher-zone-title {
+		margin: 0 0 0.85rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.8rem;
+		font-weight: 650;
+		letter-spacing: 0.02em;
+		text-transform: uppercase;
+	}
 	.sg-launcher-grid {
 		display: grid;
 		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
 		gap: 1rem;
+	}
+	.sg-launcher-more {
+		border-radius: var(--sg-radius-card);
+		padding: 0.85rem 1rem 1rem;
+	}
+	.sg-launcher-more-summary {
+		cursor: pointer;
+		color: var(--sg-text-on-dark);
+		font-size: 0.9rem;
+		font-weight: 650;
+		list-style: none;
+	}
+	.sg-launcher-more-summary::-webkit-details-marker {
+		display: none;
+	}
+	.sg-launcher-more-grid {
+		margin-top: 0.9rem;
 	}
 	.sg-launcher-state {
 		border-radius: var(--sg-radius-card);

@@ -23,21 +23,29 @@ describe("shell UI contracts", () => {
   });
 
   it("provides the requested shell components", async () => {
-    const [layout, rail, tile, note, table, tour] = await Promise.all([
+    const [layout, rail, tile, note, table, tour, railNav] = await Promise.all([
       source("layouts/ShellLayout.astro"),
       source("components/RailNav.astro"),
       source("components/TileCard.astro"),
       source("components/ComingSoonNote.astro"),
       source("components/RecordTable.astro"),
       source("components/OnboardingTour.astro"),
+      source("lib/shell/rail-nav.ts"),
     ]);
 
     assert.match(layout, /compact\?:/);
     assert.match(layout, /is-compact/);
     assert.match(layout, /<RailNav active=/);
     assert.match(layout, /<OnboardingTour/);
-    assert.match(rail, /\/hubs\/inventory/);
-    assert.match(rail, /\/hubs\/sales/);
+    assert.match(rail, /RAIL_ITEMS|rail-nav/);
+    assert.match(railNav, /href: "\/pos"/);
+    assert.match(railNav, /href: "\/caja"/);
+    assert.match(railNav, /href: "\/hubs\/inventory"/);
+    assert.match(railNav, /href: "\/hubs\/purchase"/);
+    assert.match(railNav, /href: "\/hubs\/accounting"/);
+    assert.doesNotMatch(railNav, /hubs\/sales/);
+    assert.match(railNav, /label: "Stock"/);
+    assert.match(railNav, /label: "Cobros"/);
     assert.match(rail, /data-tour=\{`rail-\$\{item\.app\}`\}/);
     assert.match(rail, /servigas-mark\.png/);
     assert.match(rail, /sg-brand-name/);
@@ -86,6 +94,7 @@ describe("shell UI contracts", () => {
     assert.match(index, /invalidateBffSession\(Astro\.cookies\)/);
     assert.match(index, /Astro\.redirect\(["']\/login["']\)/);
     assert.match(index, /resolveTileNavigation/);
+    assert.match(index, /partitionLauncherTiles/);
     assert.match(index, /sg-ops-strip/);
     assert.match(index, /data-tour=["']ops-strip["']/);
     assert.match(index, /href=["']\/pos["'][^>]*>\s*Mostrador/);
@@ -94,6 +103,8 @@ describe("shell UI contracts", () => {
     assert.match(index, /href="\/pos"/);
     assert.match(index, /quotations\/new/);
     assert.match(index, /solicitudes\/new/);
+    assert.match(index, /Áreas del negocio/);
+    assert.match(index, /Más accesos/);
     assert.match(index, /data-coming-soon-detail/);
   });
 
@@ -109,6 +120,8 @@ describe("shell UI contracts", () => {
 
     assert.match(hub, /isHubApp\(app\)/);
     assert.match(hub, /getBackend\(\)\.getHub\(odooSessionId,\s*app,\s*requestedSection\)/);
+    assert.match(hub, /thinHubPayload/);
+    assert.match(hub, /HUB_LABELS/);
     assert.match(hub, /<HubSubnav/);
     assert.match(hub, /searchParams\.get\(['"]section['"]\)/);
     assert.match(hub, /payload\.groups/);
@@ -118,10 +131,14 @@ describe("shell UI contracts", () => {
     assert.match(hub, /destination\.kind === ['"]list['"]/);
     assert.match(hub, /Ir al mostrador/);
     assert.doesNotMatch(hub, /Ir a la caja/);
+    const subnav = await source("components/HubSubnav.astro");
+    assert.match(subnav, /splitHubSections/);
+    assert.match(subnav, />Más</);
   });
 
   it("renders cash hub with open/move/close seams", async () => {
     const page = await source("pages/caja.astro");
+    assert.match(page, /active=["']caja["']/);
     assert.match(page, /getCashHub\(/);
     assert.match(page, /data-caja-root/);
     assert.match(page, /data-caja-open/);
@@ -194,6 +211,7 @@ describe("shell UI contracts", () => {
 
   it("renders POS caja with catalog BFF and cart controls", async () => {
     const page = await source("pages/pos.astro");
+    assert.match(page, /active=["']pos["']/);
     assert.match(page, /getOpenCashSession\(/);
     assert.match(page, /getPosCatalog\(/);
     assert.match(page, /<h1>Mostrador<\/h1>/);
