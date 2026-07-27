@@ -8,13 +8,18 @@ import type { PosCatalogPayload } from '../lib/bff/types.ts';
 let userName = '';
 let catalog: PosCatalogPayload | null = null;
 let error = '';
+let cashOpen = false;
 const q = Astro.url.searchParams.get('q') || '';
 
 try {
 	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
 	userName = session.name || session.login;
 	try {
-		catalog = await getBackend().getPosCatalog(odooSessionId, { q, limit: 48 });
+		const openSession = await getBackend().getOpenCashSession(odooSessionId);
+		cashOpen = Boolean(openSession);
+		if (cashOpen) {
+			catalog = await getBackend().getPosCatalog(odooSessionId, { q, limit: 48 });
+		}
 	} catch (cause) {
 		if (cause instanceof BffError && cause.code === 'unauthorized') {
 			invalidateBffSession(Astro.cookies);
@@ -38,15 +43,24 @@ try {
 		<header class="sg-pos-heading">
 			<div>
 				<p>{catalog?.config?.name || 'Punto de venta'}</p>
-				<h1>Caja</h1>
+				<h1>Mostrador</h1>
 			</div>
 			<div class="sg-pos-heading-actions">
+				<a class="sg-pos-link sg-focus-ring" href="/caja">Caja</a>
 				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas de caja</a>
 				<a class="sg-pos-link sg-focus-ring" href="/">Inicio</a>
 			</div>
 		</header>
 
-		{error ? (
+		{!cashOpen && !error ? (
+			<section class="sg-pos-state sg-glass" role="status">
+				<strong>Abrí la caja primero</strong>
+				<p>El mostrador necesita una caja abierta para cobrar.</p>
+				<p>
+					<a class="sg-pos-link sg-focus-ring" href="/caja">Ir a abrir la caja</a>
+				</p>
+			</section>
+		) : error ? (
 			<section class="sg-pos-state sg-glass" role="alert">
 				<strong>Error</strong>
 				<p>{error}</p>

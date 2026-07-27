@@ -33,7 +33,7 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/",
     target: "ops-strip",
     title: "Atajos del día",
-    body: "Acá están los atajos del mostrador: caja, cotización y pedido a proveedor.",
+    body: "Acá están los atajos del día: mostrador, caja, cotización y pedido a proveedor.",
   },
   {
     id: "home-tile",
@@ -61,8 +61,8 @@ export const TOUR_STEPS: TourStep[] = [
     id: "hub-to-pos",
     path: "/hubs/",
     target: "pos-entry",
-    title: "La caja",
-    body: "Cuando atiendas al cliente, la caja es el mostrador.",
+    title: "El mostrador",
+    body: "Cuando atiendas al cliente, cobrás acá. Antes tenés que tener la caja abierta.",
     navigateTo: "/pos",
   },
   {

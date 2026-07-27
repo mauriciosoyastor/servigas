@@ -1,9 +1,11 @@
 ---
-import RecordCreateInvoiceControl from '../../../../components/RecordCreateInvoiceControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
-import { isPosOrderReadyToInvoice } from '../../../../lib/shell/pos-invoice.ts';
+import {
+	hasPosOrderPartner,
+	isPosOrderReadyToInvoice,
+} from '../../../../lib/shell/pos-invoice.ts';
 
 const id = Number(Astro.params.id);
 const loaded = await loadRecordDetail(
@@ -26,8 +28,10 @@ function fieldValue(key: string): string {
 
 const state = fieldValue('state');
 const partner = fieldValue('partner_id');
-const showInvoice =
-	isPosOrderReadyToInvoice(state) && Boolean(partner && partner !== 'false');
+const accountMove = fieldValue('account_move');
+const ready = isPosOrderReadyToInvoice(state);
+const hasPartner = hasPosOrderPartner(partner);
+const alreadyInvoiced = hasPosOrderPartner(accountMove);
 ---
 
 <ShellLayout title={`${detail?.title || 'Venta de caja'} | Servigas`} active="sales" userName={userName}>
@@ -39,30 +43,339 @@ const showInvoice =
 		fallbackListPath="/lists/sales/ventas-caja"
 		recordId={id}
 	>
-		{detail && !error && showInvoice ? (
-			<RecordCreateInvoiceControl
-				slot="secondary"
-				listKey="sales/ventas-caja"
-				recordId={id}
-				apiPath="/api/records/sales/ventas-caja"
-				label="Crear FC"
-				confirmMessage="¿Crear factura de cliente desde esta venta de caja? Se hereda el destino CF/CUIT del cliente."
-			/>
-		) : null}
-		{detail && !error && isPosOrderReadyToInvoice(state) && !partner ? (
-			<p slot="secondary" class="sg-pos-invoice-hint">
-				Asigná un cliente a esta venta de caja para poder facturar (destino CF/CUIT).
-			</p>
+		{detail && !error && ready ? (
+			<section
+				slot="notes"
+				class="sg-pos-invoice"
+				data-pos-invoice
+				data-id={id}
+				data-api="/api/records/sales/ventas-caja"
+				data-has-partner={hasPartner ? '1' : '0'}
+				data-invoiced={alreadyInvoiced ? '1' : '0'}
+			>
+				<strong>Facturar venta</strong>
+				{alreadyInvoiced ? (
+					<p class="sg-pos-invoice-note">
+						Esta venta ya tiene factura asociada ({accountMove}).
+					</p>
+				) : (
+					<>
+						<p class="sg-pos-invoice-note">
+							{hasPartner
+								? `Cliente: ${partner}. Podés facturar o cambiar el cliente.`
+								: 'Elegí un cliente (o Consumidor Final) para emitir la factura.'}
+						</p>
+						<label class="sg-pos-invoice-search">
+							<span class="sr-only">Buscar cliente</span>
+							<input
+								class="sg-focus-ring"
+								type="search"
+								placeholder="Buscar cliente…"
+								data-pos-invoice-q
+								autocomplete="off"
+							/>
+						</label>
+						<ul class="sg-pos-invoice-results" data-pos-invoice-results hidden></ul>
+						<p class="sg-pos-invoice-selected" data-pos-invoice-selected hidden></p>
+						<input type="hidden" data-pos-invoice-partner value={hasPartner ? '' : ''} />
+						<div class="sg-pos-invoice-actions">
+							<button
+								type="button"
+								class="sg-pos-invoice-secondary sg-focus-ring"
+								data-pos-invoice-cf
+							>
+								Usar Consumidor Final
+							</button>
+							<button
+								type="button"
+								class="sg-pos-invoice-primary sg-focus-ring"
+								data-pos-invoice-btn
+							>
+								Facturar
+							</button>
+						</div>
+						<p class="sg-pos-invoice-status" data-pos-invoice-status hidden></p>
+					</>
+				)}
+			</section>
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>
 
+<script>
+	const root = document.querySelector<HTMLElement>('[data-pos-invoice]');
+	if (root && root.dataset.invoiced !== '1') {
+		const qInput = root.querySelector<HTMLInputElement>('[data-pos-invoice-q]');
+		const results = root.querySelector<HTMLElement>('[data-pos-invoice-results]');
+		const selected = root.querySelector<HTMLElement>('[data-pos-invoice-selected]');
+		const partnerInput = root.querySelector<HTMLInputElement>('[data-pos-invoice-partner]');
+		const status = root.querySelector<HTMLElement>('[data-pos-invoice-status]');
+		const btn = root.querySelector<HTMLButtonElement>('[data-pos-invoice-btn]');
+		const cfBtn = root.querySelector<HTMLButtonElement>('[data-pos-invoice-cf]');
+		const hasPartnerAlready = root.dataset.hasPartner === '1';
+
+		let timer = 0;
+		let seq = 0;
+
+		function setPartner(id: number, label: string) {
+			if (partnerInput) partnerInput.value = String(id);
+			if (selected) {
+				selected.hidden = false;
+				selected.textContent = `Cliente elegido: ${label}`;
+			}
+			if (results) {
+				results.hidden = true;
+				results.replaceChildren();
+			}
+		}
+
+		async function searchCustomers(q: string) {
+			if (!results) return;
+			const my = ++seq;
+			const params = new URLSearchParams({ q, page: '1' });
+			const response = await fetch(`/api/lists/sales/customers?${params}`, {
+				credentials: 'same-origin',
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (my !== seq) return;
+			results.replaceChildren();
+			if (!response.ok) {
+				results.hidden = true;
+				return;
+			}
+			for (const row of payload.rows || []) {
+				const id = Number(row.id);
+				if (!Number.isFinite(id) || id <= 0) continue;
+				const label = String(row.name || id);
+				const li = document.createElement('li');
+				const button = document.createElement('button');
+				button.type = 'button';
+				button.className = 'sg-focus-ring';
+				button.textContent = label;
+				button.addEventListener('click', () => setPartner(id, label));
+				li.appendChild(button);
+				results.appendChild(li);
+			}
+			if (!results.childElementCount) {
+				const empty = document.createElement('li');
+				empty.className = 'sg-pos-invoice-empty';
+				empty.textContent = 'Sin resultados';
+				results.appendChild(empty);
+			}
+			results.hidden = false;
+		}
+
+		qInput?.addEventListener('input', () => {
+			window.clearTimeout(timer);
+			const q = qInput.value.trim();
+			if (!q) {
+				results?.replaceChildren();
+				if (results) results.hidden = true;
+				return;
+			}
+			timer = window.setTimeout(() => {
+				void searchCustomers(q);
+			}, 250);
+		});
+
+		cfBtn?.addEventListener('click', async () => {
+			if (status) {
+				status.hidden = false;
+				status.textContent = 'Buscando Consumidor Final…';
+				status.dataset.state = 'pending';
+			}
+			try {
+				const params = new URLSearchParams({ q: 'Consumidor Final', page: '1' });
+				const response = await fetch(`/api/lists/sales/customers?${params}`, {
+					credentials: 'same-origin',
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) throw new Error('No se pudo buscar Consumidor Final');
+				const row =
+					(payload.rows || []).find((item: { name?: string }) =>
+						/consumidor\s*final/i.test(String(item.name || ''))
+					) || (payload.rows || [])[0];
+				const id = Number(row?.id);
+				if (!Number.isFinite(id) || id <= 0) {
+					throw new Error('No hay un cliente Consumidor Final cargado');
+				}
+				setPartner(id, String(row.name || 'Consumidor Final'));
+				if (status) {
+					status.textContent = 'Consumidor Final listo. Tocá Facturar.';
+					status.dataset.state = 'ok';
+				}
+			} catch (error) {
+				if (status) {
+					status.textContent =
+						error instanceof Error ? error.message : 'No se pudo elegir CF';
+					status.dataset.state = 'error';
+				}
+			}
+		});
+
+		btn?.addEventListener('click', async () => {
+			const partnerId = Number(partnerInput?.value || 0);
+			if (!hasPartnerAlready && !(partnerId > 0)) {
+				if (status) {
+					status.hidden = false;
+					status.textContent = 'Elegí un cliente o Usar Consumidor Final';
+					status.dataset.state = 'error';
+				}
+				return;
+			}
+			if (
+				!window.confirm(
+					'¿Facturar esta venta de caja? Se crea una factura de cliente (FC).'
+				)
+			) {
+				return;
+			}
+			if (status) {
+				status.hidden = false;
+				status.textContent = 'Creando factura…';
+				status.dataset.state = 'pending';
+			}
+			btn.disabled = true;
+			cfBtn && (cfBtn.disabled = true);
+			try {
+				const body: Record<string, unknown> = {
+					action: 'create_invoice',
+					id: Number(root.dataset.id),
+				};
+				if (partnerId > 0) body.partnerId = partnerId;
+				const response = await fetch(root.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify(body),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo facturar');
+				}
+				if (status) {
+					status.textContent = 'Factura creada';
+					status.dataset.state = 'ok';
+				}
+				window.setTimeout(() => {
+					window.location.href =
+						payload.detailPath || '/lists/accounting/customer-invoices';
+				}, 400);
+			} catch (error) {
+				if (status) {
+					status.textContent =
+						error instanceof Error ? error.message : 'No se pudo facturar';
+					status.dataset.state = 'error';
+				}
+				btn.disabled = false;
+				if (cfBtn) cfBtn.disabled = false;
+			}
+		});
+	}
+</script>
+
 <style>
-	.sg-pos-invoice-hint {
-		margin: 1rem 0 0;
+	.sg-pos-invoice {
+		margin: 0;
+		padding: 1.1rem 1.2rem;
+		border-radius: var(--sg-radius-card);
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		display: grid;
+		gap: 0.7rem;
+	}
+	.sg-pos-invoice strong {
+		font-size: 1.02rem;
+	}
+	.sg-pos-invoice-note {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.86rem;
+		line-height: 1.4;
+	}
+	.sg-pos-invoice-search input {
+		width: 100%;
+		border-radius: var(--sg-radius-pill);
+		border: 1px solid var(--sg-glass-border);
+		background: rgba(0, 0, 0, 0.18);
+		color: var(--sg-text-on-dark);
+		padding: 0.65rem 0.95rem;
+		font: inherit;
+	}
+	.sg-pos-invoice-results {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.35rem;
+		max-height: 12rem;
+		overflow: auto;
+	}
+	.sg-pos-invoice-results button {
+		width: 100%;
+		text-align: left;
+		border-radius: var(--sg-radius-pill);
+		border: 1px solid var(--sg-glass-border);
+		background: rgba(0, 0, 0, 0.16);
+		color: var(--sg-text-on-dark);
+		padding: 0.5rem 0.85rem;
+		font: inherit;
+		cursor: pointer;
+	}
+	.sg-pos-invoice-empty {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.82rem;
+		padding: 0.35rem 0.2rem;
+	}
+	.sg-pos-invoice-selected {
+		margin: 0;
+		font-size: 0.86rem;
+		font-weight: 650;
+	}
+	.sg-pos-invoice-actions {
+		display: grid;
+		gap: 0.55rem;
+	}
+	.sg-pos-invoice-actions button {
+		width: 100%;
+	}
+	.sg-pos-invoice-primary,
+	.sg-pos-invoice-secondary {
+		border-radius: var(--sg-radius-pill);
+		padding: 0.6rem 1rem;
+		font: inherit;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-pos-invoice-primary {
+		border: 0;
+		color: #fff;
+		background: var(--sg-flame-gradient);
+	}
+	.sg-pos-invoice-secondary {
+		border: 1px solid var(--sg-glass-border);
+		color: var(--sg-text-on-dark);
+		background: transparent;
+	}
+	.sg-pos-invoice-status {
+		margin: 0;
 		font-size: 0.82rem;
 		color: var(--sg-text-muted-dark);
-		max-width: 28rem;
-		line-height: 1.4;
+	}
+	.sg-pos-invoice-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-pos-invoice-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+	.sr-only {
+		position: absolute;
+		width: 1px;
+		height: 1px;
+		padding: 0;
+		margin: -1px;
+		overflow: hidden;
+		clip: rect(0, 0, 0, 0);
+		border: 0;
 	}
 </style>

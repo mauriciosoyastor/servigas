@@ -1,6 +1,14 @@
 import type { BackendClient } from "./backend-client.ts";
 import { BffError } from "./errors.ts";
 import type {
+  CashCloseResult,
+  CashFeedItemDto,
+  CashHubPayload,
+  CashMoveResult,
+  CashOpenResult,
+  CashSessionDetailPayload,
+  CashSessionInfo,
+  CashShift,
   HubPayload,
   LauncherPayload,
   PosCatalogPayload,
@@ -18,7 +26,25 @@ import type {
   RecordNote,
   SessionInfo,
 } from "./types.ts";
-import { localizePaymentMethodName } from "../pos/payment-methods.ts";
+import {
+  classifyJournalMedium,
+  classifyPosPaymentMedium,
+  mergeCashFeed,
+  summarizeCash,
+  type CashFeedItem,
+} from "../caja/cash-feed.ts";
+import { buildCashMovementReason } from "../caja/cash-motives.ts";
+import {
+  buildCashAlerts,
+  canOwnerWithdraw,
+  resolveCashShift,
+  suggestedBankWithdraw,
+  validateCashClose,
+} from "../caja/cash-ops.ts";
+import {
+  formatPosOrderPaymentLabel,
+  localizePaymentMethodName,
+} from "../pos/payment-methods.ts";
 import {
   buildProductIndexes,
   classifyRows,
@@ -102,7 +128,10 @@ import {
 } from "../shell/invoice-lifecycle.ts";
 
 /** Never requested from Odoo; computed in the BFF. */
-const COMPUTED_LIST_FIELDS = new Set(["sg_doc_type_short"]);
+const COMPUTED_LIST_FIELDS = new Set([
+  "sg_doc_type_short",
+  "payment_method",
+]);
 /** On account.move only: filled from partner, not a move column. */
 const MOVE_PARTNER_DEST_FIELD = "sg_invoice_dest";
 import {
@@ -592,6 +621,13 @@ export class OdooAdapter implements BackendClient {
       }
     }
 
+    if (
+      def.model === "pos.order" &&
+      displayFields.includes("payment_method")
+    ) {
+      await this.#enrichPosOrdersWithPaymentMethod(odooSessionId, rawRows);
+    }
+
     const total = await this.#callKw<number>(
       odooSessionId,
       def.model,
@@ -703,6 +739,13 @@ export class OdooAdapter implements BackendClient {
       row.sg_doc_type_short = suggestedDocTypeShort(row.sg_invoice_dest);
     }
 
+    if (
+      def.model === "pos.order" &&
+      displayFields.includes("payment_method")
+    ) {
+      await this.#enrichPosOrdersWithPaymentMethod(odooSessionId, [row]);
+    }
+
     const labels: Record<string, string> = {
       name: "Nombre",
       display_name: "Nombre",
@@ -723,6 +766,7 @@ export class OdooAdapter implements BackendClient {
       amount_residual: "Saldo",
       amount_total: "Total",
       payment_state: "Pago",
+      payment_method: "Tipo de pago",
       sg_fw_loaded: "Factura Web",
       sg_fw_number: "N° Factura Web",
       sg_fw_loaded_at: "Cargada el",
@@ -1376,6 +1420,52 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async #enrichPosOrdersWithPaymentMethod(
+    odooSessionId: string,
+    rows: Record<string, unknown>[]
+  ): Promise<void> {
+    const orderIds = [
+      ...new Set(
+        rows
+          .map((row) => Number(row.id) || 0)
+          .filter((id) => id > 0)
+      ),
+    ];
+    for (const row of rows) {
+      row.payment_method = null;
+    }
+    if (!orderIds.length) return;
+
+    const payments = await this.#searchRead(
+      odooSessionId,
+      "pos.payment",
+      [["pos_order_id", "in", orderIds]],
+      ["pos_order_id", "payment_method_id"],
+      Math.max(orderIds.length * 8, 40),
+      0,
+      "id asc"
+    );
+    const namesByOrder = new Map<number, string[]>();
+    for (const pay of payments) {
+      const order = Array.isArray(pay.pos_order_id) ? pay.pos_order_id : [];
+      const orderId = Number(order[0]) || 0;
+      if (!(orderId > 0)) continue;
+      const pm = Array.isArray(pay.payment_method_id)
+        ? pay.payment_method_id
+        : [];
+      const name = pm[1] != null ? String(pm[1]) : "";
+      if (!name) continue;
+      const list = namesByOrder.get(orderId) || [];
+      list.push(name);
+      namesByOrder.set(orderId, list);
+    }
+    for (const row of rows) {
+      const id = Number(row.id) || 0;
+      const label = formatPosOrderPaymentLabel(namesByOrder.get(id) || []);
+      row.payment_method = label || null;
+    }
+  }
+
   async #assertPartnerOkToPublishInvoice(
     odooSessionId: string,
     move: Record<string, unknown> | undefined
@@ -1854,7 +1944,8 @@ export class OdooAdapter implements BackendClient {
   async createInvoiceFromPos(
     odooSessionId: string,
     listKey: string,
-    id: number
+    id: number,
+    options: { partnerId?: number } = {}
   ): Promise<{ ok: true; id: number; detailPath: string }> {
     if (!canCreateInvoiceFromPos(listKey)) {
       throw new BffError("not_found", 404, "Facturación no permitida");
@@ -1909,12 +2000,36 @@ export class OdooAdapter implements BackendClient {
       return { ok: true, id: existingMove, detailPath };
     }
 
-    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    let partnerId = this.#partnerIdFromM2o(order.partner_id);
+    const requestedPartner = Number(options.partnerId);
+    if (
+      partnerId <= 0 &&
+      Number.isFinite(requestedPartner) &&
+      requestedPartner > 0
+    ) {
+      const partners = await this.#searchRead(
+        odooSessionId,
+        "res.partner",
+        [["id", "=", requestedPartner]],
+        ["name"],
+        1,
+        0,
+        "id asc"
+      );
+      if (!partners[0]?.id) {
+        throw new BffError("not_found", 404, "Cliente no encontrado");
+      }
+      await this.#callKw(odooSessionId, "pos.order", "write", [
+        [id],
+        { partner_id: requestedPartner },
+      ]);
+      partnerId = requestedPartner;
+    }
     if (partnerId <= 0) {
       throw new BffError(
         "validation_error",
         400,
-        "Asigná un cliente a la venta de caja antes de facturar"
+        "Elegí un cliente para facturar esta venta de caja"
       );
     }
 
@@ -2273,6 +2388,585 @@ export class OdooAdapter implements BackendClient {
     return { ok: true, state: afterState };
   }
 
+  static readonly #CASH_SESSION_FIELDS = [
+    "name",
+    "state",
+    "shift",
+    "opened_at",
+    "opened_by",
+    "opening_balance",
+    "note",
+    "closed_at",
+    "closed_by",
+    "closing_counted",
+    "closing_expected",
+    "difference",
+    "difference_note",
+    "bank_deposit",
+    "leave_float",
+  ];
+
+  async getOpenCashSession(
+    odooSessionId: string
+  ): Promise<CashSessionInfo | null> {
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "sg.cash.session",
+      [["state", "=", "open"]],
+      OdooAdapter.#CASH_SESSION_FIELDS,
+      1,
+      0,
+      "opened_at desc, id desc"
+    );
+    if (!rows[0]) return null;
+    return this.#mapCashSession(rows[0]);
+  }
+
+  async requireOpenCashSession(
+    odooSessionId: string
+  ): Promise<CashSessionInfo> {
+    const session = await this.getOpenCashSession(odooSessionId);
+    if (!session) {
+      throw new BffError(
+        "validation_error",
+        409,
+        "Abrí la caja antes de usar el mostrador"
+      );
+    }
+    return session;
+  }
+
+  async getCashHistory(
+    odooSessionId: string,
+    limit = 20
+  ): Promise<CashSessionInfo[]> {
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "sg.cash.session",
+      [["state", "=", "closed"]],
+      OdooAdapter.#CASH_SESSION_FIELDS,
+      Math.min(Math.max(Number(limit) || 20, 1), 50),
+      0,
+      "closed_at desc, id desc"
+    );
+    return rows.map((row) => this.#mapCashSession(row));
+  }
+
+  async getCashSessionDetail(
+    odooSessionId: string,
+    sessionId: number
+  ): Promise<CashSessionDetailPayload> {
+    const id = Number(sessionId);
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Caja no encontrada");
+    }
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "sg.cash.session",
+      [["id", "=", id]],
+      OdooAdapter.#CASH_SESSION_FIELDS,
+      1,
+      0,
+      "id desc"
+    );
+    if (!rows[0]) {
+      throw new BffError("not_found", 404, "Caja no encontrada");
+    }
+    const session = this.#mapCashSession(rows[0]);
+    const feed = await this.#buildCashFeed(odooSessionId, session);
+    const summary = summarizeCash(session.openingBalance, feed);
+    return { session, summary, feed };
+  }
+
+  async getCashHub(odooSessionId: string): Promise<CashHubPayload> {
+    const [session, history, capabilities] = await Promise.all([
+      this.getOpenCashSession(odooSessionId),
+      this.getCashHistory(odooSessionId, 10),
+      this.#getCashCapabilities(odooSessionId),
+    ]);
+    if (!session) {
+      return {
+        session: null,
+        summary: null,
+        feed: [],
+        history,
+        alerts: [],
+        capabilities,
+        suggestedBankWithdraw: 0,
+      };
+    }
+    const feed = await this.#buildCashFeed(odooSessionId, session);
+    const summary = summarizeCash(session.openingBalance, feed);
+    const alerts = buildCashAlerts({
+      openedAt: session.openedAt,
+      expectedCash: summary.expectedCash,
+      cashThreshold: 100_000,
+      openHoursThreshold: 12,
+      feed,
+    });
+    return {
+      session,
+      summary,
+      feed,
+      history,
+      alerts,
+      capabilities,
+      suggestedBankWithdraw: suggestedBankWithdraw(
+        summary.expectedCash,
+        session.openingBalance
+      ),
+    };
+  }
+
+  async openCashSession(
+    odooSessionId: string,
+    input: { openingBalance: number; note?: string; shift?: string }
+  ): Promise<CashOpenResult> {
+    const openingBalance = Number(input.openingBalance);
+    if (!Number.isFinite(openingBalance) || openingBalance < 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "El monto inicial no puede ser negativo"
+      );
+    }
+    const shift = resolveCashShift(input.shift);
+    if (!shift) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Elegí el turno (mañana, tarde o noche)"
+      );
+    }
+    const existing = await this.getOpenCashSession(odooSessionId);
+    if (existing) {
+      throw new BffError(
+        "validation_error",
+        409,
+        "Ya hay una caja abierta. Cerrala antes de abrir otra."
+      );
+    }
+
+    const note = (input.note || "").trim();
+    try {
+      const created = await this.#callKw<number | number[]>(
+        odooSessionId,
+        "sg.cash.session",
+        "action_open_session",
+        [openingBalance, note || false, shift]
+      );
+      const sessionId = Array.isArray(created)
+        ? Number(created[0])
+        : Number(created);
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "sg.cash.session",
+        [["id", "=", sessionId]],
+        OdooAdapter.#CASH_SESSION_FIELDS,
+        1,
+        0,
+        "id desc"
+      );
+      if (!rows[0]) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo abrir la caja"
+        );
+      }
+      return { session: this.#mapCashSession(rows[0]) };
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se pudo abrir la caja"
+      );
+    }
+  }
+
+  async addCashMovement(
+    odooSessionId: string,
+    input: {
+      kind: "in" | "out";
+      amount: number;
+      motiveCode: string;
+      note?: string;
+    }
+  ): Promise<CashMoveResult> {
+    const session = await this.requireOpenCashSession(odooSessionId);
+    const kind = input.kind === "out" ? "out" : "in";
+    const amount = Number(input.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "El monto debe ser mayor a cero"
+      );
+    }
+    if (kind === "out" && input.motiveCode === "retiro_dueno") {
+      const capabilities = await this.#getCashCapabilities(odooSessionId);
+      if (!capabilities.canOwnerWithdraw) {
+        throw new BffError(
+          "forbidden",
+          403,
+          "Solo un responsable de caja puede registrar retiro del dueño"
+        );
+      }
+    }
+    let reason = "";
+    try {
+      reason = buildCashMovementReason(kind, input.motiveCode, input.note);
+    } catch (cause) {
+      throw new BffError(
+        "validation_error",
+        400,
+        cause instanceof Error ? cause.message : "El motivo no es válido"
+      );
+    }
+
+    try {
+      const id = await this.#callKw<number>(
+        odooSessionId,
+        "sg.cash.movement",
+        "create",
+        [
+          {
+            session_id: session.id,
+            kind,
+            amount,
+            reason,
+          },
+        ]
+      );
+      const fresh = await this.getOpenCashSession(odooSessionId);
+      return {
+        id: Number(id),
+        session: fresh || session,
+      };
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se pudo registrar el movimiento"
+      );
+    }
+  }
+
+  async closeCashSession(
+    odooSessionId: string,
+    input: {
+      countedAmount: number;
+      bankDeposit?: number;
+      leaveFloat?: number;
+      differenceNote?: string;
+    }
+  ): Promise<CashCloseResult> {
+    const session = await this.requireOpenCashSession(odooSessionId);
+    const countedAmount = Number(input.countedAmount);
+    const bankDeposit = Number(input.bankDeposit ?? 0);
+    const leaveFloat = Number(
+      input.leaveFloat ?? countedAmount - bankDeposit
+    );
+    const feed = await this.#buildCashFeed(odooSessionId, session);
+    const summary = summarizeCash(session.openingBalance, feed);
+    const validation = validateCashClose({
+      countedAmount,
+      expectedCash: summary.expectedCash,
+      bankDeposit,
+      leaveFloat,
+      differenceNote: input.differenceNote,
+    });
+    if (!validation.ok) {
+      throw new BffError("validation_error", 400, validation.error);
+    }
+
+    try {
+      await this.#callKw(
+        odooSessionId,
+        "sg.cash.session",
+        "action_close_session",
+        [
+          [session.id],
+          countedAmount,
+          summary.expectedCash,
+          String(input.differenceNote || "").trim() || false,
+          bankDeposit,
+          leaveFloat,
+        ]
+      );
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "sg.cash.session",
+        [["id", "=", session.id]],
+        OdooAdapter.#CASH_SESSION_FIELDS,
+        1,
+        0,
+        "id desc"
+      );
+      if (!rows[0]) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo cerrar la caja"
+        );
+      }
+      return { session: this.#mapCashSession(rows[0]) };
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se pudo cerrar la caja"
+      );
+    }
+  }
+
+  async #getCashCapabilities(
+    odooSessionId: string
+  ): Promise<{ canOwnerWithdraw: boolean }> {
+    let uid = 0;
+    try {
+      const response = await this.#post(
+        "/web/session/get_session_info",
+        { jsonrpc: "2.0", params: {} },
+        odooSessionId
+      );
+      const payload = (await response.json()) as JsonRpcResponse<{
+        uid?: number | false;
+      }>;
+      uid = Number(payload.result?.uid) || 0;
+    } catch {
+      return { canOwnerWithdraw: false };
+    }
+    if (!uid) return { canOwnerWithdraw: false };
+
+    const groups: string[] = [];
+    for (const xmlId of [
+      "account.group_account_manager",
+      "base.group_system",
+    ]) {
+      try {
+        const has = await this.#callKw<boolean>(
+          odooSessionId,
+          "res.users",
+          "has_group",
+          [[uid], xmlId]
+        );
+        if (has) groups.push(xmlId);
+      } catch {
+        // ignore missing group lookups
+      }
+    }
+    return { canOwnerWithdraw: canOwnerWithdraw(groups) };
+  }
+
+  #mapCashSession(row: Record<string, unknown>): CashSessionInfo {
+    const openedBy = Array.isArray(row.opened_by) ? row.opened_by : [];
+    const closedBy = Array.isArray(row.closed_by) ? row.closed_by : [];
+    const shiftRaw = row.shift ? String(row.shift) : "";
+    const shift = resolveCashShift(shiftRaw);
+    return {
+      id: Number(row.id),
+      state: row.state === "closed" ? "closed" : "open",
+      shift: (shift as CashShift | null) || null,
+      openedAt: this.#odooDateToIso(row.opened_at),
+      openedByName: openedBy[1] != null ? String(openedBy[1]) : null,
+      openingBalance: Number(row.opening_balance) || 0,
+      note: row.note ? String(row.note) : null,
+      closedAt: row.closed_at ? this.#odooDateToIso(row.closed_at) : null,
+      closedByName: closedBy[1] != null ? String(closedBy[1]) : null,
+      closingCounted:
+        row.closing_counted == null || row.closing_counted === false
+          ? null
+          : Number(row.closing_counted),
+      closingExpected:
+        row.closing_expected == null || row.closing_expected === false
+          ? null
+          : Number(row.closing_expected),
+      difference:
+        row.difference == null || row.difference === false
+          ? null
+          : Number(row.difference),
+      differenceNote: row.difference_note
+        ? String(row.difference_note)
+        : null,
+      bankDeposit:
+        row.bank_deposit == null || row.bank_deposit === false
+          ? null
+          : Number(row.bank_deposit),
+      leaveFloat:
+        row.leave_float == null || row.leave_float === false
+          ? null
+          : Number(row.leave_float),
+    };
+  }
+
+  #odooDateToIso(value: unknown): string {
+    if (value instanceof Date) return value.toISOString();
+    const raw = String(value || "").trim();
+    if (!raw) return new Date(0).toISOString();
+    if (raw.includes("T")) {
+      const parsed = new Date(raw);
+      return Number.isNaN(parsed.getTime()) ? raw : parsed.toISOString();
+    }
+    const parsed = new Date(raw.replace(" ", "T") + "Z");
+    return Number.isNaN(parsed.getTime())
+      ? raw
+      : parsed.toISOString();
+  }
+
+  #odooDateForDomain(isoOrOdoo: string): string {
+    const iso = this.#odooDateToIso(isoOrOdoo);
+    return iso.replace("T", " ").replace(/\.\d{3}Z$/, "").replace(/Z$/, "");
+  }
+
+  async #buildCashFeed(
+    odooSessionId: string,
+    session: CashSessionInfo
+  ): Promise<CashFeedItemDto[]> {
+    const from = this.#odooDateForDomain(session.openedAt);
+    const to = this.#odooDateForDomain(
+      session.closedAt || new Date().toISOString()
+    );
+    const items: CashFeedItem[] = [];
+
+    const manuals = await this.#searchRead(
+      odooSessionId,
+      "sg.cash.movement",
+      [["session_id", "=", session.id]],
+      ["kind", "amount", "reason", "create_date"],
+      200,
+      0,
+      "create_date desc, id desc"
+    );
+    for (const row of manuals) {
+      const kind = row.kind === "out" ? "manual_out" : "manual_in";
+      items.push({
+        id: `manual-${row.id}`,
+        at: this.#odooDateToIso(row.create_date),
+        kind,
+        medium: "cash",
+        amount: Math.abs(Number(row.amount) || 0),
+        label: String(row.reason || (kind === "manual_out" ? "Egreso" : "Ingreso")),
+        reference: null,
+        href: null,
+      });
+    }
+
+    const posPayments = await this.#searchRead(
+      odooSessionId,
+      "pos.payment",
+      [
+        ["payment_date", ">=", from],
+        ["payment_date", "<=", to],
+      ],
+      ["amount", "payment_date", "payment_method_id", "pos_order_id"],
+      200,
+      0,
+      "payment_date desc, id desc"
+    );
+    const methodIds = [
+      ...new Set(
+        posPayments
+          .map((row) => {
+            const pm = Array.isArray(row.payment_method_id)
+              ? Number(row.payment_method_id[0])
+              : Number(row.payment_method_id);
+            return pm;
+          })
+          .filter((id) => id > 0)
+      ),
+    ];
+    const methodById = new Map<number, { name: string; isCash: boolean }>();
+    if (methodIds.length) {
+      const methods = await this.#searchRead(
+        odooSessionId,
+        "pos.payment.method",
+        [["id", "in", methodIds]],
+        ["name", "is_cash_count"],
+        methodIds.length,
+        0,
+        "id asc"
+      );
+      for (const method of methods) {
+        methodById.set(Number(method.id), {
+          name: String(method.name || "Pago"),
+          isCash: method.is_cash_count === true,
+        });
+      }
+    }
+    for (const row of posPayments) {
+      const pm = Array.isArray(row.payment_method_id)
+        ? row.payment_method_id
+        : [];
+      const methodId = Number(pm[0]) || 0;
+      const method = methodById.get(methodId);
+      const methodName = method?.name || (pm[1] != null ? String(pm[1]) : "Pago");
+      const order = Array.isArray(row.pos_order_id) ? row.pos_order_id : [];
+      const orderId = Number(order[0]) || 0;
+      const orderName = order[1] != null ? String(order[1]) : "Venta POS";
+      items.push({
+        id: `pos-${row.id}`,
+        at: this.#odooDateToIso(row.payment_date),
+        kind: "pos_sale",
+        medium: classifyPosPaymentMedium(Boolean(method?.isCash), methodName),
+        amount: Math.abs(Number(row.amount) || 0),
+        label: `Mostrador · ${localizePaymentMethodName(methodName)}`,
+        reference: orderName,
+        href: orderId > 0 ? `/lists/sales/ventas-caja/${orderId}` : null,
+      });
+    }
+
+    const payments = await this.#searchRead(
+      odooSessionId,
+      "account.payment",
+      [
+        ["state", "=", "paid"],
+        ["date", ">=", from.slice(0, 10)],
+        ["date", "<=", to.slice(0, 10)],
+      ],
+      [
+        "amount",
+        "date",
+        "payment_type",
+        "journal_id",
+        "partner_id",
+        "name",
+        "create_date",
+      ],
+      200,
+      0,
+      "date desc, id desc"
+    );
+    for (const row of payments) {
+      const journal = Array.isArray(row.journal_id) ? row.journal_id : [];
+      const journalName = journal[1] != null ? String(journal[1]) : "";
+      const partner = Array.isArray(row.partner_id) ? row.partner_id : [];
+      const partnerName = partner[1] != null ? String(partner[1]) : "";
+      const inbound = String(row.payment_type || "") === "inbound";
+      items.push({
+        id: `pay-${row.id}`,
+        at: this.#odooDateToIso(row.create_date || row.date),
+        kind: inbound ? "payment_in" : "payment_out",
+        medium: classifyJournalMedium(
+          // journal type not in row; classify by name (cash/caja/banco/tarjeta)
+          /caja|efectivo|cash/i.test(journalName) ? "cash" : "bank",
+          journalName
+        ),
+        amount: Math.abs(Number(row.amount) || 0),
+        label: inbound
+          ? `Cobro${partnerName ? ` · ${partnerName}` : ""}`
+          : `Pago${partnerName ? ` · ${partnerName}` : ""}`,
+        reference: row.name ? String(row.name) : null,
+        href: Number(row.id) > 0 ? `/lists/accounting/payments/${row.id}` : null,
+      });
+    }
+
+    return mergeCashFeed(items) as CashFeedItemDto[];
+  }
+
   async getPosCatalog(
     odooSessionId: string,
     query: { q?: string; limit?: number } = {}
@@ -2460,6 +3154,7 @@ export class OdooAdapter implements BackendClient {
     }
 
     try {
+      await this.requireOpenCashSession(odooSessionId);
       return await this.#checkoutPosOrder(
         odooSessionId,
         clean,
@@ -2468,6 +3163,9 @@ export class OdooAdapter implements BackendClient {
       );
     } catch (cause) {
       if (cause instanceof BffError && cause.code === "unauthorized") throw cause;
+      if (cause instanceof BffError && cause.code === "validation_error") {
+        throw cause;
+      }
       if (cause instanceof BffError && cause.code === "checkout_failed") {
         throw cause;
       }
@@ -2755,13 +3453,12 @@ export class OdooAdapter implements BackendClient {
       "read",
       [[orderId], ["amount_total", "amount_tax"]]
     );
-    const paidTotal = roundCents(
+    let paidTotal = roundCents(
       Number(createdOrder?.amount_total) || amountTotal
     );
-    const paidTax = roundCents(
+    let paidTax = roundCents(
       Number(createdOrder?.amount_tax) || amountTax
     );
-    const paidUntaxed = roundCents(paidTotal - paidTax);
 
     await this.#callKw(odooSessionId, "pos.order", "write", [
       [orderId],
@@ -2780,6 +3477,50 @@ export class OdooAdapter implements BackendClient {
         ],
       },
     ]);
+
+    // Con varias líneas Odoo puede recalcular IVA al escribir el pago
+    // (p.ej. 2363.21 → 2363.22) y action_pos_order_paid falla por 1 centavo.
+    const [afterPay] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "pos.order",
+      "read",
+      [[orderId], ["amount_total", "amount_tax", "amount_paid"]]
+    );
+    const recomputedTotal = roundCents(
+      Number(afterPay?.amount_total) || paidTotal
+    );
+    const currentPaid = roundCents(
+      Number(afterPay?.amount_paid) || paidTotal
+    );
+    if (Math.abs(recomputedTotal - currentPaid) > 0.005) {
+      const payments = await this.#searchRead(
+        odooSessionId,
+        "pos.payment",
+        [["pos_order_id", "=", orderId]],
+        ["amount"],
+        5,
+        0,
+        "id desc"
+      );
+      const paymentId = Number(payments[0]?.id);
+      if (paymentId > 0) {
+        await this.#callKw(odooSessionId, "pos.payment", "write", [
+          [paymentId],
+          { amount: recomputedTotal },
+        ]);
+      }
+      await this.#callKw(odooSessionId, "pos.order", "write", [
+        [orderId],
+        {
+          amount_paid: recomputedTotal,
+          amount_return: 0,
+        },
+      ]);
+      paidTotal = recomputedTotal;
+      paidTax = roundCents(Number(afterPay?.amount_tax) || paidTax);
+    }
+
+    const paidUntaxed = roundCents(paidTotal - paidTax);
 
     await this.#callKw(odooSessionId, "pos.order", "action_pos_order_paid", [
       [orderId],
@@ -3271,6 +4012,18 @@ export class OdooAdapter implements BackendClient {
   #describeRpcError(error: unknown): string {
     if (typeof error === "string") {
       return error;
+    }
+
+    if (error && typeof error === "object") {
+      const data = (error as { data?: { message?: unknown } }).data;
+      const userMessage =
+        data && typeof data.message === "string" ? data.message.trim() : "";
+      if (userMessage) return userMessage;
+      const top =
+        typeof (error as { message?: unknown }).message === "string"
+          ? String((error as { message: string }).message).trim()
+          : "";
+      if (top) return top;
     }
 
     try {

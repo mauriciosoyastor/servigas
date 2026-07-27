@@ -216,3 +216,88 @@ export type PriceListImportApplyResult = {
   updated: number;
   skipped: number;
 };
+
+export type CashSessionState = "open" | "closed";
+export type CashShift = "manana" | "tarde" | "noche";
+
+export type CashSessionInfo = {
+  id: number;
+  state: CashSessionState;
+  shift: CashShift | null;
+  openedAt: string;
+  openedByName: string | null;
+  openingBalance: number;
+  note: string | null;
+  closedAt: string | null;
+  closedByName: string | null;
+  closingCounted: number | null;
+  closingExpected: number | null;
+  difference: number | null;
+  differenceNote: string | null;
+  bankDeposit: number | null;
+  leaveFloat: number | null;
+};
+
+export type CashFeedItemDto = {
+  id: string;
+  at: string;
+  kind:
+    | "pos_sale"
+    | "payment_in"
+    | "payment_out"
+    | "manual_in"
+    | "manual_out";
+  medium: "cash" | "transfer" | "card" | "other";
+  amount: number;
+  label: string;
+  reference?: string | null;
+  href?: string | null;
+};
+
+export type CashSummaryDto = {
+  openingBalance: number;
+  cashIn: number;
+  cashOut: number;
+  expectedCash: number;
+  transferTotal: number;
+  cardTotal: number;
+  movementCount: number;
+};
+
+export type CashAlertDto = {
+  code: "open_too_long" | "high_cash_no_bank";
+  message: string;
+};
+
+export type CashCapabilities = {
+  canOwnerWithdraw: boolean;
+};
+
+export type CashHubPayload = {
+  session: CashSessionInfo | null;
+  summary: CashSummaryDto | null;
+  feed: CashFeedItemDto[];
+  history: CashSessionInfo[];
+  alerts: CashAlertDto[];
+  capabilities: CashCapabilities;
+  suggestedBankWithdraw: number;
+};
+
+export type CashSessionDetailPayload = {
+  session: CashSessionInfo;
+  summary: CashSummaryDto;
+  feed: CashFeedItemDto[];
+};
+
+export type CashOpenResult = {
+  session: CashSessionInfo;
+};
+
+export type CashMoveResult = {
+  id: number;
+  session: CashSessionInfo;
+};
+
+export type CashCloseResult = {
+  session: CashSessionInfo;
+};

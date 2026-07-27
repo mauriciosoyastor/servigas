@@ -363,8 +363,8 @@ describe("BFF API routes", () => {
     cookies.values.set(BFF_COOKIE, bffSid);
     let called = null;
     __setBackendForTests({
-      createInvoiceFromPos: async (sessionId, listKey, id) => {
-        called = { sessionId, listKey, id };
+      createInvoiceFromPos: async (sessionId, listKey, id, options) => {
+        called = { sessionId, listKey, id, options };
         return {
           ok: true,
           id: 88,
@@ -379,7 +379,11 @@ describe("BFF API routes", () => {
         request: new Request("http://localhost/api/records/sales/ventas-caja", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ action: "create_invoice", id: 12 }),
+          body: JSON.stringify({
+            action: "create_invoice",
+            id: 12,
+            partnerId: 6,
+          }),
         }),
       });
       assert.equal(response.status, 200);
@@ -392,6 +396,7 @@ describe("BFF API routes", () => {
         sessionId: "odoo",
         listKey: "sales/ventas-caja",
         id: 12,
+        options: { partnerId: 6 },
       });
     } finally {
       __setBackendForTests(undefined);

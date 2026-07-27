@@ -1,6 +1,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
+  PAYMENT_METHOD_OPTIONS,
   canRegisterPayment,
   filterPaymentRegisterValues,
   getPaymentRegisterDef,
@@ -23,6 +24,23 @@ describe("payment-registers allowlist", () => {
     assert.equal(canRegisterPayment("accounting/drafts"), false);
   });
 
+  it("lists the same payment media as Mostrador", () => {
+    assert.deepEqual(
+      PAYMENT_METHOD_OPTIONS.map((option) => option.label),
+      [
+        "Efectivo",
+        "Transferencia / depósito al banco",
+        "Cuenta corriente",
+        "Débito",
+        "Mercado Pago",
+      ]
+    );
+    assert.deepEqual(
+      PAYMENT_METHOD_OPTIONS.map((option) => option.value),
+      ["cash", "transfer", "account", "debit", "mercadopago"]
+    );
+  });
+
   it("requires payment method and filters optional amount", () => {
     assert.equal(
       filterPaymentRegisterValues("accounting/customer-invoices", {}),
@@ -40,6 +58,18 @@ describe("payment-registers allowlist", () => {
         amount: "150.5",
       }),
       { paymentMethod: "transfer", amount: 150.5 }
+    );
+    assert.deepEqual(
+      filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "mercadopago",
+      }),
+      { paymentMethod: "mercadopago" }
+    );
+    assert.deepEqual(
+      filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "card",
+      }),
+      { paymentMethod: "debit" }
     );
     assert.equal(
       filterPaymentRegisterValues("accounting/customer-invoices", {
@@ -71,10 +101,14 @@ describe("payment-registers allowlist", () => {
       { id: 2, name: "Banco Galicia", type: "bank" },
       { id: 3, name: "Tarjeta Mercado Pago", type: "bank" },
       { id: 4, name: "Transferencias", type: "bank" },
+      { id: 5, name: "Débito", type: "bank" },
+      { id: 6, name: "Cuenta corriente clientes", type: "bank" },
     ];
     assert.equal(pickJournalId("cash", journals), 1);
     assert.equal(pickJournalId("transfer", journals), 4);
-    assert.equal(pickJournalId("card", journals), 3);
+    assert.equal(pickJournalId("mercadopago", journals), 3);
+    assert.equal(pickJournalId("debit", journals), 5);
+    assert.equal(pickJournalId("account", journals), 6);
     assert.equal(pickJournalId("cash", [{ id: 9, name: "Bank", type: "bank" }]), null);
   });
 });

@@ -124,6 +124,13 @@ function orderCols(): RecordListColumnDef[] {
   ];
 }
 
+function posOrderCols(): RecordListColumnDef[] {
+  return [
+    ...orderCols(),
+    { key: "payment_method", label: "Tipo de pago" },
+  ];
+}
+
 function moveCols(
   includeInvoiceDest = false,
   opts?: { due?: boolean; residual?: boolean }
@@ -591,8 +598,15 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     hint: "Ventas registradas en caja — facturá desde la ficha",
     model: "pos.order",
     domain: [],
-    fields: ["name", "partner_id", "date_order", "amount_total", "state"],
-    columns: orderCols(),
+    fields: [
+      "name",
+      "partner_id",
+      "date_order",
+      "amount_total",
+      "state",
+      "payment_method",
+    ],
+    columns: posOrderCols(),
     limit: 50,
     order: "date_order desc",
     hubBack: "/hubs/sales",

@@ -10,7 +10,7 @@ interface Props {
 	label?: string;
 	directionLabel?: string;
 	/** Default medio: cash */
-	defaultPaymentMethod?: 'cash' | 'transfer' | 'card';
+	defaultPaymentMethod?: 'cash' | 'transfer' | 'account' | 'debit' | 'mercadopago';
 }
 
 const {
@@ -74,7 +74,7 @@ const residualHint =
 	</button>
 	<span class="sg-record-pay-status" data-pay-status hidden></span>
 	<p class="sg-record-pay-hint">
-		Elegí el medio (caja/banco). Dejá el monto vacío o igual al saldo para el total; un monto menor es pago parcial.
+		Medios del Mostrador. Dejá el monto vacío o igual al saldo para el total; un monto menor es pago parcial.
 	</p>
 </section>
 

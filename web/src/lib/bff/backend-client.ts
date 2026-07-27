@@ -1,4 +1,10 @@
 import type {
+  CashCloseResult,
+  CashHubPayload,
+  CashMoveResult,
+  CashOpenResult,
+  CashSessionDetailPayload,
+  CashSessionInfo,
   HubPayload,
   LauncherPayload,
   PosCatalogPayload,
@@ -112,7 +118,8 @@ export interface BackendClient {
   createInvoiceFromPos(
     odooSessionId: string,
     listKey: string,
-    id: number
+    id: number,
+    options?: { partnerId?: number }
   ): Promise<{ ok: true; id: number; detailPath: string }>;
   registerPayment(
     odooSessionId: string,
@@ -156,6 +163,43 @@ export interface BackendClient {
     lines: PosCheckoutLine[],
     options?: PosCheckoutOptions
   ): Promise<PosCheckoutResult>;
+  getCashHub(odooSessionId: string): Promise<CashHubPayload>;
+  getCashHistory(
+    odooSessionId: string,
+    limit?: number
+  ): Promise<CashSessionInfo[]>;
+  getCashSessionDetail(
+    odooSessionId: string,
+    sessionId: number
+  ): Promise<CashSessionDetailPayload>;
+  getOpenCashSession(
+    odooSessionId: string
+  ): Promise<CashSessionInfo | null>;
+  requireOpenCashSession(
+    odooSessionId: string
+  ): Promise<CashSessionInfo>;
+  openCashSession(
+    odooSessionId: string,
+    input: { openingBalance: number; note?: string; shift?: string }
+  ): Promise<CashOpenResult>;
+  addCashMovement(
+    odooSessionId: string,
+    input: {
+      kind: "in" | "out";
+      amount: number;
+      motiveCode: string;
+      note?: string;
+    }
+  ): Promise<CashMoveResult>;
+  closeCashSession(
+    odooSessionId: string,
+    input: {
+      countedAmount: number;
+      bankDeposit?: number;
+      leaveFloat?: number;
+      differenceNote?: string;
+    }
+  ): Promise<CashCloseResult>;
   fetchMedia(
     odooSessionId: string,
     model: string,

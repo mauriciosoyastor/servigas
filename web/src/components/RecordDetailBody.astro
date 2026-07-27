@@ -334,13 +334,12 @@ function displayValue(
 						</section>
 					) : null}
 				</section>
-
-				<slot name="secondary" />
 			</div>
 
 			{
-				Astro.slots.has('notes') ? (
+				Astro.slots.has('notes') || Astro.slots.has('secondary') ? (
 					<aside class="sg-ficha-aside">
+						<slot name="secondary" />
 						<slot name="notes" />
 					</aside>
 				) : null
@@ -523,11 +522,6 @@ function displayValue(
 		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.85rem;
-	}
-	.sg-ficha-secondary-actions {
-		display: grid;
-		gap: 0.85rem;
-		margin-top: 0.25rem;
 	}
 	.sg-detail-attachments {
 		display: grid;

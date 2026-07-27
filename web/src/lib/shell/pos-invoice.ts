@@ -19,5 +19,19 @@ export function canCreateInvoiceFromPos(listKey: string): boolean {
 export function isPosOrderReadyToInvoice(
   state: string | null | undefined
 ): boolean {
-  return POS_INVOICEABLE_STATES.has(String(state || "").trim());
+  const raw = String(state || "").trim().toLowerCase();
+  if (POS_INVOICEABLE_STATES.has(raw)) return true;
+  // Labels localizados en ficha (por si llega el texto y no el key).
+  return raw === "pagado" || raw === "hecho" || raw === "done";
+}
+
+/** True when the POS order already has a real customer assigned. */
+export function hasPosOrderPartner(
+  partnerValue: string | number | boolean | null | undefined
+): boolean {
+  if (partnerValue == null || partnerValue === false) return false;
+  if (typeof partnerValue === "number") return partnerValue > 0;
+  const raw = String(partnerValue).trim().toLowerCase();
+  if (!raw || raw === "false" || raw === "no" || raw === "0") return false;
+  return true;
 }

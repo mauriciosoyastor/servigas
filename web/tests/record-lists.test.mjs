@@ -391,6 +391,16 @@ describe("record-lists allowlist", () => {
       "/lists/sales/ventas-caja/:id"
     );
     assert.equal(
+      getRecordListDef("sales/ventas-caja")?.fields.includes("payment_method"),
+      true
+    );
+    assert.equal(
+      getRecordListDef("sales/ventas-caja")?.columns.some(
+        (col) => col.key === "payment_method" && col.label === "Tipo de pago"
+      ),
+      true
+    );
+    assert.equal(
       getRecordListDef("purchase/orders")?.detailPath,
       "/lists/purchase/orders/:id"
     );

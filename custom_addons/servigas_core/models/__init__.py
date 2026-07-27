@@ -6,3 +6,4 @@ from . import res_partner
 from . import account_move
 from . import sg_price_list_import_log
 from . import sg_price_list_import_wizard
+from . import sg_cash_session

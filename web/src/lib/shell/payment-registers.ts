@@ -1,6 +1,8 @@
 /**
  * Allowlisted payment registration from posted invoices (FC/FP).
  * Specs: accounting-ops-prioridad-alta + fc-pdf-payment-method
+ *
+ * Medios alineados al Mostrador (pos.payment.method / labels BFF).
  */
 
 import { resolveRecordListKey } from "./record-lists.ts";
@@ -13,20 +15,32 @@ export type PaymentRegisterDef = {
   expectedMoveTypes: string[];
 };
 
-export type PaymentMethodCode = "cash" | "transfer" | "card";
+/** Codes accepted by register_payment (Mostrador + legacy `card`). */
+export type PaymentMethodCode =
+  | "cash"
+  | "transfer"
+  | "account"
+  | "debit"
+  | "mercadopago"
+  | "card";
 
 export const PAYMENT_METHOD_OPTIONS: ReadonlyArray<{
-  value: PaymentMethodCode;
+  value: Exclude<PaymentMethodCode, "card">;
   label: string;
 }> = [
   { value: "cash", label: "Efectivo" },
-  { value: "transfer", label: "Transferencia" },
-  { value: "card", label: "Tarjeta" },
+  { value: "transfer", label: "Transferencia / depósito al banco" },
+  { value: "account", label: "Cuenta corriente" },
+  { value: "debit", label: "Débito" },
+  { value: "mercadopago", label: "Mercado Pago" },
 ];
 
-const PAYMENT_METHOD_CODES = new Set<PaymentMethodCode>([
+const PAYMENT_METHOD_CODES = new Set<string>([
   "cash",
   "transfer",
+  "account",
+  "debit",
+  "mercadopago",
   "card",
 ]);
 
@@ -87,13 +101,14 @@ export function normalizePaymentMethod(
   const value = String(raw ?? "")
     .trim()
     .toLowerCase();
-  if (PAYMENT_METHOD_CODES.has(value as PaymentMethodCode)) {
-    return value as PaymentMethodCode;
-  }
-  return null;
+  if (!PAYMENT_METHOD_CODES.has(value)) return null;
+  // Legacy UI/API "card" → Débito del Mostrador.
+  if (value === "card") return "debit";
+  return value as PaymentMethodCode;
 }
 
 export function paymentMethodLabel(code: PaymentMethodCode): string {
+  if (code === "card") return "Débito";
   return (
     PAYMENT_METHOD_OPTIONS.find((option) => option.value === code)?.label ||
     code
@@ -108,7 +123,7 @@ export type PaymentRegisterValues = {
 
 /**
  * Filtra monto opcional + medio de pago.
- * - paymentMethod obligatorio (cash|transfer|card)
+ * - paymentMethod obligatorio (códigos Mostrador; `card` se normaliza a debit)
  * - amount opcional (> 0)
  */
 export function filterPaymentRegisterValues(
@@ -131,26 +146,32 @@ export function filterPaymentRegisterValues(
   return out;
 }
 
-/** Preferencias de nombre al elegir diario bank. */
+/** Preferencias de nombre al elegir diario bank/cash. */
 export function journalNameHints(method: PaymentMethodCode): string[] {
   if (method === "transfer") {
-    return ["transferencia", "transfer", "banco"];
+    return ["transferencia", "transfer", "depósito", "deposito", "banco"];
   }
-  if (method === "card") {
-    return ["tarjeta", "card", "credito", "crédito", "debito", "débito"];
+  if (method === "mercadopago") {
+    return ["mercado pago", "mercadopago", "mp"];
+  }
+  if (method === "debit" || method === "card") {
+    return ["débito", "debito", "debit", "tarjeta", "card"];
+  }
+  if (method === "account") {
+    return ["cuenta corriente", "cuenta", "crédito", "credito"];
   }
   return ["efectivo", "caja", "cash"];
 }
 
 /**
  * Elige journal_id entre candidatos {id, name, type}.
- * cash → type cash; transfer/card → type bank con hint de nombre.
+ * cash → type cash; resto → type bank con hint de nombre.
  */
 function pickByNameHints(
   journals: Array<{ id: number; name?: string; type?: string }>,
   hints: string[]
 ): number | null {
-  // Preferir hints en orden (más específicos primero: "transferencia" antes que "banco").
+  // Preferir hints en orden (más específicos primero).
   for (const hint of hints) {
     const match = journals.find((j) =>
       String(j.name || "").toLowerCase().includes(hint)

@@ -17,3 +17,7 @@ access_sg_price_list_import_line_user,sg.price.list.import.line user,model_sg_pr
 access_sg_price_list_import_line_stock_manager,sg.price.list.import.line stock manager,model_sg_price_list_import_line,stock.group_stock_manager,1,1,1,1
 access_sg_price_list_import_log_user,sg.price.list.import.log user,model_sg_price_list_import_log,base.group_user,1,0,0,0
 access_sg_price_list_import_log_stock_manager,sg.price.list.import.log stock manager,model_sg_price_list_import_log,stock.group_stock_manager,1,1,1,0
+access_sg_cash_session_user,sg.cash.session user,model_sg_cash_session,base.group_user,1,1,1,0
+access_sg_cash_session_system,sg.cash.session system,model_sg_cash_session,base.group_system,1,1,1,1
+access_sg_cash_movement_user,sg.cash.movement user,model_sg_cash_movement,base.group_user,1,1,1,0
+access_sg_cash_movement_system,sg.cash.movement system,model_sg_cash_movement,base.group_system,1,1,1,1

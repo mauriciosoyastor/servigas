@@ -51,6 +51,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       id?: unknown;
       items?: unknown;
       values?: Record<string, unknown>;
+      partnerId?: unknown;
     };
     try {
       const parsed = await request.json();
@@ -142,10 +143,18 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
 
     if (action === "create_invoice") {
       if (canCreateInvoiceFromPos(slug)) {
+        const partnerId =
+          body.partnerId != null ? Number(body.partnerId) : undefined;
         const result = await getBackend().createInvoiceFromPos(
           odooSessionId,
           slug,
-          id
+          id,
+          {
+            partnerId:
+              partnerId != null && Number.isFinite(partnerId)
+                ? partnerId
+                : undefined,
+          }
         );
         return json(result);
       }

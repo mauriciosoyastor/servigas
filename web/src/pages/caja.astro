@@ -1,0 +1,819 @@
+---
+import ShellLayout from '../layouts/ShellLayout.astro';
+import { BffError } from '../lib/bff/errors.ts';
+import { getBackend } from '../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
+import type { CashHubPayload } from '../lib/bff/types.ts';
+import { CASH_MOTIVES_IN, CASH_MOTIVES_OUT } from '../lib/caja/cash-motives.ts';
+import { CASH_SHIFTS, filterCashFeed, type CashFeedFilter } from '../lib/caja/cash-ops.ts';
+
+let userName = '';
+let hub: CashHubPayload = {
+	session: null,
+	summary: null,
+	feed: [],
+	history: [],
+	alerts: [],
+	capabilities: { canOwnerWithdraw: false },
+	suggestedBankWithdraw: 0,
+};
+let error = '';
+const filterParam = (Astro.url.searchParams.get('filter') || 'all') as CashFeedFilter;
+const activeFilter: CashFeedFilter = ['all', 'cash', 'transfer', 'card', 'manual'].includes(filterParam)
+	? filterParam
+	: 'all';
+
+try {
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+	try {
+		hub = await getBackend().getCashHub(odooSessionId);
+	} catch (cause) {
+		if (cause instanceof BffError && cause.code === 'unauthorized') {
+			invalidateBffSession(Astro.cookies);
+			return Astro.redirect('/login');
+		}
+		error = 'No pudimos cargar la caja.';
+	}
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+
+const session = hub.session;
+const summary = hub.summary;
+const feed = filterCashFeed(hub.feed, activeFilter);
+const isOpen = session?.state === 'open';
+const outMotives = hub.capabilities.canOwnerWithdraw
+	? CASH_MOTIVES_OUT
+	: CASH_MOTIVES_OUT.filter((m) => m.code !== 'retiro_dueno');
+
+function money(value: number | null | undefined) {
+	return (Number(value) || 0).toLocaleString('es-AR', {
+		style: 'currency',
+		currency: 'ARS',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+}
+
+function kindLabel(kind: string) {
+	switch (kind) {
+		case 'pos_sale':
+			return 'Mostrador';
+		case 'payment_in':
+			return 'Cobro';
+		case 'payment_out':
+			return 'Pago';
+		case 'manual_in':
+			return 'Ingreso';
+		case 'manual_out':
+			return 'Egreso';
+		default:
+			return kind;
+	}
+}
+
+function mediumLabel(medium: string) {
+	switch (medium) {
+		case 'cash':
+			return 'Efectivo';
+		case 'transfer':
+			return 'Transferencia';
+		case 'card':
+			return 'Tarjeta';
+		default:
+			return 'Otro';
+	}
+}
+
+function shiftLabel(shift: string | null | undefined) {
+	return CASH_SHIFTS.find((s) => s.code === shift)?.label || '—';
+}
+
+const filterLinks: { key: CashFeedFilter; label: string }[] = [
+	{ key: 'all', label: 'Todos' },
+	{ key: 'cash', label: 'Efectivo' },
+	{ key: 'transfer', label: 'Transferencia' },
+	{ key: 'card', label: 'Tarjeta' },
+	{ key: 'manual', label: 'Manuales' },
+];
+---
+
+<ShellLayout title="Caja | Servigas" active="sales" userName={userName}>
+	<main
+		class="sg-caja"
+		data-caja-root
+		data-open={isOpen ? '1' : '0'}
+		data-suggested-bank={hub.suggestedBankWithdraw}
+		data-expected={summary?.expectedCash ?? 0}
+	>
+		<header class="sg-caja-heading">
+			<div>
+				<p>{isOpen ? `Sesión abierta · ${shiftLabel(session?.shift)}` : 'Sin sesión'}</p>
+				<h1>Caja</h1>
+			</div>
+			<div class="sg-caja-heading-actions">
+				{isOpen ? (
+					<a class="sg-caja-link sg-focus-ring" href="/pos">Ir al mostrador</a>
+				) : null}
+				<a class="sg-caja-link sg-focus-ring" href="/caja/historial">
+					Historial{hub.history.length ? ` (${hub.history.length})` : ''}
+				</a>
+				<a class="sg-caja-link sg-focus-ring" href="/">Inicio</a>
+			</div>
+		</header>
+
+		{error ? (
+			<section class="sg-caja-state sg-glass" role="alert">
+				<strong>Error</strong>
+				<p>{error}</p>
+			</section>
+		) : null}
+
+		<p class="sg-caja-flash" data-caja-flash hidden></p>
+
+		{hub.alerts.length ? (
+			<section class="sg-caja-alerts" aria-label="Alertas de caja">
+				{hub.alerts.map((alert) => (
+					<p class="sg-caja-alert" data-alert={alert.code}>{alert.message}</p>
+				))}
+			</section>
+		) : null}
+
+		{!isOpen ? (
+			<section class="sg-caja-panel sg-glass" aria-label="Abrir caja">
+				<strong>Abrí la caja para vender</strong>
+				<p>El mostrador queda bloqueado hasta que abras con el monto inicial del cajón.</p>
+				<form class="sg-caja-form" data-caja-open>
+					<label>
+						<span>Monto inicial</span>
+						<input
+							class="sg-focus-ring"
+							type="number"
+							name="openingBalance"
+							min="0"
+							step="0.01"
+							required
+							placeholder="0,00"
+							value={hub.history[0]?.leaveFloat ?? ''}
+						/>
+					</label>
+					<label>
+						<span>Turno</span>
+						<select class="sg-focus-ring" name="shift" required>
+							<option value="">Elegí turno…</option>
+							{CASH_SHIFTS.map((shift) => (
+								<option value={shift.code}>{shift.label}</option>
+							))}
+						</select>
+					</label>
+					<label>
+						<span>Nota (opcional)</span>
+						<input class="sg-focus-ring" type="text" name="note" maxlength="120" placeholder="Observaciones…" />
+					</label>
+					<button class="sg-caja-primary sg-focus-ring" type="submit">Abrir caja</button>
+				</form>
+			</section>
+		) : (
+			<>
+				<section class="sg-caja-status sg-glass" aria-label="Estado de caja">
+					<div>
+						<span class="sg-caja-badge">Abierta · {shiftLabel(session?.shift)}</span>
+						<p>
+							Desde{' '}
+							{session?.openedAt
+								? new Date(session.openedAt).toLocaleString('es-AR')
+								: '—'}
+							{session?.openedByName ? ` · ${session.openedByName}` : ''}
+						</p>
+					</div>
+					<dl class="sg-caja-totals">
+						<div>
+							<dt>Inicial</dt>
+							<dd>{money(summary?.openingBalance)}</dd>
+						</div>
+						<div>
+							<dt>Efectivo entró</dt>
+							<dd>{money(summary?.cashIn)}</dd>
+						</div>
+						<div>
+							<dt>Efectivo salió</dt>
+							<dd>{money(summary?.cashOut)}</dd>
+						</div>
+						<div>
+							<dt>Efectivo esperado</dt>
+							<dd data-caja-expected>{money(summary?.expectedCash)}</dd>
+						</div>
+						<div>
+							<dt>Transferencias</dt>
+							<dd>{money(summary?.transferTotal)}</dd>
+						</div>
+						<div>
+							<dt>Tarjeta</dt>
+							<dd>{money(summary?.cardTotal)}</dd>
+						</div>
+					</dl>
+					{hub.suggestedBankWithdraw > 0 ? (
+						<button
+							type="button"
+							class="sg-caja-secondary sg-focus-ring"
+							data-caja-quick-bank
+							data-amount={hub.suggestedBankWithdraw}
+						>
+							Retiro al banco sugerido ({money(hub.suggestedBankWithdraw)})
+						</button>
+					) : null}
+				</section>
+
+				<section class="sg-caja-actions" aria-label="Acciones de caja">
+					<form class="sg-caja-panel sg-glass" data-caja-move data-kind="in">
+						<strong>Ingreso</strong>
+						<label>
+							<span>Monto</span>
+							<input class="sg-focus-ring" type="number" name="amount" min="0.01" step="0.01" required />
+						</label>
+						<label>
+							<span>Motivo</span>
+							<select class="sg-focus-ring" name="motiveCode" data-caja-motive required>
+								<option value="">Elegí un motivo…</option>
+								{CASH_MOTIVES_IN.map((motive) => (
+									<option value={motive.code} data-requires-note={motive.requiresNote ? '1' : '0'}>
+										{motive.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<label data-caja-note-wrap hidden>
+							<span>Nota</span>
+							<input class="sg-focus-ring" type="text" name="note" maxlength="80" placeholder="Detalle del ingreso" />
+						</label>
+						<button class="sg-caja-secondary sg-focus-ring" type="submit">Registrar ingreso</button>
+					</form>
+					<form class="sg-caja-panel sg-glass" data-caja-move data-kind="out" data-caja-move-out>
+						<strong>Egreso</strong>
+						<label>
+							<span>Monto</span>
+							<input class="sg-focus-ring" type="number" name="amount" min="0.01" step="0.01" required data-caja-out-amount />
+						</label>
+						<label>
+							<span>Motivo</span>
+							<select class="sg-focus-ring" name="motiveCode" data-caja-motive required>
+								<option value="">Elegí un motivo…</option>
+								{outMotives.map((motive) => (
+									<option value={motive.code} data-requires-note={motive.requiresNote ? '1' : '0'}>
+										{motive.label}
+									</option>
+								))}
+							</select>
+						</label>
+						<label data-caja-note-wrap hidden>
+							<span>Nota</span>
+							<input class="sg-focus-ring" type="text" name="note" maxlength="80" placeholder="Detalle del egreso" />
+						</label>
+						<button class="sg-caja-secondary sg-focus-ring" type="submit">Registrar egreso</button>
+					</form>
+					<form class="sg-caja-panel sg-glass" data-caja-close>
+						<strong>Cerrar caja</strong>
+						<p>
+							Esperado: <b data-caja-expected-label>{money(summary?.expectedCash)}</b>
+						</p>
+						<label>
+							<span>Efectivo contado</span>
+							<input
+								class="sg-focus-ring"
+								type="number"
+								name="countedAmount"
+								min="0"
+								step="0.01"
+								required
+								placeholder="0,00"
+								data-caja-counted
+							/>
+						</label>
+						<label>
+							<span>Transferencia / depósito al banco</span>
+							<input
+								class="sg-focus-ring"
+								type="number"
+								name="bankDeposit"
+								min="0"
+								step="0.01"
+								value={hub.suggestedBankWithdraw || 0}
+								data-caja-deposit
+							/>
+						</label>
+						<label>
+							<span>Fondo a dejar</span>
+							<input
+								class="sg-focus-ring"
+								type="number"
+								name="leaveFloat"
+								min="0"
+								step="0.01"
+								value={session?.openingBalance ?? 0}
+								data-caja-float
+							/>
+						</label>
+						<label data-caja-diff-note-wrap hidden>
+							<span>Justificación de diferencia</span>
+							<input
+								class="sg-focus-ring"
+								type="text"
+								name="differenceNote"
+								maxlength="160"
+								placeholder="Explicá el faltante o sobrante"
+								data-caja-diff-note
+							/>
+						</label>
+						<button class="sg-caja-danger sg-focus-ring" type="submit">Cerrar caja</button>
+					</form>
+				</section>
+
+				<section class="sg-caja-feed sg-glass" aria-label="Movimientos">
+					<header>
+						<strong>Movimientos</strong>
+						<span>{feed.length}</span>
+					</header>
+					<nav class="sg-caja-filters" aria-label="Filtros del feed">
+						{filterLinks.map((item) => (
+							<a
+								class:list={['sg-caja-filter', activeFilter === item.key && 'is-active']}
+								href={`/caja?filter=${item.key}`}
+							>
+								{item.label}
+							</a>
+						))}
+					</nav>
+					{feed.length ? (
+						<ul class="sg-caja-feed-list">
+							{feed.map((item) => (
+								<li>
+									<div>
+										<span class="sg-caja-feed-kind">{kindLabel(item.kind)}</span>
+										<span class="sg-caja-feed-medium">{mediumLabel(item.medium)}</span>
+										<p>{item.label}</p>
+										<small>
+											{new Date(item.at).toLocaleString('es-AR')}
+											{item.reference ? ` · ${item.reference}` : ''}
+										</small>
+									</div>
+									<div class="sg-caja-feed-amount">
+										<span class:list={[item.kind.includes('out') && 'is-out']}>
+											{item.kind.includes('out') ? '−' : '+'}
+											{money(item.amount)}
+										</span>
+										{item.href ? (
+											<a class="sg-focus-ring" href={item.href}>Ver</a>
+										) : null}
+									</div>
+								</li>
+							))}
+						</ul>
+					) : (
+						<p class="sg-caja-empty">No hay movimientos para este filtro.</p>
+					)}
+				</section>
+			</>
+		)}
+
+	</main>
+</ShellLayout>
+
+<script>
+	const root = document.querySelector<HTMLElement>('[data-caja-root]');
+	const flash = document.querySelector<HTMLElement>('[data-caja-flash]');
+
+	function showFlash(message: string, isError = false) {
+		if (!flash) return;
+		flash.hidden = false;
+		flash.textContent = message;
+		flash.classList.toggle('is-error', isError);
+	}
+
+	async function postJson(url: string, body: Record<string, unknown>) {
+		const response = await fetch(url, {
+			method: 'POST',
+			headers: { 'content-type': 'application/json' },
+			body: JSON.stringify(body),
+		});
+		const payload = await response.json().catch(() => ({}));
+		if (!response.ok) {
+			const message =
+				payload?.error?.message || 'No se pudo completar la acción';
+			throw new Error(message);
+		}
+		return payload;
+	}
+
+	document.querySelector<HTMLFormElement>('[data-caja-open]')?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const form = event.currentTarget as HTMLFormElement;
+		const data = new FormData(form);
+		try {
+			await postJson('/api/caja/open', {
+				openingBalance: Number(data.get('openingBalance')),
+				note: String(data.get('note') || ''),
+				shift: String(data.get('shift') || ''),
+			});
+			window.location.href = '/caja';
+		} catch (err) {
+			showFlash(err instanceof Error ? err.message : 'Error al abrir', true);
+		}
+	});
+
+	function syncMotiveNote(form: HTMLFormElement) {
+		const select = form.querySelector<HTMLSelectElement>('[data-caja-motive]');
+		const noteWrap = form.querySelector<HTMLElement>('[data-caja-note-wrap]');
+		const noteInput = noteWrap?.querySelector<HTMLInputElement>('input[name="note"]');
+		if (!select || !noteWrap || !noteInput) return;
+		const selected = select.selectedOptions[0];
+		const requiresNote = selected?.dataset.requiresNote === '1';
+		noteWrap.hidden = !requiresNote;
+		noteInput.required = requiresNote;
+		if (!requiresNote) noteInput.value = '';
+	}
+
+	document.querySelectorAll<HTMLFormElement>('[data-caja-move]').forEach((form) => {
+		const select = form.querySelector<HTMLSelectElement>('[data-caja-motive]');
+		select?.addEventListener('change', () => syncMotiveNote(form));
+		syncMotiveNote(form);
+
+		form.addEventListener('submit', async (event) => {
+			event.preventDefault();
+			const data = new FormData(form);
+			try {
+				await postJson('/api/caja/move', {
+					kind: form.dataset.kind,
+					amount: Number(data.get('amount')),
+					motiveCode: String(data.get('motiveCode') || ''),
+					note: String(data.get('note') || ''),
+				});
+				window.location.href = '/caja';
+			} catch (err) {
+				showFlash(err instanceof Error ? err.message : 'Error al registrar', true);
+			}
+		});
+	});
+
+	const closeForm = document.querySelector<HTMLFormElement>('[data-caja-close]');
+	const countedInput = closeForm?.querySelector<HTMLInputElement>('[data-caja-counted]');
+	const depositInput = closeForm?.querySelector<HTMLInputElement>('[data-caja-deposit]');
+	const floatInput = closeForm?.querySelector<HTMLInputElement>('[data-caja-float]');
+	const diffWrap = closeForm?.querySelector<HTMLElement>('[data-caja-diff-note-wrap]');
+	const diffNote = closeForm?.querySelector<HTMLInputElement>('[data-caja-diff-note]');
+	const expected = Number(root?.dataset.expected || 0);
+
+	function syncCloseDiff() {
+		if (!countedInput || !diffWrap || !diffNote) return;
+		const counted = Number(countedInput.value || 0);
+		const needsNote = Math.abs(counted - expected) > 0.01;
+		diffWrap.hidden = !needsNote;
+		diffNote.required = needsNote;
+	}
+	countedInput?.addEventListener('input', syncCloseDiff);
+	syncCloseDiff();
+
+	closeForm?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		const data = new FormData(closeForm);
+		const counted = Number(data.get('countedAmount'));
+		const expectedText =
+			root?.querySelector('[data-caja-expected-label]')?.textContent || '';
+		if (!window.confirm(`¿Cerrar caja?\nContado: ${counted}\nEsperado: ${expectedText}`)) {
+			return;
+		}
+		try {
+			await postJson('/api/caja/close', {
+				countedAmount: counted,
+				bankDeposit: Number(data.get('bankDeposit') || 0),
+				leaveFloat: Number(data.get('leaveFloat') || 0),
+				differenceNote: String(data.get('differenceNote') || ''),
+			});
+			window.location.href = '/caja';
+		} catch (err) {
+			showFlash(err instanceof Error ? err.message : 'Error al cerrar', true);
+		}
+	});
+
+	document.querySelector<HTMLButtonElement>('[data-caja-quick-bank]')?.addEventListener('click', (event) => {
+		const outForm = document.querySelector<HTMLFormElement>('[data-caja-move-out]');
+		const button = (event.currentTarget as HTMLElement) || null;
+		const amount = Number(button?.getAttribute('data-amount') || root?.dataset.suggestedBank || 0);
+		const amountInput = outForm?.querySelector<HTMLInputElement>('[data-caja-out-amount]');
+		const motive = outForm?.querySelector<HTMLSelectElement>('[data-caja-motive]');
+		if (!outForm || !amountInput || !motive) return;
+		amountInput.value = String(amount);
+		motive.value = 'retiro_banco';
+		syncMotiveNote(outForm);
+		amountInput.focus();
+		outForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+	});
+</script>
+
+<style>
+	.sg-caja {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-caja-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.sg-caja-heading p {
+		margin: 0 0 0.45rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-caja-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		font-weight: 600;
+		letter-spacing: -0.04em;
+		line-height: 1.05;
+	}
+	.sg-caja-heading-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+	}
+	.sg-caja-link {
+		display: inline-flex;
+		align-items: center;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		color: var(--sg-text-on-dark);
+		text-decoration: none;
+		font-size: 0.84rem;
+		font-weight: 650;
+	}
+	.sg-caja-state,
+	.sg-caja-panel,
+	.sg-caja-status,
+	.sg-caja-feed {
+		border-radius: var(--sg-radius-card);
+		padding: 1.25rem 1.35rem;
+		margin-bottom: 1rem;
+	}
+	.sg-caja-alerts {
+		display: grid;
+		gap: 0.55rem;
+		margin-bottom: 1rem;
+	}
+	.sg-caja-alert {
+		margin: 0;
+		padding: 0.75rem 1rem;
+		border-radius: var(--sg-radius-pill);
+		border: 1px solid rgba(255, 193, 7, 0.45);
+		background: rgba(255, 193, 7, 0.12);
+		color: #ffe8a3;
+		font-size: 0.88rem;
+		font-weight: 600;
+	}
+	.sg-caja-flash {
+		margin: 0 0 1rem;
+		padding: 0.75rem 1rem;
+		border-radius: var(--sg-radius-pill);
+		background: var(--sg-glass-fill);
+		border: 1px solid var(--sg-glass-border);
+		color: var(--sg-text-on-dark);
+		font-size: 0.88rem;
+	}
+	.sg-caja-flash.is-error {
+		border-color: rgba(220, 80, 60, 0.45);
+		color: #ffc9bc;
+	}
+	.sg-caja-panel strong,
+	.sg-caja-feed header strong {
+		display: block;
+		font-size: 1.05rem;
+		margin-bottom: 0.35rem;
+	}
+	.sg-caja-panel p,
+	.sg-caja-status p {
+		margin: 0 0 1rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	.sg-caja-form,
+	.sg-caja-panel form,
+	[data-caja-move],
+	[data-caja-close] {
+		display: grid;
+		gap: 0.75rem;
+	}
+	.sg-caja-form label,
+	.sg-caja-panel label,
+	[data-caja-move] label,
+	[data-caja-close] label {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-caja-form input,
+	.sg-caja-panel input,
+	.sg-caja-panel select,
+	[data-caja-move] input,
+	[data-caja-move] select,
+	[data-caja-close] input {
+		border-radius: var(--sg-radius-pill);
+		border: 1px solid var(--sg-glass-border);
+		background: rgba(0, 0, 0, 0.18);
+		color: var(--sg-text-on-dark);
+		padding: 0.7rem 0.95rem;
+		font: inherit;
+	}
+	.sg-caja-panel select,
+	[data-caja-move] select,
+	.sg-caja-form select {
+		appearance: none;
+		color-scheme: dark;
+		background-color: #1c1a17;
+		background-image: linear-gradient(45deg, transparent 50%, #f2ebe0 50%),
+			linear-gradient(135deg, #f2ebe0 50%, transparent 50%);
+		background-position:
+			calc(100% - 1.15rem) calc(50% - 0.15rem),
+			calc(100% - 0.85rem) calc(50% - 0.15rem);
+		background-size: 0.35rem 0.35rem, 0.35rem 0.35rem;
+		background-repeat: no-repeat;
+		padding-right: 2rem;
+		color: #f2ebe0;
+	}
+	.sg-caja-panel select option,
+	[data-caja-move] select option,
+	.sg-caja-form select option {
+		background-color: #1c1a17;
+		color: #f2ebe0;
+	}
+	.sg-caja-primary,
+	.sg-caja-secondary,
+	.sg-caja-danger {
+		justify-self: start;
+		border: 0;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.7rem 1.15rem;
+		font: inherit;
+		font-weight: 650;
+		cursor: pointer;
+	}
+	.sg-caja-primary {
+		color: #fff;
+		background: var(--sg-flame-gradient);
+		box-shadow: var(--sg-shadow-flame, 0 12px 28px rgba(230, 74, 25, 0.3));
+	}
+	.sg-caja-secondary {
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		border: 1px solid var(--sg-glass-border);
+	}
+	.sg-caja-danger {
+		color: #fff;
+		background: linear-gradient(135deg, #c62828, #e65100);
+	}
+	.sg-caja-badge {
+		display: inline-flex;
+		margin-bottom: 0.45rem;
+		padding: 0.28rem 0.65rem;
+		border-radius: var(--sg-radius-pill);
+		background: rgba(76, 175, 80, 0.18);
+		border: 1px solid rgba(76, 175, 80, 0.4);
+		color: #b9f6ca;
+		font-size: 0.72rem;
+		font-weight: 700;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+	}
+	.sg-caja-totals {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+		gap: 0.75rem 1rem;
+		margin: 0 0 1rem;
+	}
+	.sg-caja-totals div {
+		display: grid;
+		gap: 0.2rem;
+	}
+	.sg-caja-totals dt {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+	.sg-caja-totals dd {
+		margin: 0;
+		font-size: 1.05rem;
+		font-weight: 650;
+	}
+	.sg-caja-actions {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+		gap: 1rem;
+		margin-bottom: 1rem;
+	}
+	.sg-caja-feed header {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		margin-bottom: 0.85rem;
+	}
+	.sg-caja-feed header span {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+	}
+	.sg-caja-filters {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.45rem;
+		margin-bottom: 0.9rem;
+	}
+	.sg-caja-filter {
+		border-radius: var(--sg-radius-pill);
+		padding: 0.35rem 0.75rem;
+		border: 1px solid var(--sg-glass-border);
+		color: var(--sg-text-muted-dark);
+		text-decoration: none;
+		font-size: 0.75rem;
+		font-weight: 650;
+	}
+	.sg-caja-filter.is-active {
+		color: #fff;
+		background: var(--sg-flame-gradient);
+		border-color: transparent;
+	}
+	.sg-caja-feed-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+	.sg-caja-feed-list li {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+	}
+	.sg-caja-feed-list li:last-child {
+		border-bottom: 0;
+		padding-bottom: 0;
+	}
+	.sg-caja-feed-kind,
+	.sg-caja-feed-medium {
+		display: inline-flex;
+		margin-right: 0.4rem;
+		margin-bottom: 0.25rem;
+		font-size: 0.68rem;
+		font-weight: 700;
+		letter-spacing: 0.03em;
+		text-transform: uppercase;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-caja-feed-list p {
+		margin: 0.15rem 0;
+		font-size: 0.95rem;
+		font-weight: 600;
+	}
+	.sg-caja-feed-list small {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.75rem;
+	}
+	.sg-caja-feed-amount {
+		display: grid;
+		justify-items: end;
+		gap: 0.35rem;
+		font-weight: 700;
+		white-space: nowrap;
+	}
+	.sg-caja-feed-amount .is-out {
+		color: #ffab91;
+	}
+	.sg-caja-feed-amount a {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		text-decoration: none;
+	}
+	.sg-caja-empty {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	@media (max-width: 640px) {
+		.sg-caja-heading {
+			align-items: start;
+			flex-direction: column;
+		}
+		.sg-caja-feed-list li {
+			flex-direction: column;
+		}
+		.sg-caja-feed-amount {
+			justify-items: start;
+		}
+	}
+</style>

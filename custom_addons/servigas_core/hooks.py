@@ -30,9 +30,71 @@ def _ensure_pos_order_discount(env):
         )
 
 
+def _ensure_pos_payment_methods(env):
+    """Medios de pago del Mostrador Astro: agrega Débito / Mercado Pago al config.
+
+    Renombrar Cash/Card/Customer Account falla si hay sesión POS abierta;
+    el BFF ya localiza esos nombres en español.
+    """
+    from odoo.exceptions import UserError
+
+    Method = env["pos.payment.method"]
+    Config = env["pos.config"]
+    bank_journal = env["account.journal"].search(
+        [("type", "=", "bank")], limit=1
+    )
+
+    renames = {
+        "Cash": "Efectivo",
+        "Card": "Transferencia / depósito al banco",
+        "Customer Account": "Cuenta corriente",
+        "Crédito": "Cuenta corriente",
+    }
+    for old_name, new_name in renames.items():
+        rows = Method.search([("name", "=", old_name)])
+        if not rows:
+            continue
+        try:
+            rows.write({"name": new_name})
+        except UserError:
+            # Sesión POS abierta: el label lo resuelve localizePaymentMethodName.
+            pass
+
+    def _get_or_create(name, *, is_cash, journal, split=False):
+        existing = Method.search([("name", "=", name)], limit=1)
+        if existing:
+            return existing
+        vals = {
+            "name": name,
+            "is_cash_count": bool(is_cash),
+            "payment_method_type": "none",
+            "split_transactions": bool(split),
+        }
+        if journal:
+            vals["journal_id"] = journal.id
+        return Method.create(vals)
+
+    # Solo crear medios nuevos; los defaults (Cash/Card/Customer Account) ya existen.
+    methods = Method.browse()
+    methods |= _get_or_create("Débito", is_cash=False, journal=bank_journal)
+    methods |= _get_or_create(
+        "Mercado Pago", is_cash=False, journal=bank_journal
+    )
+
+    for config in Config.search([]):
+        missing = methods - config.payment_method_ids
+        if not missing:
+            continue
+        # Con sesión POS abierta Odoo bloquea cambios; este context lo permite.
+        config.with_context(
+            bypass_payment_method_ids_forbidden_change=True
+        ).write({"payment_method_ids": [(4, m.id) for m in missing]})
+
+
 def post_init_hook(env):
     """Crea tile de Tableros si spreadsheet_dashboard está instalado."""
     _ensure_pos_order_discount(env)
+    _ensure_pos_payment_methods(env)
     module = env["ir.module.module"].search(
         [("name", "=", "spreadsheet_dashboard"), ("state", "=", "installed")],
         limit=1,

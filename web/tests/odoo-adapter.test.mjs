@@ -579,6 +579,60 @@ describe("OdooAdapter.getRecordDetail", () => {
     );
   });
 
+  it("enriches ventas-caja detail with localized payment method", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const method = body?.params?.method;
+      const model = body?.params?.model;
+      if (method === "read" && model === "pos.order") {
+        return Response.json({
+          result: [
+            {
+              id: 43,
+              name: "Mostrador Servigas - 000043",
+              partner_id: [2, "Consumidor Final"],
+              date_order: "2026-07-27 00:16:54",
+              amount_total: 4726.44,
+              state: "paid",
+            },
+          ],
+        });
+      }
+      if (method === "search_read" && model === "pos.payment") {
+        return Response.json({
+          result: [
+            {
+              id: 1,
+              pos_order_id: [43, "Mostrador Servigas - 000043"],
+              payment_method_id: [9, "Customer Account"],
+            },
+          ],
+        });
+      }
+      if (method === "search_read" && model === "pos.order.line") {
+        return Response.json({ result: [] });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const detail = await adapter.getRecordDetail(
+      "sess",
+      "sales/ventas-caja",
+      43
+    );
+    const paymentField = detail.fields.find(
+      (field) => field.key === "payment_method"
+    );
+    assert.ok(paymentField);
+    assert.equal(paymentField.label, "Tipo de pago");
+    assert.equal(paymentField.value, "Cuenta corriente");
+  });
+
   it("loads account.move lines with product display_type domain", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};
@@ -714,7 +768,10 @@ describe("OdooAdapter.getPosCatalog", () => {
     assert.equal(catalog.paymentMethods.length, 2);
     assert.equal(catalog.paymentMethods[0].name, "Efectivo");
     assert.equal(catalog.paymentMethods[1].id, 2);
-    assert.equal(catalog.paymentMethods[1].name, "Transferencia");
+    assert.equal(
+      catalog.paymentMethods[1].name,
+      "Transferencia / depósito al banco"
+    );
 
     const bodies = fetchImpl.mock.calls.map((call) =>
       JSON.parse(call.arguments[1].body)
@@ -738,12 +795,65 @@ describe("OdooAdapter.getPosCatalog", () => {
   });
 });
 
+const OPEN_CASH_SESSION_ROW = {
+  id: 77,
+  name: "Caja test",
+  state: "open",
+  shift: "manana",
+  opened_at: "2026-07-26 10:00:00",
+  opened_by: [2, "Admin"],
+  opening_balance: 1000,
+  note: false,
+  closed_at: false,
+  closed_by: false,
+  closing_counted: false,
+  closing_expected: false,
+  difference: false,
+  difference_note: false,
+  bank_deposit: false,
+  leave_float: false,
+};
+
+function cashHubFetch(handlers = {}) {
+  return mock.fn(async (url, init) => {
+    const path = String(url);
+    if (path.includes("/web/session/get_session_info")) {
+      return Response.json({ result: { uid: 2 } });
+    }
+    const body = init?.body ? JSON.parse(init.body) : {};
+    const model = body?.params?.model;
+    const method = body?.params?.method;
+    if (model === "res.users" && method === "has_group") {
+      return Response.json({ result: true });
+    }
+    if (typeof handlers.handle === "function") {
+      const custom = await handlers.handle(url, init, body);
+      if (custom) return custom;
+    }
+    if (model === "sg.cash.session" && method === "search_read") {
+      const domain = body?.params?.args?.[0] || [];
+      const closed = domain.some(
+        (clause) =>
+          Array.isArray(clause) &&
+          clause[0] === "state" &&
+          clause[2] === "closed"
+      );
+      if (closed) return Response.json({ result: [] });
+      return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+    }
+    return Response.json({ result: [] });
+  });
+}
+
 describe("OdooAdapter.checkoutPosCart", () => {
   it("creates a paid pos.order with selected payment method and discount", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};
       const model = body?.params?.model;
       const method = body?.params?.method;
+      if (model === "sg.cash.session" && method === "search_read") {
+        return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+      }
       if (model === "pos.config" && method === "search_read") {
         return Response.json({
           result: [{ id: 1, name: "Mostrador Servigas" }],
@@ -818,7 +928,10 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(result.detailPath, "/lists/sales/ventas-caja/55");
     assert.equal(result.channel, "pos.order");
     assert.equal(result.paymentMethodId, 2);
-    assert.equal(result.paymentMethodName, "Transferencia");
+    assert.equal(
+      result.paymentMethodName,
+      "Transferencia / depósito al banco"
+    );
     // 180 sin IVA + 21% = 217.80
     assert.equal(result.amountUntaxed, 180);
     assert.equal(result.amountTax, 37.8);
@@ -853,11 +966,130 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.equal(writeCall.params.args[1].amount_paid, 217.8);
   });
 
+  it("resyncs payment when Odoo bumps amount_total by one cent after pay write", async () => {
+    let orderReads = 0;
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "sg.cash.session" && method === "search_read") {
+        return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+      }
+      if (model === "pos.config" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 1, name: "Mostrador Servigas" }],
+        });
+      }
+      if (model === "pos.session" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 4, name: "Mostrador Servigas/00002", state: "opened" }],
+        });
+      }
+      if (model === "product.product" && method === "search_read") {
+        return Response.json({
+          result: [
+            { id: 48, taxes_id: [1] },
+            { id: 50, taxes_id: [1] },
+          ],
+        });
+      }
+      if (model === "account.tax" && method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 1,
+              amount: 15,
+              amount_type: "percent",
+              price_include: false,
+              type_tax_use: "sale",
+            },
+          ],
+        });
+      }
+      if (model === "pos.payment.method" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 1, name: "Cash", is_cash_count: true }],
+        });
+      }
+      if (model === "pos.order" && method === "create") {
+        return Response.json({ result: 88 });
+      }
+      if (model === "pos.order" && method === "write") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.payment" && method === "search_read") {
+        return Response.json({ result: [{ id: 9, amount: 2363.21 }] });
+      }
+      if (model === "pos.payment" && method === "write") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.order" && method === "action_pos_order_paid") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.order" && method === "read") {
+        const fields = body?.params?.args?.[1] || [];
+        if (Array.isArray(fields) && fields.includes("amount_total")) {
+          orderReads += 1;
+          if (orderReads === 1) {
+            return Response.json({
+              result: [{ id: 88, amount_total: 2363.21, amount_tax: 308.24 }],
+            });
+          }
+          return Response.json({
+            result: [
+              {
+                id: 88,
+                amount_total: 2363.22,
+                amount_tax: 308.25,
+                amount_paid: 2363.21,
+              },
+            ],
+          });
+        }
+        return Response.json({
+          result: [{ id: 88, name: "Mostrador Servigas - 000088" }],
+        });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.checkoutPosCart(
+      "sess",
+      [
+        { productId: 48, qty: 1, price: 1375.54, discount: 0 },
+        { productId: 50, qty: 1, price: 679.43, discount: 0 },
+      ],
+      { paymentMethodId: 1 }
+    );
+    assert.equal(result.orderId, 88);
+    assert.equal(result.amountTotal, 2363.22);
+
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    assert.ok(
+      bodies.some(
+        (body) =>
+          body.params?.model === "pos.payment" &&
+          body.params?.method === "write" &&
+          body.params?.args?.[1]?.amount === 2363.22
+      )
+    );
+  });
+
   it("fails loud when POS session cannot open and never creates sale.order", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};
       const model = body?.params?.model;
       const method = body?.params?.method;
+      if (model === "sg.cash.session" && method === "search_read") {
+        return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+      }
       if (model === "pos.config" && method === "search_read") {
         return Response.json({
           result: [{ id: 1, name: "Mostrador Servigas" }],
@@ -914,11 +1146,47 @@ describe("OdooAdapter.checkoutPosCart", () => {
     assert.ok(!models.includes("res.partner"));
   });
 
+  it("rejects checkout when cash session is closed", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "sg.cash.session" && method === "search_read") {
+        return Response.json({ result: [] });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.checkoutPosCart("sess", [
+          { productId: 42, qty: 1, price: 100, discount: 0 },
+        ]),
+      (error) =>
+        error?.code === "validation_error" &&
+        /Abrí la caja/i.test(error?.message || "")
+    );
+
+    const models = fetchImpl.mock.calls.map((call) => {
+      const body = JSON.parse(call.arguments[1].body);
+      return body.params?.model;
+    });
+    assert.ok(!models.includes("pos.order"));
+  });
+
   it("attaches an optional customer partner_id on pos.order create", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = init?.body ? JSON.parse(init.body) : {};
       const model = body?.params?.model;
       const method = body?.params?.method;
+      if (model === "sg.cash.session" && method === "search_read") {
+        return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+      }
       if (model === "pos.config" && method === "search_read") {
         return Response.json({
           result: [{ id: 1, name: "Mostrador Servigas" }],
@@ -990,6 +1258,215 @@ describe("OdooAdapter.checkoutPosCart", () => {
         body.params?.model === "pos.order" && body.params?.method === "create"
     );
     assert.equal(createCall.params.args[0].partner_id, 9);
+  });
+});
+
+describe("OdooAdapter cash session", () => {
+  it("returns empty hub when no open session", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        if (body?.params?.model === "sg.cash.session") {
+          return Response.json({ result: [] });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const hub = await adapter.getCashHub("sess");
+    assert.equal(hub.session, null);
+    assert.equal(hub.summary, null);
+    assert.deepEqual(hub.feed, []);
+    assert.deepEqual(hub.history, []);
+    assert.deepEqual(hub.alerts, []);
+    assert.equal(hub.suggestedBankWithdraw, 0);
+    assert.equal(hub.capabilities.canOwnerWithdraw, true);
+  });
+
+  it("opens a cash session and builds feed summary", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          const domain = body?.params?.args?.[0] || [];
+          const closed = domain.some(
+            (clause) =>
+              Array.isArray(clause) &&
+              clause[0] === "state" &&
+              clause[2] === "closed"
+          );
+          if (closed) return Response.json({ result: [] });
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.cash.session" && method === "action_open_session") {
+          return Response.json({ result: 77 });
+        }
+        if (model === "sg.cash.movement" && method === "search_read") {
+          return Response.json({
+            result: [
+              {
+                id: 1,
+                kind: "out",
+                amount: 500,
+                reason: "Retiro al banco",
+                create_date: "2026-07-26 11:00:00",
+              },
+            ],
+          });
+        }
+        if (model === "pos.payment" && method === "search_read") {
+          return Response.json({
+            result: [
+              {
+                id: 9,
+                amount: 1200,
+                payment_date: "2026-07-26 10:30:00",
+                payment_method_id: [1, "Cash"],
+                pos_order_id: [55, "POS-55"],
+              },
+            ],
+          });
+        }
+        if (model === "pos.payment.method" && method === "search_read") {
+          return Response.json({
+            result: [{ id: 1, name: "Cash", is_cash_count: true }],
+          });
+        }
+        if (model === "account.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    // First search_read for existing open returns empty once, then open
+    let openChecks = 0;
+    const gatedFetch = mock.fn(async (url, init) => {
+      const path = String(url);
+      if (path.includes("/web/session/get_session_info")) {
+        return Response.json({ result: { uid: 2 } });
+      }
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body?.params?.model;
+      const method = body?.params?.method;
+      if (model === "res.users" && method === "has_group") {
+        return Response.json({ result: true });
+      }
+      if (model === "sg.cash.session" && method === "search_read") {
+        openChecks += 1;
+        if (openChecks === 1) return Response.json({ result: [] });
+        return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+      }
+      return fetchImpl(url, init);
+    });
+    const openAdapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: gatedFetch,
+    });
+    const opened = await openAdapter.openCashSession("sess", {
+      openingBalance: 1000,
+      shift: "manana",
+    });
+    assert.equal(opened.session.id, 77);
+    assert.equal(opened.session.state, "open");
+    assert.equal(opened.session.shift, "manana");
+
+    const hub = await adapter.getCashHub("sess");
+    assert.equal(hub.session?.id, 77);
+    assert.equal(hub.summary?.openingBalance, 1000);
+    assert.equal(hub.summary?.cashIn, 1200);
+    assert.equal(hub.summary?.cashOut, 500);
+    assert.equal(hub.summary?.expectedCash, 1700);
+    assert.equal(hub.suggestedBankWithdraw, 700);
+    assert.ok(hub.feed.some((item) => item.kind === "pos_sale"));
+    assert.ok(hub.feed.some((item) => item.kind === "manual_out"));
+  });
+
+  it("loads closed session detail and rejects close without difference note", async () => {
+    const closedRow = {
+      ...OPEN_CASH_SESSION_ROW,
+      state: "closed",
+      closed_at: "2026-07-26 18:00:00",
+      closed_by: [2, "Admin"],
+      closing_counted: 990,
+      closing_expected: 1000,
+      difference: -10,
+      difference_note: "Faltante",
+      bank_deposit: 500,
+      leave_float: 490,
+    };
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [closedRow] });
+        }
+        if (model === "sg.cash.movement" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "pos.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "account.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const detail = await adapter.getCashSessionDetail("sess", 77);
+    assert.equal(detail.session.state, "closed");
+    assert.equal(detail.session.differenceNote, "Faltante");
+    assert.equal(detail.session.bankDeposit, 500);
+
+    const openFetch = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.cash.movement" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "pos.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        if (model === "account.payment" && method === "search_read") {
+          return Response.json({ result: [] });
+        }
+        return null;
+      },
+    });
+    const openAdapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: openFetch,
+    });
+    await assert.rejects(
+      () =>
+        openAdapter.closeCashSession("sess", {
+          countedAmount: 990,
+          bankDeposit: 0,
+          leaveFloat: 990,
+        }),
+      (error) => /justific/i.test(error?.message || "")
+    );
   });
 });
 
@@ -1434,6 +1911,76 @@ describe("OdooAdapter.createInvoiceFromPos", () => {
       (err) =>
         err?.code === "validation_error" &&
         /cliente/.test(String(err?.message || ""))
+    );
+  });
+
+  it("assigns partnerId before invoicing a paid pos.order without customer", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = init?.body ? JSON.parse(init.body) : {};
+      const model = body.params?.model;
+      const method = body.params?.method;
+      if (model === "pos.order" && method === "read") {
+        return Response.json({
+          result: [
+            {
+              id: 12,
+              name: "POS/00012",
+              partner_id: false,
+              state: "paid",
+              amount_total: 200,
+              account_move: false,
+            },
+          ],
+        });
+      }
+      if (model === "res.partner" && method === "search_read") {
+        return Response.json({
+          result: [{ id: 6, name: "Consumidor Final" }],
+        });
+      }
+      if (model === "pos.order" && method === "write") {
+        return Response.json({ result: true });
+      }
+      if (model === "pos.order.line" && method === "search_read") {
+        return Response.json({
+          result: [
+            {
+              id: 1,
+              product_id: [42, "Repuesto"],
+              qty: 1,
+              price_unit: 200,
+              discount: 0,
+            },
+          ],
+        });
+      }
+      if (model === "account.move" && method === "create") {
+        return Response.json({ result: 91 });
+      }
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.createInvoiceFromPos(
+      "sess",
+      "sales/ventas-caja",
+      12,
+      { partnerId: 6 }
+    );
+    assert.equal(result.id, 91);
+    const bodies = fetchImpl.mock.calls.map((call) =>
+      JSON.parse(call.arguments[1].body)
+    );
+    assert.ok(
+      bodies.some(
+        (body) =>
+          body.params?.model === "pos.order" &&
+          body.params?.method === "write" &&
+          body.params?.args?.[1]?.partner_id === 6
+      )
     );
   });
 });

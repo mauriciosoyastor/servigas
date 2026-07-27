@@ -1,0 +1,374 @@
+---
+import ShellLayout from '../../layouts/ShellLayout.astro';
+import { BffError } from '../../lib/bff/errors.ts';
+import { getBackend } from '../../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
+import type { CashSessionDetailPayload } from '../../lib/bff/types.ts';
+import { CASH_SHIFTS } from '../../lib/caja/cash-ops.ts';
+
+const id = Number(Astro.params.id);
+let userName = '';
+let detail: CashSessionDetailPayload | null = null;
+let error = '';
+
+try {
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+	try {
+		detail = await getBackend().getCashSessionDetail(odooSessionId, id);
+	} catch (cause) {
+		if (cause instanceof BffError && cause.code === 'unauthorized') {
+			invalidateBffSession(Astro.cookies);
+			return Astro.redirect('/login');
+		}
+		if (cause instanceof BffError && cause.code === 'not_found') {
+			error = 'No encontramos esa sesión de caja.';
+		} else {
+			error = 'No pudimos cargar el detalle de caja.';
+		}
+	}
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+
+function money(value: number | null | undefined) {
+	return (Number(value) || 0).toLocaleString('es-AR', {
+		style: 'currency',
+		currency: 'ARS',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+}
+
+function kindLabel(kind: string) {
+	switch (kind) {
+		case 'pos_sale':
+			return 'Mostrador';
+		case 'payment_in':
+			return 'Cobro';
+		case 'payment_out':
+			return 'Pago';
+		case 'manual_in':
+			return 'Ingreso';
+		case 'manual_out':
+			return 'Egreso';
+		default:
+			return kind;
+	}
+}
+
+function mediumLabel(medium: string) {
+	switch (medium) {
+		case 'cash':
+			return 'Efectivo';
+		case 'transfer':
+			return 'Transferencia';
+		case 'card':
+			return 'Tarjeta';
+		default:
+			return 'Otro';
+	}
+}
+
+const shiftLabel =
+	CASH_SHIFTS.find((s) => s.code === detail?.session.shift)?.label || '—';
+---
+
+<ShellLayout title={`Caja #${id} | Servigas`} active="sales" userName={userName}>
+	<main class="sg-caja-detail" data-caja-detail>
+		<header class="sg-caja-detail-heading no-print">
+			<div>
+				<p>Detalle de sesión</p>
+				<h1>Caja #{id}</h1>
+			</div>
+			<div class="sg-caja-detail-actions">
+				<button class="sg-caja-print sg-focus-ring" type="button" data-caja-print>Imprimir / PDF</button>
+				<a class="sg-caja-back sg-focus-ring" href="/caja/historial">Historial</a>
+				<a class="sg-caja-back sg-focus-ring" href="/caja">Volver a caja</a>
+			</div>
+		</header>
+
+		{error ? (
+			<section class="sg-caja-detail-card sg-glass" role="alert">
+				<strong>Error</strong>
+				<p>{error}</p>
+			</section>
+		) : detail ? (
+			<article class="sg-caja-detail-print">
+				<header class="sg-caja-detail-print-head">
+					<strong>Servigas · Cierre de caja</strong>
+					<span>#{detail.session.id}</span>
+				</header>
+
+				<section class="sg-caja-detail-card sg-glass">
+					<dl class="sg-caja-detail-grid">
+						<div>
+							<dt>Estado</dt>
+							<dd>{detail.session.state === 'closed' ? 'Cerrada' : 'Abierta'}</dd>
+						</div>
+						<div>
+							<dt>Turno</dt>
+							<dd>{shiftLabel}</dd>
+						</div>
+						<div>
+							<dt>Apertura</dt>
+							<dd>
+								{detail.session.openedAt
+									? new Date(detail.session.openedAt).toLocaleString('es-AR')
+									: '—'}
+							</dd>
+						</div>
+						<div>
+							<dt>Cierre</dt>
+							<dd>
+								{detail.session.closedAt
+									? new Date(detail.session.closedAt).toLocaleString('es-AR')
+									: '—'}
+							</dd>
+						</div>
+						<div>
+							<dt>Abrió</dt>
+							<dd>{detail.session.openedByName || '—'}</dd>
+						</div>
+						<div>
+							<dt>Cerró</dt>
+							<dd>{detail.session.closedByName || '—'}</dd>
+						</div>
+						<div>
+							<dt>Inicial</dt>
+							<dd>{money(detail.session.openingBalance)}</dd>
+						</div>
+						<div>
+							<dt>Contado</dt>
+							<dd>{money(detail.session.closingCounted)}</dd>
+						</div>
+						<div>
+							<dt>Esperado</dt>
+							<dd>{money(detail.session.expectedCash)}</dd>
+						</div>
+						<div>
+							<dt>Diferencia</dt>
+							<dd>{money(detail.session.difference)}</dd>
+						</div>
+						<div>
+							<dt>Transferencia / depósito al banco</dt>
+							<dd>{money(detail.session.bankDeposit)}</dd>
+						</div>
+						<div>
+							<dt>Fondo dejado</dt>
+							<dd>{money(detail.session.leaveFloat)}</dd>
+						</div>
+					</dl>
+					{detail.session.differenceNote ? (
+						<p class="sg-caja-detail-note">
+							<strong>Nota de diferencia:</strong> {detail.session.differenceNote}
+						</p>
+					) : null}
+					{detail.session.note ? (
+						<p class="sg-caja-detail-note">
+							<strong>Nota de apertura:</strong> {detail.session.note}
+						</p>
+					) : null}
+				</section>
+
+				<section class="sg-caja-detail-card sg-glass">
+					<strong>Resumen</strong>
+					<dl class="sg-caja-detail-grid">
+						<div>
+							<dt>Efectivo entró</dt>
+							<dd>{money(detail.summary.cashIn)}</dd>
+						</div>
+						<div>
+							<dt>Efectivo salió</dt>
+							<dd>{money(detail.summary.cashOut)}</dd>
+						</div>
+						<div>
+							<dt>Transferencias</dt>
+							<dd>{money(detail.summary.transferTotal)}</dd>
+						</div>
+						<div>
+							<dt>Tarjeta</dt>
+							<dd>{money(detail.summary.cardTotal)}</dd>
+						</div>
+					</dl>
+				</section>
+
+				<section class="sg-caja-detail-card sg-glass">
+					<strong>Movimientos ({detail.feed.length})</strong>
+					{detail.feed.length ? (
+						<table class="sg-caja-detail-table">
+							<thead>
+								<tr>
+									<th>Fecha</th>
+									<th>Tipo</th>
+									<th>Medio</th>
+									<th>Detalle</th>
+									<th>Monto</th>
+								</tr>
+							</thead>
+							<tbody>
+								{detail.feed.map((item) => (
+									<tr>
+										<td>{new Date(item.at).toLocaleString('es-AR')}</td>
+										<td>{kindLabel(item.kind)}</td>
+										<td>{mediumLabel(item.medium)}</td>
+										<td>
+											{item.label}
+											{item.reference ? ` · ${item.reference}` : ''}
+										</td>
+										<td class:list={[item.kind.includes('out') && 'is-out']}>
+											{item.kind.includes('out') ? '−' : '+'}
+											{money(item.amount)}
+										</td>
+									</tr>
+								))}
+							</tbody>
+						</table>
+					) : (
+						<p>Sin movimientos en esta sesión.</p>
+					)}
+				</section>
+			</article>
+		) : null}
+	</main>
+</ShellLayout>
+
+<script>
+	document.querySelector('[data-caja-print]')?.addEventListener('click', () => {
+		window.print();
+	});
+</script>
+
+<style>
+	.sg-caja-detail {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-caja-detail-heading {
+		display: flex;
+		justify-content: space-between;
+		align-items: end;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.sg-caja-detail-heading p {
+		margin: 0 0 0.45rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+	}
+	.sg-caja-detail-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3rem);
+		letter-spacing: -0.04em;
+	}
+	.sg-caja-detail-actions {
+		display: flex;
+		gap: 0.55rem;
+		flex-wrap: wrap;
+	}
+	.sg-caja-print,
+	.sg-caja-back {
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		color: var(--sg-text-on-dark);
+		font: inherit;
+		font-weight: 650;
+		text-decoration: none;
+		cursor: pointer;
+	}
+	.sg-caja-print {
+		border: 0;
+		color: #fff;
+		background: var(--sg-flame-gradient);
+	}
+	.sg-caja-detail-card {
+		border-radius: var(--sg-radius-card);
+		padding: 1.25rem 1.35rem;
+		margin-bottom: 1rem;
+	}
+	.sg-caja-detail-card > strong {
+		display: block;
+		margin-bottom: 0.85rem;
+		font-size: 1.05rem;
+	}
+	.sg-caja-detail-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+		gap: 0.85rem 1rem;
+		margin: 0;
+	}
+	.sg-caja-detail-grid dt {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+		font-weight: 600;
+	}
+	.sg-caja-detail-grid dd {
+		margin: 0.2rem 0 0;
+		font-weight: 650;
+	}
+	.sg-caja-detail-note {
+		margin: 1rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	.sg-caja-detail-table {
+		width: 100%;
+		border-collapse: collapse;
+		font-size: 0.85rem;
+	}
+	.sg-caja-detail-table th,
+	.sg-caja-detail-table td {
+		text-align: left;
+		padding: 0.55rem 0.4rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+		vertical-align: top;
+	}
+	.sg-caja-detail-table th {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.72rem;
+		text-transform: uppercase;
+		letter-spacing: 0.03em;
+	}
+	.sg-caja-detail-table .is-out {
+		color: #ffab91;
+		font-weight: 700;
+	}
+	.sg-caja-detail-print-head {
+		display: none;
+	}
+	@media print {
+		:global(body) {
+			background: #fff !important;
+			color: #111 !important;
+		}
+		:global(.sg-shell-nav),
+		:global(.sg-shell-aside),
+		.no-print {
+			display: none !important;
+		}
+		.sg-caja-detail-print-head {
+			display: flex;
+			justify-content: space-between;
+			margin-bottom: 1rem;
+			font-size: 1.1rem;
+		}
+		.sg-caja-detail-card {
+			background: transparent !important;
+			border: 1px solid #ddd;
+			box-shadow: none !important;
+			color: #111;
+			break-inside: avoid;
+		}
+		.sg-caja-detail-grid dt,
+		.sg-caja-detail-note,
+		.sg-caja-detail-table th {
+			color: #555;
+		}
+		.sg-caja-detail-table .is-out {
+			color: #b71c1c;
+		}
+	}
+</style>

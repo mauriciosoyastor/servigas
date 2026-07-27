@@ -1,0 +1,198 @@
+---
+import ShellLayout from '../../layouts/ShellLayout.astro';
+import { BffError } from '../../lib/bff/errors.ts';
+import { getBackend } from '../../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
+import type { CashSessionInfo } from '../../lib/bff/types.ts';
+import { CASH_SHIFTS } from '../../lib/caja/cash-ops.ts';
+
+let userName = '';
+let history: CashSessionInfo[] = [];
+let error = '';
+
+try {
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+	try {
+		history = await getBackend().getCashHistory(odooSessionId, 50);
+	} catch (cause) {
+		if (cause instanceof BffError && cause.code === 'unauthorized') {
+			invalidateBffSession(Astro.cookies);
+			return Astro.redirect('/login');
+		}
+		error = 'No pudimos cargar el historial de caja.';
+	}
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+
+function money(value: number | null | undefined) {
+	return (Number(value) || 0).toLocaleString('es-AR', {
+		style: 'currency',
+		currency: 'ARS',
+		minimumFractionDigits: 2,
+		maximumFractionDigits: 2,
+	});
+}
+
+function shiftLabel(shift: string | null | undefined) {
+	return CASH_SHIFTS.find((s) => s.code === shift)?.label || '—';
+}
+---
+
+<ShellLayout title="Historial de caja | Servigas" active="sales" userName={userName}>
+	<main class="sg-caja-hist">
+		<header class="sg-caja-hist-heading">
+			<div>
+				<p>Cajas cerradas</p>
+				<h1>Historial</h1>
+			</div>
+			<div class="sg-caja-hist-actions">
+				<a class="sg-caja-hist-link sg-focus-ring" href="/caja">Caja</a>
+				<a class="sg-caja-hist-link sg-focus-ring" href="/">Inicio</a>
+			</div>
+		</header>
+
+		{error ? (
+			<section class="sg-caja-hist-card sg-glass" role="alert">
+				<strong>Error</strong>
+				<p>{error}</p>
+			</section>
+		) : (
+			<section class="sg-caja-hist-card sg-glass" aria-label="Historial de cajas">
+				<header>
+					<strong>Sesiones</strong>
+					<span>{history.length}</span>
+				</header>
+				{history.length ? (
+					<ul class="sg-caja-hist-list">
+						{history.map((item) => (
+							<li>
+								<div>
+									<p>
+										{shiftLabel(item.shift)} ·{' '}
+										{item.closedAt
+											? new Date(item.closedAt).toLocaleString('es-AR')
+											: '—'}
+									</p>
+									<small>
+										Inicial {money(item.openingBalance)} · Contado{' '}
+										{money(item.closingCounted)} · Diff {money(item.difference)}
+									</small>
+								</div>
+								<a class="sg-caja-hist-link sg-focus-ring" href={`/caja/${item.id}`}>
+									Ver detalle
+								</a>
+							</li>
+						))}
+					</ul>
+				) : (
+					<p class="sg-caja-hist-empty">Todavía no hay cajas cerradas.</p>
+				)}
+			</section>
+		)}
+	</main>
+</ShellLayout>
+
+<style>
+	.sg-caja-hist {
+		max-width: 78rem;
+		margin: 0 auto;
+	}
+	.sg-caja-hist-heading {
+		display: flex;
+		align-items: end;
+		justify-content: space-between;
+		gap: 1rem;
+		margin-bottom: 1.25rem;
+	}
+	.sg-caja-hist-heading p {
+		margin: 0 0 0.45rem;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+		font-weight: 500;
+	}
+	.sg-caja-hist-heading h1 {
+		margin: 0;
+		font-size: clamp(2rem, 4vw, 3.2rem);
+		font-weight: 600;
+		letter-spacing: -0.04em;
+		line-height: 1.05;
+	}
+	.sg-caja-hist-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+	}
+	.sg-caja-hist-link {
+		display: inline-flex;
+		align-items: center;
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.9rem;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		color: var(--sg-text-on-dark);
+		text-decoration: none;
+		font-size: 0.84rem;
+		font-weight: 650;
+	}
+	.sg-caja-hist-card {
+		border-radius: var(--sg-radius-card);
+		padding: 1.25rem 1.35rem;
+	}
+	.sg-caja-hist-card > header {
+		display: flex;
+		justify-content: space-between;
+		align-items: baseline;
+		margin-bottom: 0.85rem;
+	}
+	.sg-caja-hist-card > header strong {
+		font-size: 1.05rem;
+	}
+	.sg-caja-hist-card > header span {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.78rem;
+	}
+	.sg-caja-hist-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.75rem;
+	}
+	.sg-caja-hist-list li {
+		display: flex;
+		justify-content: space-between;
+		gap: 1rem;
+		padding-bottom: 0.75rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+	}
+	.sg-caja-hist-list li:last-child {
+		border-bottom: 0;
+		padding-bottom: 0;
+	}
+	.sg-caja-hist-list p {
+		margin: 0.15rem 0;
+		font-size: 0.95rem;
+		font-weight: 600;
+	}
+	.sg-caja-hist-list small {
+		color: var(--sg-text-muted-dark);
+		font-size: 0.75rem;
+	}
+	.sg-caja-hist-empty {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.9rem;
+	}
+	@media (max-width: 640px) {
+		.sg-caja-hist-heading {
+			align-items: start;
+			flex-direction: column;
+		}
+		.sg-caja-hist-list li {
+			flex-direction: column;
+		}
+	}
+</style>

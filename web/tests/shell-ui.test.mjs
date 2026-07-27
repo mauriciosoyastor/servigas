@@ -88,6 +88,9 @@ describe("shell UI contracts", () => {
     assert.match(index, /resolveTileNavigation/);
     assert.match(index, /sg-ops-strip/);
     assert.match(index, /data-tour=["']ops-strip["']/);
+    assert.match(index, /href=["']\/pos["'][^>]*>\s*Mostrador/);
+    assert.match(index, /href=["']\/caja["'][^>]*>\s*Caja/);
+    assert.doesNotMatch(index, /Caja \/ Mostrador/);
     assert.match(index, /href="\/pos"/);
     assert.match(index, /quotations\/new/);
     assert.match(index, /solicitudes\/new/);
@@ -113,6 +116,48 @@ describe("shell UI contracts", () => {
     assert.match(hub, /accentIndex=/);
     assert.match(hub, /resolveTileNavigation/);
     assert.match(hub, /destination\.kind === ['"]list['"]/);
+    assert.match(hub, /Ir al mostrador/);
+    assert.doesNotMatch(hub, /Ir a la caja/);
+  });
+
+  it("renders cash hub with open/move/close seams", async () => {
+    const page = await source("pages/caja.astro");
+    assert.match(page, /getCashHub\(/);
+    assert.match(page, /data-caja-root/);
+    assert.match(page, /data-caja-open/);
+    assert.match(page, /data-caja-move/);
+    assert.match(page, /data-caja-close/);
+    assert.match(page, /data-caja-motive/);
+    assert.match(page, /CASH_MOTIVES_IN/);
+    assert.match(page, /CASH_MOTIVES_OUT/);
+    assert.match(page, /data-caja-note-wrap/);
+    assert.match(page, /motiveCode/);
+    assert.match(page, /name="shift"/);
+    assert.match(page, /CASH_SHIFTS/);
+    assert.match(page, /filterCashFeed/);
+    assert.match(page, /sg-caja-filters/);
+    assert.match(page, /href=["']\/caja\/historial["']/);
+    assert.match(page, /Historial/);
+    assert.match(page, /sg-caja-alerts/);
+    const historyPage = await source("pages/caja/historial.astro");
+    assert.match(historyPage, /getCashHistory/);
+    assert.match(historyPage, /Ver detalle/);
+    assert.match(page, /data-caja-quick-bank/);
+    assert.match(page, /data-caja-diff-note/);
+    assert.match(page, /bankDeposit/);
+    assert.match(page, /leaveFloat/);
+    assert.match(page, /retiro_dueno/);
+    const motives = await source("lib/caja/cash-motives.ts");
+    assert.match(motives, /devolucion_cliente/);
+    assert.match(motives, /refuerzo/);
+    assert.match(page, /\/api\/caja\/open/);
+    assert.match(page, /\/api\/caja\/move/);
+    assert.match(page, /\/api\/caja\/close/);
+    assert.match(page, /Efectivo esperado/);
+    const detail = await source("pages/caja/[id].astro");
+    assert.match(detail, /getCashSessionDetail/);
+    assert.match(detail, /data-caja-print/);
+    assert.match(detail, /window\.print/);
   });
 
   it("renders allowlisted lists from the BFF with search toolbar", async () => {
@@ -149,7 +194,10 @@ describe("shell UI contracts", () => {
 
   it("renders POS caja with catalog BFF and cart controls", async () => {
     const page = await source("pages/pos.astro");
+    assert.match(page, /getOpenCashSession\(/);
     assert.match(page, /getPosCatalog\(/);
+    assert.match(page, /<h1>Mostrador<\/h1>/);
+    assert.match(page, /Abrí la caja primero/);
     assert.match(page, /data-pos-caja/);
     assert.match(page, /data-tour=["']pos-ticket["']/);
     assert.match(page, /data-tour=["']pos-checkout["']/);
@@ -424,6 +472,10 @@ describe("shell UI contracts", () => {
       "pages/lists/accounting/customer-invoices/[id].astro"
     );
     const posDetail = await source("pages/lists/sales/ventas-caja/[id].astro");
+    assert.match(posDetail, /data-pos-invoice/);
+    assert.match(posDetail, /Facturar/);
+    assert.match(posDetail, /Usar Consumidor Final/);
+    assert.match(posDetail, /partnerId/);
     const vendorNcNew = await source(
       "pages/lists/accounting/vendor-refunds/new.astro"
     );
@@ -446,8 +498,9 @@ describe("shell UI contracts", () => {
     assert.match(recordTable, /data-fw-row-number/);
     assert.match(listPage, /fwNumberInput/);
     assert.match(invoiceDetail, /RecordMarkFwLoadedControl/);
-    assert.match(posDetail, /RecordCreateInvoiceControl/);
     assert.match(posDetail, /isPosOrderReadyToInvoice/);
+    assert.match(posDetail, /hasPosOrderPartner/);
+    assert.doesNotMatch(posDetail, /RecordCreateInvoiceControl/);
     assert.match(vendorNcNew, /vendor-refunds/);
     assert.match(vendorNcNew, /purchase\/vendors/);
     assert.match(vendorNcDetail, /RecordConfirmControl/);
@@ -654,7 +707,7 @@ describe("shell UI contracts", () => {
     );
   });
 
-  it("densifies ficha fields and reserves aside only when notes exist", async () => {
+  it("densifies ficha fields and reserves aside for notes or secondary actions", async () => {
     const css = await source("styles/list.css");
     const body = await source("components/RecordDetailBody.astro");
 
@@ -675,7 +728,14 @@ describe("shell UI contracts", () => {
       /@media\s*\(max-width:\s*720px\)[\s\S]*\.sg-detail-fields\s*\{[^}]*grid-template-columns:\s*1fr/s
     );
     assert.match(body, /Astro\.slots\.has\(['"]notes['"]\)/);
+    assert.match(body, /Astro\.slots\.has\(['"]secondary['"]\)/);
     assert.match(body, /sg-ficha-aside/);
+    assert.match(css, /\.sg-ficha-action\s*\{/);
+    assert.match(css, /\.sg-ficha-secondary-actions\s*\{/);
+    assert.match(
+      await source("pages/lists/accounting/customer-invoices/[id].astro"),
+      /sg-ficha-action/
+    );
   });
 
   it("densifies shared create pages to ficha frame width", async () => {
