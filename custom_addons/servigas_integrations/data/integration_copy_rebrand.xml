@@ -4,7 +4,7 @@
     <data noupdate="0">
         <record id="integration_factura_web" model="servigas.integration">
             <field name="description">Puente manual entre Servigas y Factura Web para la facturación fiscal temporal.</field>
-            <field name="process_notes">1) Abrí Contabilidad → Pendientes Factura Web. 2) Exportá el CSV y cargá cada FC en Factura Web (tipo sugerido: CF → B/C; CUIT → A/B). 3) En la ficha de la FC, marcá «Cargada en Factura Web» (podés anotar el n°). Planilla de respaldo: datos/import/planilla_puente_factura_web.xlsx. El tipo final lo confirma AFIP/l10n_ar.</field>
+            <field name="process_notes">1) Abrí Cobros → Pendientes Factura Web. 2) Exportá el CSV y cargá cada factura de cliente en Factura Web (tipo sugerido: CF → B/C; CUIT → A/B). 3) En la ficha de la factura, marcá «Cargada en Factura Web» (podés anotar el n°). Planilla de respaldo: datos/import/planilla_puente_factura_web.xlsx. El tipo final lo confirma AFIP/l10n_ar.</field>
         </record>
     </data>
 </odoo>

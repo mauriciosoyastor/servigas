@@ -33,7 +33,7 @@ describe("invoice-draft-edit helpers", () => {
       imageUrl: null,
       fields: [
         { key: "partner_id", label: "Cliente", value: "Pérez" },
-        { key: "partner_ref_id", label: "Partner ref", value: 6 },
+        { key: "partner_ref_id", label: "Ref. contacto", value: 6 },
         { key: "state", label: "Estado", value: "draft" },
       ],
       lines: {

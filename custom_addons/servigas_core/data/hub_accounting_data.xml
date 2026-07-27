@@ -107,7 +107,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">45</field>
             <field name="label">Pendientes Factura Web</field>
-            <field name="hint">FC publicadas sin cargar en Factura Web</field>
+            <field name="hint">Facturas de cliente publicadas sin cargar en Factura Web</field>
             <field name="icon">fa-external-link</field>
             <field name="variant">warning</field>
             <field name="enter_label">Exportar / marcar →</field>
@@ -123,7 +123,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">50</field>
             <field name="label">Facturado hoy</field>
-            <field name="hint">Total FC publicadas hoy</field>
+            <field name="hint">Total facturas de cliente publicadas hoy</field>
             <field name="icon">fa-line-chart</field>
             <field name="enter_label">Ver facturas →</field>
             <field name="action_id" ref="account.action_move_out_invoice"/>
@@ -158,7 +158,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">5</field>
             <field name="label">Vencidas por cobrar</field>
-            <field name="hint">FC con fecha de vencimiento pasada</field>
+            <field name="hint">Facturas de cliente con vencimiento pasado</field>
             <field name="icon">fa-exclamation-triangle</field>
             <field name="variant">warning</field>
             <field name="enter_label">Ver vencidas →</field>
@@ -175,7 +175,7 @@
             <field name="section">receivables</field>
             <field name="sequence">6</field>
             <field name="label">Vence hoy por cobrar</field>
-            <field name="hint">FC que vencen hoy</field>
+            <field name="hint">Facturas de cliente que vencen hoy</field>
             <field name="icon">fa-calendar-check-o</field>
             <field name="variant">warning</field>
             <field name="enter_label">Ver →</field>
@@ -192,7 +192,7 @@
             <field name="section">receivables</field>
             <field name="sequence">7</field>
             <field name="label">Vence esta semana por cobrar</field>
-            <field name="hint">FC con vencimiento en los próximos 7 días</field>
+            <field name="hint">Facturas de cliente con vencimiento en los próximos 7 días</field>
             <field name="icon">fa-calendar</field>
             <field name="enter_label">Ver →</field>
             <field name="action_id" ref="account.action_move_out_invoice"/>
@@ -229,7 +229,7 @@
             <field name="app">accounting</field>
             <field name="section">receivables</field>
             <field name="sequence">30</field>
-            <field name="label">Borradores FC</field>
+            <field name="label">Borradores de facturas</field>
             <field name="icon">fa-pencil</field>
             <field name="variant">warning</field>
             <field name="action_id" ref="account.action_move_out_invoice"/>

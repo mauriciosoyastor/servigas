@@ -4,7 +4,9 @@
 export const POS_CONFIG_KANBAN_ACTION = "point_of_sale.action_pos_config_kanban";
 
 export function isPosLauncherTile(tile) {
-    return Boolean(tile && tile.label === "Punto de venta");
+    if (!tile) return false;
+    const label = String(tile.label || "");
+    return label === "Mostrador" || label === "Punto de venta";
 }
 
 export function isPosMenuReloadAction(action) {

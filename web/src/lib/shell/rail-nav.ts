@@ -2,6 +2,8 @@
  * Primary shell rail — work-of-the-day navigation (opción B).
  */
 
+import { AREA_LABELS } from "./ui-glossary.ts";
+
 export type RailApp =
   | "home"
   | "pos"
@@ -21,37 +23,37 @@ export type RailItem = {
 export const RAIL_ITEMS: readonly RailItem[] = [
   {
     app: "home",
-    label: "Inicio",
+    label: AREA_LABELS.home,
     href: "/",
     icon: "M4 10.5 12 4l8 6.5V20h-5v-6H9v6H4z",
   },
   {
     app: "pos",
-    label: "Mostrador",
+    label: AREA_LABELS.pos,
     href: "/pos",
     icon: "M4 7h16v12H4zm3 3h2m2 0h2m2 0h2M8 17h8",
   },
   {
     app: "caja",
-    label: "Caja",
+    label: AREA_LABELS.caja,
     href: "/caja",
     icon: "M3 7h18v12H3zm3 4h3m3 0h3m3 0h3M7 16h10",
   },
   {
     app: "inventory",
-    label: "Stock",
+    label: AREA_LABELS.inventory,
     href: "/hubs/inventory",
     icon: "m4 7 8-4 8 4-8 4zm0 4 8 4 8-4M4 15l8 4 8-4",
   },
   {
     app: "purchase",
-    label: "Compras",
+    label: AREA_LABELS.purchase,
     href: "/hubs/purchase",
     icon: "M6 8h12l1 12H5zm3 0V6a3 3 0 0 1 6 0v2",
   },
   {
     app: "accounting",
-    label: "Cobros",
+    label: AREA_LABELS.accounting,
     href: "/hubs/accounting",
     icon: "M4 19V9m5 10V5m6 14v-7m5 7V3",
   },

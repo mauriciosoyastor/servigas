@@ -53,7 +53,7 @@
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">10</field>
             <field name="label">Pedidos confirmados</field>
-            <field name="hint">Órdenes en estado venta</field>
+            <field name="hint">Pedidos en estado venta</field>
             <field name="icon">fa-check-circle</field>
             <field name="enter_label">Ver pedidos →</field>
             <field name="action_id" ref="sale.action_orders"/>
@@ -114,7 +114,7 @@
             <field name="label">Ventas de hoy</field>
             <field name="hint">Pedidos de mostrador del día</field>
             <field name="icon">fa-desktop</field>
-            <field name="enter_label">Ver POS →</field>
+            <field name="enter_label">Ver ventas de caja →</field>
             <field name="action_id" ref="point_of_sale.action_pos_pos_form"/>
             <field name="metric_model">pos.order</field>
             <field name="metric_domain">[('state', 'in', ('paid', 'done'))]</field>
@@ -173,11 +173,12 @@
             <field name="metric_aggregate">count</field>
         </record>
 
-        <!-- Cards — Pedidos -->
+        <!-- Cards — Pedidos (Cotizaciones vive en su pestaña; no duplicar acá) -->
         <record id="hub_card_sales_orders_quotations" model="sg.hub.card">
             <field name="app">sales</field>
             <field name="section">orders</field>
             <field name="sequence">10</field>
+            <field name="active" eval="False"/>
             <field name="label">Cotizaciones</field>
             <field name="icon">fa-file-text-o</field>
             <field name="action_id" ref="sale.action_quotations_with_onboarding"/>
@@ -200,7 +201,7 @@
             <field name="app">sales</field>
             <field name="section">orders</field>
             <field name="sequence">40</field>
-            <field name="label">A facturar</field>
+            <field name="label">Por facturar</field>
             <field name="icon">fa-money</field>
             <field name="action_id" ref="sale.action_orders_to_invoice"/>
             <field name="metric_model">sale.order</field>
@@ -211,7 +212,7 @@
             <field name="app">sales</field>
             <field name="section">orders</field>
             <field name="sequence">50</field>
-            <field name="label">Oportunidades upsell</field>
+            <field name="label">Pedidos con venta pendiente</field>
             <field name="icon">fa-level-up</field>
             <field name="action_id" ref="sale.action_orders_upselling"/>
             <field name="metric_model">sale.order</field>
@@ -222,7 +223,7 @@
             <field name="app">sales</field>
             <field name="section">orders</field>
             <field name="sequence">60</field>
-            <field name="label">Pedidos POS</field>
+            <field name="label">Ventas de caja</field>
             <field name="hint">Historial mostrador</field>
             <field name="icon">fa-desktop</field>
             <field name="action_id" ref="point_of_sale.action_pos_pos_form"/>

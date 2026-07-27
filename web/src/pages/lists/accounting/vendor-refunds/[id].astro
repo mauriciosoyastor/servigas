@@ -32,12 +32,12 @@ const showPublish = isConfirmableState('accounting/vendor-refunds', state);
 const showResetCancel = isInvoiceLifecycleReady(state, paymentState);
 ---
 
-<ShellLayout title={`${detail?.title || 'NC proveedor'} | Servigas`} active="accounting" userName={userName}>
+<ShellLayout title={`${detail?.title || 'Nota de crédito proveedor'} | Servigas`} active="accounting" userName={userName}>
 	<RecordDetailBody
 		detail={detail}
 		error={error}
-		eyebrow="Ficha de NC proveedor"
-		fallbackTitle="NC proveedor"
+		eyebrow="Ficha de nota de crédito proveedor"
+		fallbackTitle="Nota de crédito proveedor"
 		fallbackListPath="/lists/accounting/vendor-refunds"
 		recordId={id}
 	>

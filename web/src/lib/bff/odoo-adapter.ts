@@ -841,7 +841,7 @@ export class OdooAdapter implements BackendClient {
       if (partnerRef > 0) {
         detailFields.push({
           key: "partner_ref_id",
-          label: "Partner ref",
+          label: "Ref. contacto",
           value: partnerRef,
         });
       }
@@ -2365,7 +2365,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "action_failed",
         409,
-        "No se pudo reservar stock para validar la transferencia"
+        "No se pudo reservar stock para validar el movimiento"
       );
     }
 
@@ -2415,7 +2415,7 @@ export class OdooAdapter implements BackendClient {
       throw new BffError(
         "action_failed",
         409,
-        "La validación no completó la transferencia (puede requerir asistente en Odoo)"
+        "La validación no completó el movimiento (puede requerir asistente en Odoo)"
       );
     }
     return { ok: true, state: afterState };

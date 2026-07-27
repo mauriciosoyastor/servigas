@@ -197,6 +197,53 @@ describe("record-lists allowlist", () => {
     );
   });
 
+  it("maps stock.picking hub labels to movimiento list paths", () => {
+    assert.equal(
+      resolveRecordListPath(
+        {
+          type: "ir.actions.act_window",
+          res_model: "stock.picking",
+          domain: [],
+        },
+        { label: "Todos los movimientos" }
+      ),
+      "/lists/inventory/transfers-all"
+    );
+    assert.equal(
+      resolveRecordListPath(
+        {
+          type: "ir.actions.act_window",
+          res_model: "stock.picking",
+          domain: [],
+        },
+        { label: "Movimientos de stock" }
+      ),
+      "/lists/inventory/transfers"
+    );
+    assert.equal(
+      resolveRecordListPath(
+        {
+          type: "ir.actions.act_window",
+          res_model: "stock.picking",
+          domain: [],
+        },
+        { label: "Movimientos internos" }
+      ),
+      "/lists/inventory/transfers"
+    );
+  });
+
+  it("exposes movimiento titles for transfer list defs", () => {
+    assert.equal(
+      getRecordListDef("inventory/transfers")?.title,
+      "Movimientos de stock"
+    );
+    assert.equal(
+      getRecordListDef("inventory/transfers-all")?.title,
+      "Todos los movimientos"
+    );
+  });
+
   it("maps sales summary cards", () => {
     assert.equal(
       resolveRecordListPath({

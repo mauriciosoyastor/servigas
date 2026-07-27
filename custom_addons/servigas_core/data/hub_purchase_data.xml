@@ -13,7 +13,7 @@
         <record id="hub_section_purchase_orders" model="sg.hub.section">
             <field name="app">purchase</field>
             <field name="code">orders</field>
-            <field name="name">Órdenes</field>
+            <field name="name">Pedidos</field>
             <field name="icon">fa-file-text</field>
             <field name="sequence">2</field>
         </record>
@@ -60,7 +60,7 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">20</field>
-            <field name="label">Pedidos abiertos</field>
+            <field name="label">Pedidos a proveedor</field>
             <field name="hint">Borradores + enviados</field>
             <field name="icon">fa-file-text-o</field>
             <field name="enter_label">Ver pedidos →</field>
@@ -141,7 +141,7 @@
             <field name="app">purchase</field>
             <field name="section">orders</field>
             <field name="sequence">10</field>
-            <field name="label">Pedidos abiertos</field>
+            <field name="label">Pedidos a proveedor</field>
             <field name="icon">fa-file-text-o</field>
             <field name="action_id" ref="purchase.purchase_rfq"/>
             <field name="metric_model">purchase.order</field>

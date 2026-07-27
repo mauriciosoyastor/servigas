@@ -20,7 +20,7 @@ const STATE_LABELS: Record<string, string> = {
   in_payment: "En proceso",
   not_paid: "No pagado",
   reversed: "Revertido",
-  to_invoice: "A facturar",
+  to_invoice: "Por facturar",
   purchase: "Orden de compra",
   to_approve: "A aprobar",
 };

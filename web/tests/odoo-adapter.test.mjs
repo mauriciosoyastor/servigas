@@ -462,7 +462,7 @@ describe("OdooAdapter.getRecordDetail", () => {
     assert.equal(detail.listPath, "/lists/sales/orders");
     assert.equal(detail.imageUrl, null);
     const partner = detail.fields.find((field) => field.key === "partner_id");
-    assert.equal(partner?.label, "Contacto");
+    assert.equal(partner?.label, "Cliente");
     assert.equal(partner?.value, "Cliente Demo");
     assert.equal(detail.lines?.title, "Líneas");
     assert.equal(detail.lines?.rows.length, 1);

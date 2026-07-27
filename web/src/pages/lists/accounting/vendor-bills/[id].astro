@@ -36,12 +36,12 @@ const showPay = isPaymentRegisterableState(state, paymentState);
 const showResetCancel = isInvoiceLifecycleReady(state, paymentState);
 ---
 
-<ShellLayout title={`${detail?.title || 'Factura proveedor'} | Servigas`} active="accounting" userName={userName}>
+<ShellLayout title={`${detail?.title || 'Factura de proveedor'} | Servigas`} active="accounting" userName={userName}>
 	<RecordDetailBody
 		detail={detail}
 		error={error}
 		eyebrow="Ficha de factura de proveedor"
-		fallbackTitle="Factura proveedor"
+		fallbackTitle="Factura de proveedor"
 		fallbackListPath="/lists/accounting/vendor-bills"
 		recordId={id}
 	>

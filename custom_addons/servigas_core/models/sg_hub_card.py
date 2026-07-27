@@ -14,10 +14,10 @@ class SgHubCard(models.Model):
 
     app = fields.Selection(
         [
-            ("inventory", "Inventario"),
+            ("inventory", "Stock"),
             ("sales", "Ventas"),
             ("purchase", "Compras"),
-            ("accounting", "Facturación"),
+            ("accounting", "Cobros"),
         ],
         required=True,
         index=True,
@@ -252,11 +252,27 @@ class SgHubCard(models.Model):
         """Force-update inventory hub copy (noupdate XML cards)."""
         updates = {
             "servigas_core.hub_card_inv_summary_variants": {
-                "label": "Ítems de stock",
-                "enter_label": "Ver ítems →",
+                "label": "Variantes",
+                "enter_label": "Ver variantes →",
             },
             "servigas_core.hub_card_inv_products_variants": {
-                "label": "Ítems de stock",
+                "label": "Variantes",
+            },
+            "servigas_core.hub_card_inv_summary_transfers": {
+                "label": "Movimientos de stock",
+                "enter_label": "Ver movimientos →",
+            },
+            "servigas_core.hub_card_inv_ops_all": {
+                "label": "Todos los movimientos",
+            },
+            "servigas_core.hub_card_inv_ops_internal": {
+                "label": "Movimientos internos",
+            },
+            "servigas_core.hub_card_inv_ops_quants": {
+                "label": "Existencias",
+            },
+            "servigas_core.hub_card_inv_report_replenish": {
+                "label": "Reglas de reabastecimiento",
             },
         }
         for xmlid, values in updates.items():
@@ -321,10 +337,26 @@ class SgHubCard(models.Model):
             # Redundant with Cotizaciones (draft ⊂ draft+sent).
             "servigas_core.hub_card_sales_quotations_draft": {"active": False},
             "servigas_core.hub_card_sales_orders_draft": {"active": False},
+            # Cotizaciones ya tiene su pestaña; no repetir en Pedidos.
+            "servigas_core.hub_card_sales_orders_quotations": {"active": False},
             "servigas_core.hub_card_sales_summary_quotations": {
                 "label": "Cotizaciones",
                 "hint": "Borradores y enviadas",
                 "enter_label": "Ver cotizaciones →",
+            },
+            "servigas_core.hub_card_sales_summary_confirmed": {
+                "hint": "Pedidos en estado venta",
+            },
+            "servigas_core.hub_card_sales_orders_to_invoice": {
+                "label": "Por facturar",
+            },
+            "servigas_core.hub_card_sales_orders_upselling": {
+                "label": "Pedidos con venta pendiente",
+            },
+            "servigas_core.hub_card_sales_orders_pos": {
+                "label": "Ventas de caja",
+                "hint": "Historial mostrador",
+                "enter_label": "Ver ventas de caja →",
             },
         }
         for xmlid, values in updates.items():
@@ -347,14 +379,19 @@ class SgHubCard(models.Model):
     @api.model
     def apply_purchase_hub_copy(self):
         """Force-update purchase hub copy (noupdate XML cards)."""
+        section = self.env.ref(
+            "servigas_core.hub_section_purchase_orders", raise_if_not_found=False
+        )
+        if section and section.name != "Pedidos":
+            section.write({"name": "Pedidos"})
         updates = {
             "servigas_core.hub_card_purchase_summary_rfq": {
-                "label": "Pedidos abiertos",
+                "label": "Pedidos a proveedor",
                 "hint": "Borradores + enviados",
                 "enter_label": "Ver pedidos →",
             },
             "servigas_core.hub_card_purchase_orders_rfq": {
-                "label": "Pedidos abiertos",
+                "label": "Pedidos a proveedor",
             },
             "servigas_core.hub_card_purchase_orders_draft": {
                 "label": "Borradores",

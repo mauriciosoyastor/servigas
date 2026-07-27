@@ -129,17 +129,19 @@ describe("resolveTileNavigation", () => {
     assert.deepEqual(nav, { kind: "list", path: "/lists/sales/analysis" });
   });
 
-  it("routes Punto de venta launcher tile to POS landing", () => {
-    const nav = resolveTileNavigation({
-      target_type: "action",
-      client_tag: "",
-      label: "Punto de venta",
-      action: {
-        type: "ir.actions.act_window",
-        res_model: "pos.config",
-      },
-    });
-    assert.deepEqual(nav, { kind: "route", path: "/pos" });
+  it("routes Mostrador / Punto de venta launcher tiles to POS landing", () => {
+    for (const label of ["Mostrador", "Punto de venta"]) {
+      const nav = resolveTileNavigation({
+        target_type: "action",
+        client_tag: "",
+        label,
+        action: {
+          type: "ir.actions.act_window",
+          res_model: "pos.config",
+        },
+      });
+      assert.deepEqual(nav, { kind: "route", path: "/pos" });
+    }
   });
 
   it("routes Apps and Ajustes launcher tiles to landings", () => {

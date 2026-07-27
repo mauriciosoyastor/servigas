@@ -99,17 +99,17 @@ describe("onboarding smoke", () => {
         assert.ok(!steps.some((s) => s.phase === "B" || s.phase === "C"));
     });
 
-    it("findTourTarget matches Punto de venta by label text", () => {
+    it("findTourTarget matches Mostrador (or legacy Punto de venta) by label text", () => {
         const nodes = {
             ".sg-rail__app": [
                 { textContent: "Ventas" },
-                { textContent: "Punto de venta" },
+                { textContent: "Mostrador" },
             ],
             ".sg-launcher-tile": [],
         };
         const queryAll = (sel) => nodes[sel] || [];
         const el = findTourTarget(queryAll, "tile.punto_de_venta");
-        assert.equal(el.textContent, "Punto de venta");
+        assert.equal(el.textContent, "Mostrador");
     });
 
     it("hub.kpi_card resolves only to KPI tiles inside the hub shell", () => {
