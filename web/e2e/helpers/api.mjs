@@ -424,3 +424,56 @@ export async function seedVendorBillDraft(request) {
   const { partnerId, productId } = await pickVendorAndProduct(request);
   return createVendorBillDraft(request, partnerId, productId);
 }
+
+/**
+ * Confirms a quotation via API (state=sale). Same id is the sale order.
+ * @param {import('@playwright/test').APIRequestContext} request
+ * @param {number} quotationId
+ */
+export async function confirmQuotation(request, quotationId) {
+  const { res, body, status } = await json(
+    request,
+    "/api/records/sales/quotations",
+    {
+      method: "POST",
+      data: JSON.stringify({ action: "confirm", id: quotationId }),
+    }
+  );
+  if (!res.ok() || !(body.state === "sale" || body.ok === true)) {
+    throw new Error(
+      `confirm quotation failed ${status} ${JSON.stringify(body).slice(0, 300)}`
+    );
+  }
+  return {
+    id: quotationId,
+    detailPath: `/lists/sales/orders/${quotationId}`,
+    body,
+  };
+}
+
+/**
+ * Seed: pedido confirmado listo para Crear FC (API).
+ * @param {import('@playwright/test').APIRequestContext} request
+ */
+export async function seedConfirmedSaleOrder(request) {
+  const { partnerId, productId } = await pickPartnerAndProduct(request);
+  const quotation = await createQuotation(request, partnerId, productId);
+  return confirmQuotation(request, quotation.id);
+}
+
+/** 1×1 PNG bytes for file uploads in browser. */
+export function tinyPngBuffer() {
+  return Buffer.from(TINY_PNG_B64, "base64");
+}
+
+/** CSV that creates a unique product via price-list import. */
+export function uniqueCreateProductCsv() {
+  const stamp = Date.now();
+  const code = `E2E-${stamp}`;
+  const barcode = `779${String(stamp).slice(-10)}`;
+  const name = `E2E Import ${stamp}`;
+  const csv =
+    "barcode,default_code,name,list_price,standard_price\n" +
+    `${barcode},${code},${name},1234.00,500.00\n`;
+  return { csv, code, barcode, name };
+}
