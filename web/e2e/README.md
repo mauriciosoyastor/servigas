@@ -39,9 +39,13 @@ Specs actuales:
 - `hub-tile-nav` — tile Ventas → `/hubs/sales`
 - `pos-checkout` — producto + `[data-pos-checkout]`
 - `caja-move` — Abrir (si cerrada) + Ingreso refuerzo
-- `caja-close` — Cerrar caja (confirm + POST `/api/caja/close`)
+- `caja-close` / `caja-close-diff` — Cerrar caja (sin/con diferencia)
 - `fc-register-payment` — Registrar cobro en ficha FC
+- `fc-lifecycle` — Volver a borrador / Anular FC
+- `create-invoice-click` — Crear FC desde pedido
+- `customer-archive` / `customer-notes` — Archivar / notas
 - `purchase-confirm` — Confirmar OC
 - `inventory-validate` — Validar recepción (picking)
 - `quotation-share-email` — Enviar cotización por mail
-- `fp-publish` — Publicar factura de proveedor
+- `fp-publish` / `fp-create-attachment` — Publicar / crear FP con adjunto UI
+- `price-list-import` — CSV precios preview + apply
