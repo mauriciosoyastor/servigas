@@ -409,3 +409,34 @@ export function resolveApplyStatus(line: ApplyLineInput): "create" | "update" | 
   if (line.status === "review" && line.productId) return "update";
   return "skip";
 }
+
+const IMPORT_STATUS_LABELS: Record<string, string> = {
+  create: "Crear",
+  update: "Actualizar",
+  review: "Revisar",
+  error: "Error",
+};
+
+const IMPORT_REASON_LABELS: Record<string, string> = {
+  no_match: "Producto nuevo (no encontrado en stock)",
+  barcode: "Encontrado por código de barras",
+  default_code: "Encontrado por código",
+  name: "Encontrado por nombre",
+  ambiguous_barcode: "Varios productos coinciden; revisá el CSV",
+  ambiguous_code: "Varios productos coinciden; revisá el CSV",
+  ambiguous_name: "Varios productos coinciden; revisá el CSV",
+  invalid_price: "Falta o es inválido el precio de venta",
+  missing_name: "Falta el nombre",
+};
+
+/** Display label for preview Estado column (codes unchanged in API). */
+export function labelImportStatus(status: string): string {
+  const key = String(status || "").trim();
+  return IMPORT_STATUS_LABELS[key] || key;
+}
+
+/** Display label for preview Motivo column (codes unchanged in API). */
+export function labelImportReason(reason: string): string {
+  const key = String(reason || "").trim();
+  return IMPORT_REASON_LABELS[key] || key;
+}

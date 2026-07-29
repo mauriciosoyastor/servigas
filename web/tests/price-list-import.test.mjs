@@ -4,6 +4,8 @@ import { describe, it } from "node:test";
 import {
   classifyRows,
   isRejectedFilename,
+  labelImportReason,
+  labelImportStatus,
   matchProduct,
   normalizeRow,
   parseTabularText,
@@ -160,5 +162,37 @@ describe("price-list-import classify", () => {
     );
     assert.equal(row.list_price, 1234.5);
     assert.equal(row.name, "Gas");
+  });
+});
+
+describe("price-list-import labels", () => {
+  it("labels status in Spanish", () => {
+    assert.equal(labelImportStatus("create"), "Crear");
+    assert.equal(labelImportStatus("update"), "Actualizar");
+    assert.equal(labelImportStatus("review"), "Revisar");
+    assert.equal(labelImportStatus("error"), "Error");
+  });
+
+  it("labels reasons with actionable Spanish copy", () => {
+    assert.equal(
+      labelImportReason("no_match"),
+      "Producto nuevo (no encontrado en stock)"
+    );
+    assert.equal(
+      labelImportReason("invalid_price"),
+      "Falta o es inválido el precio de venta"
+    );
+    assert.equal(labelImportReason("missing_name"), "Falta el nombre");
+    assert.equal(labelImportReason("barcode"), "Encontrado por código de barras");
+    assert.equal(labelImportReason("default_code"), "Encontrado por código");
+    assert.equal(labelImportReason("name"), "Encontrado por nombre");
+    assert.match(labelImportReason("ambiguous_barcode"), /Varios productos/);
+    assert.match(labelImportReason("ambiguous_code"), /Varios productos/);
+    assert.match(labelImportReason("ambiguous_name"), /Varios productos/);
+  });
+
+  it("falls back to the raw code when unknown", () => {
+    assert.equal(labelImportReason("weird_code"), "weird_code");
+    assert.equal(labelImportStatus("weird"), "weird");
   });
 });
