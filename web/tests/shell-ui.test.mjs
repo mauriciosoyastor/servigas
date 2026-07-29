@@ -655,6 +655,9 @@ describe("shell UI contracts", () => {
     assert.match(productNew, /inventory\/products/);
     assert.match(productImport, /Cargar lista de precios\/Productos/);
     assert.match(productImport, /\/api\/inventory\/price-list-import/);
+    assert.match(productImport, /data-import-error-banner/);
+    assert.match(productImport, /labelImportStatus|statusLabels/);
+    assert.match(productImport, /Confirmar e importar/);
     assert.match(listPage, /\/lists\/inventory\/products\/import/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
