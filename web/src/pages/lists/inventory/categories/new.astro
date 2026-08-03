@@ -1,0 +1,52 @@
+---
+import RecordCreateForm from '../../../../components/RecordCreateForm.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getBackend } from '../../../../lib/bff/get-backend.ts';
+import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
+
+let userName = '';
+/** @type {{ value: string, label: string }[]} */
+let parentOptions = [{ value: '', label: 'Sin padre' }];
+try {
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+	const list = await getBackend().getRecordList(odooSessionId, 'inventory/categories', {
+		page: 1,
+	});
+	parentOptions = [
+		{ value: '', label: 'Sin padre' },
+		...list.rows.map((row) => ({
+			value: String(row.id),
+			label: String(row.complete_name || row.name || row.id),
+		})),
+	];
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Nueva categoría | Servigas" active="inventory" userName={userName}>
+	<main class="sg-create-page">
+		<header>
+			<p>Stock · Categorías</p>
+			<h1>Nueva categoría</h1>
+		</header>
+		<RecordCreateForm
+			listKey="inventory/categories"
+			apiPath="/api/records/inventory/categories"
+			listPath="/lists/inventory/categories"
+			title="Alta de categoría"
+			hint="Nombre obligatorio. Podés colgarla de otra categoría (padre) o dejarla suelta."
+			fields={[
+				{ key: 'name', label: 'Nombre', required: true },
+				{
+					key: 'parent_id',
+					label: 'Categoría padre',
+					type: 'select',
+					options: parentOptions,
+				},
+			]}
+		/>
+	</main>
+</ShellLayout>
