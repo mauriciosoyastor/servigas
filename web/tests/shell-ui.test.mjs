@@ -709,6 +709,9 @@ describe("shell UI contracts", () => {
     assert.match(form, /Ya atendido/);
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /workshop\/appliances/);
+    assert.match(form, /servigas-logo\.png/);
+    assert.match(form, /alt=["']Servigas["']/);
+    assert.match(orderDetail, /servigas-logo\.png/);
     assert.match(orderDetail, /Cerrar orden/);
     assert.match(orderDetail, /RecordConfirmControl/);
     assert.match(orderDetail, /Eliminar orden/);

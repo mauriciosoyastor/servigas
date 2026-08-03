@@ -20,8 +20,13 @@ const today = new Date().toISOString().slice(0, 10);
 ---
 
 <section class="sg-wo-create sg-glass" data-wo-create>
-	<strong>Orden de trabajo</strong>
-	<p>Completá como en el papel. La serie identifica el artefacto y arma el historial.</p>
+	<header class="sg-wo-brand">
+		<img src="/servigas-logo.png" alt="Servigas" width="40" height="40" />
+		<div>
+			<strong>Orden de trabajo</strong>
+			<p>Completá como en el papel. La serie identifica el artefacto y arma el historial.</p>
+		</div>
+	</header>
 
 	<form class="sg-wo-form" data-wo-form>
 		<div class="sg-wo-grid">
@@ -310,14 +315,26 @@ const today = new Date().toISOString().slice(0, 10);
 		padding: 1.25rem 1.5rem 1.5rem;
 		max-width: 52rem;
 	}
-	.sg-wo-create > strong {
-		display: block;
-		font-size: 1.1rem;
-		margin-bottom: 0.25rem;
+	.sg-wo-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.85rem;
+		margin-bottom: 0.75rem;
 	}
-	.sg-wo-create > p {
-		margin: 0 0 1.25rem;
-		opacity: 0.8;
+	.sg-wo-brand img {
+		width: 40px;
+		height: 40px;
+		object-fit: contain;
+		flex-shrink: 0;
+	}
+	.sg-wo-brand strong {
+		display: block;
+		font-size: 1.05rem;
+	}
+	.sg-wo-brand p {
+		margin: 0.2rem 0 0;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+		font-size: 0.88rem;
 	}
 	.sg-wo-grid {
 		display: grid;

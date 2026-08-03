@@ -71,6 +71,10 @@ if (detail && !error && share) {
 	>
 		{detail && !error ? (
 			<div class="sg-ficha-secondary-actions" data-wo-share-panel slot="secondary">
+				<div class="sg-wo-detail-brand">
+					<img src="/servigas-logo.png" alt="Servigas" width="28" height="28" />
+					<span>Servigas · Taller</span>
+				</div>
 				{share ? (
 					<RecordWorkOrderShareControl listKey={listKey} recordId={id} share={share} />
 				) : null}
@@ -100,3 +104,20 @@ if (detail && !error && share) {
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>
+
+<style>
+	.sg-wo-detail-brand {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		margin-bottom: 0.75rem;
+		font-size: 0.82rem;
+		font-weight: 650;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-detail-brand img {
+		width: 28px;
+		height: 28px;
+		object-fit: contain;
+	}
+</style>
