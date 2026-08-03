@@ -1,11 +1,11 @@
 import type { APIRoute } from "astro";
-import { BffError } from "../../../lib/bff/errors.ts";
-import { getBackend } from "../../../lib/bff/get-backend.ts";
+import { BffError } from "../../../../lib/bff/errors.ts";
+import { getBackend } from "../../../../lib/bff/get-backend.ts";
 import {
   bffErrorResponse,
   json,
   requireOdooSession,
-} from "../../../lib/bff/http.ts";
+} from "../../../../lib/bff/http.ts";
 
 type Body = {
   action?: "preview" | "purge";
