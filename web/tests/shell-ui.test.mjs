@@ -186,6 +186,9 @@ describe("shell UI contracts", () => {
     const page = await source("pages/lists/[...slug].astro");
 
     assert.match(page, /getRecordList\(odooSessionId,\s*listKey/);
+    assert.match(page, /parsePositiveIntParam|categ_id/);
+    assert.match(page, /categId/);
+    assert.match(page, /Quitar filtro/);
     assert.match(page, /<RecordTable/);
     assert.match(page, /<ListToolbar/);
     const toolbar = await source("components/ListToolbar.astro");
@@ -193,6 +196,7 @@ describe("shell UI contracts", () => {
     assert.match(toolbar, /\+10/);
     assert.match(toolbar, /−10/);
     assert.match(toolbar, /Avanzar 10 páginas/);
+    assert.match(toolbar, /categId|categ_id/);
     assert.match(page, /Sin resultados/);
     assert.match(page, /active=\{def\.railApp\}/);
   });
@@ -670,8 +674,22 @@ describe("shell UI contracts", () => {
     const categoryDetail = await source(
       "pages/lists/inventory/categories/[id].astro"
     );
+    const categoryNew = await source(
+      "pages/lists/inventory/categories/new.astro"
+    );
     assert.match(categoryDetail, /CategoryProductPurgeControl/);
     assert.match(categoryDetail, /purge-by-category/);
+    assert.match(categoryDetail, /editApiPath|editFields/);
+    assert.match(categoryDetail, /\/lists\/inventory\/products\?categ_id=/);
+    assert.match(categoryDetail, /Ver productos/);
+    assert.match(categoryDetail, /countProductsInCategory/);
+    assert.match(categoryNew, /inventory\/categories/);
+    assert.match(categoryNew, /RecordCreateForm/);
+    assert.match(categoryNew, /parent_id/);
+    assert.match(listPage, /Nueva categoría/);
+    const recordTable = await source("components/RecordTable.astro");
+    assert.match(recordTable, /product_count/);
+    assert.match(recordTable, /\/lists\/inventory\/products\?categ_id=/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
     assert.match(po, /Confirmar OC|purchase\/solicitudes/);
   });

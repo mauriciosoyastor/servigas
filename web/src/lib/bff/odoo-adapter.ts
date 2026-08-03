@@ -188,6 +188,7 @@ import {
 const COMPUTED_LIST_FIELDS = new Set([
   "sg_doc_type_short",
   "payment_method",
+  "product_count",
 ]);
 /** On account.move only: filled from partner, not a move column. */
 const MOVE_PARTNER_DEST_FIELD = "sg_invoice_dest";
@@ -619,7 +620,9 @@ export class OdooAdapter implements BackendClient {
 
     const page = Math.max(1, Number(query.page) || 1);
     const q = (query.q || "").trim();
-    const domain = buildSearchDomain(def, q);
+    const domain = buildSearchDomain(def, q, new Date(), {
+      categId: query.categId,
+    });
     const offset = (page - 1) * def.limit;
 
     const displayFields = [...def.fields];
@@ -697,6 +700,13 @@ export class OdooAdapter implements BackendClient {
       displayFields.includes("payment_method")
     ) {
       await this.#enrichPosOrdersWithPaymentMethod(odooSessionId, rawRows);
+    }
+
+    if (
+      def.key === "inventory/categories" &&
+      displayFields.includes("product_count")
+    ) {
+      await this.#enrichCategoryProductCounts(odooSessionId, rawRows);
     }
 
     const total = await this.#callKw<number>(
@@ -1827,6 +1837,45 @@ export class OdooAdapter implements BackendClient {
     for (const row of rows) {
       const pid = this.#partnerIdFromM2o(row.partner_id);
       row.sg_invoice_dest = destById.get(pid) || "cf";
+    }
+  }
+
+  async #enrichCategoryProductCounts(
+    odooSessionId: string,
+    rows: Record<string, unknown>[]
+  ): Promise<void> {
+    for (const row of rows) row.product_count = 0;
+    const ids = rows
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    if (!ids.length) return;
+
+    const groups = await this.#callKw<
+      Array<{ categ_id?: unknown; categ_id_count?: number; __count?: number }>
+    >(odooSessionId, "product.template", "read_group", [
+      [
+        ["active", "=", true],
+        ["categ_id", "in", ids],
+      ],
+      ["categ_id"],
+      ["categ_id"],
+    ]);
+
+    const countById = new Map<number, number>();
+    for (const group of groups || []) {
+      const categ = group.categ_id;
+      let categId = 0;
+      if (Array.isArray(categ) && categ.length) {
+        categId = Number(categ[0]) || 0;
+      } else {
+        categId = Number(categ) || 0;
+      }
+      const count = Number(group.categ_id_count ?? group.__count ?? 0) || 0;
+      if (categId > 0) countById.set(categId, count);
+    }
+    for (const row of rows) {
+      const id = Number(row.id) || 0;
+      row.product_count = countById.get(id) || 0;
     }
   }
 

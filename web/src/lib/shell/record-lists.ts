@@ -507,13 +507,14 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "inventory/categories",
     path: "/lists/inventory/categories",
     title: "Categorías",
-    hint: "Categorías de producto",
+    hint: "Creá categorías y eliminá productos por categoría",
     model: "product.category",
     domain: [],
-    fields: ["complete_name", "name", "parent_id"],
+    fields: ["complete_name", "name", "parent_id", "product_count"],
     columns: [
       { key: "complete_name", label: "Categoría" },
       { key: "parent_id", label: "Padre" },
+      { key: "product_count", label: "Productos" },
     ],
     limit: 50,
     order: "complete_name asc",
@@ -2588,16 +2589,37 @@ export function resolveRecordListPath(
 export type RecordListQuery = {
   q?: string;
   page?: number;
+  /** Allowlisted on inventory/products only — exact categ_id filter. */
+  categId?: number;
 };
+
+export function parsePositiveIntParam(
+  raw: string | null | undefined
+): number | undefined {
+  if (raw === null || raw === undefined || raw === "") return undefined;
+  const n = Number(raw);
+  if (!Number.isFinite(n) || !Number.isInteger(n) || n <= 0) return undefined;
+  return n;
+}
 
 export function buildSearchDomain(
   def: RecordListDef,
   q: string | undefined,
-  now: Date = new Date()
+  now: Date = new Date(),
+  opts?: { categId?: number }
 ): unknown[] {
   const base = [...def.domain];
   if (def.agingBucket) {
     base.push(...agingDueClauses(def.agingBucket, agingDateParts(now)));
+  }
+  const categId = opts?.categId;
+  if (
+    def.key === "inventory/products" &&
+    typeof categId === "number" &&
+    Number.isInteger(categId) &&
+    categId > 0
+  ) {
+    base.push(["categ_id", "=", categId]);
   }
   const term = (q || "").trim();
   if (!term || !def.searchFields?.length) return base;

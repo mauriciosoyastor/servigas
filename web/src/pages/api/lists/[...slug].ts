@@ -6,7 +6,10 @@ import {
   json,
   requireOdooSession,
 } from "../../../lib/bff/http.ts";
-import { getRecordListDef } from "../../../lib/shell/record-lists.ts";
+import {
+  getRecordListDef,
+  parsePositiveIntParam,
+} from "../../../lib/shell/record-lists.ts";
 
 export const GET: APIRoute = async ({ cookies, params, url }) => {
   try {
@@ -19,9 +22,14 @@ export const GET: APIRoute = async ({ cookies, params, url }) => {
     const { odooSessionId } = requireOdooSession(cookies);
     const q = url.searchParams.get("q") || undefined;
     const page = Number(url.searchParams.get("page") || "1") || 1;
+    const categId =
+      slug === "inventory/products"
+        ? parsePositiveIntParam(url.searchParams.get("categ_id"))
+        : undefined;
     const payload = await getBackend().getRecordList(odooSessionId, slug, {
       q,
       page,
+      categId,
     });
     return json(payload);
   } catch (err) {
