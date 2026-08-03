@@ -715,6 +715,13 @@ describe("shell UI contracts", () => {
     assert.match(orderDetail, /action=["']delete["']/);
     assert.match(orderDetail, /sg-ficha-secondary-actions/);
     assert.match(orderDetail, /sg-ficha-action/);
+    assert.match(orderDetail, /RecordWorkOrderShareControl/);
+    assert.match(orderDetail, /Enviar al cliente|data-wo-share/);
+    const shareCtrl = await source("components/RecordWorkOrderShareControl.astro");
+    assert.match(shareCtrl, /data-wo-share/);
+    assert.match(shareCtrl, /\/api\/workshop-orders\/send-email/);
+    assert.match(shareCtrl, /WhatsApp/);
+    assert.match(shareCtrl, /Descargar PDF/);
     const archiveCtrl = await source("components/RecordArchiveControl.astro");
     assert.match(archiveCtrl, /sg-glass-rim|backdrop-filter/);
     assert.match(archiveCtrl, /is-delete/);

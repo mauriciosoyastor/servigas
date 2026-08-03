@@ -1,0 +1,221 @@
+---
+import InvoicePdfModalHost from './InvoicePdfModalHost.astro';
+import type { WorkshopOrderShareMeta } from '../lib/shell/workshop-order-share.ts';
+
+interface Props {
+	listKey: string;
+	recordId: number;
+	share: WorkshopOrderShareMeta;
+}
+
+const { listKey, recordId, share } = Astro.props;
+const pdfPath = share.pdfPath;
+const title = share.orderName || 'Orden de trabajo';
+---
+
+<section
+	class="sg-wo-share"
+	data-wo-share
+	data-list-key={listKey}
+	data-id={recordId}
+	data-invoice-pdf={pdfPath ? true : undefined}
+>
+	<p class="sg-wo-share-title">Enviar al cliente</p>
+	<div class="sg-wo-share-actions">
+		{pdfPath ? (
+			<>
+				<button
+					class="sg-focus-ring"
+					type="button"
+					data-invoice-pdf-download
+					data-pdf-url={`${pdfPath}?download=1`}
+					data-pdf-title={title}
+				>
+					Descargar PDF
+				</button>
+				<button
+					class="sg-focus-ring"
+					type="button"
+					data-invoice-pdf-open
+					data-pdf-url={pdfPath}
+					data-pdf-title={title}
+				>
+					Ver PDF
+				</button>
+			</>
+		) : null}
+		{share.whatsappUrl ? (
+			<a
+				class="sg-wo-share-wa sg-focus-ring"
+				href={share.whatsappUrl}
+				target="_blank"
+				rel="noopener noreferrer"
+			>
+				WhatsApp
+			</a>
+		) : (
+			<button class="sg-wo-share-wa is-disabled sg-focus-ring" type="button" disabled>
+				WhatsApp
+			</button>
+		)}
+		<button
+			class="sg-wo-share-mail sg-focus-ring"
+			type="button"
+			data-wo-share-email
+			data-api="/api/workshop-orders/send-email"
+			data-list-key={listKey}
+			data-id={recordId}
+			data-has-email={share.email ? '1' : '0'}
+			disabled={!share.email}
+		>
+			Enviar por mail
+		</button>
+	</div>
+	{share.missingContactHint ? (
+		<p class="sg-wo-share-hint">{share.missingContactHint}</p>
+	) : null}
+	{share.whatsappUrl ? (
+		<p class="sg-wo-share-wa-tip">
+			WhatsApp abre el chat con el mensaje; descargá el PDF y adjuntarlo a mano.
+		</p>
+	) : null}
+	<p class="sg-wo-share-status" data-wo-share-status hidden></p>
+	<p class="sg-invoice-pdf-inline-status" data-invoice-pdf-inline-status hidden></p>
+	<InvoicePdfModalHost />
+</section>
+
+<script>
+	document.querySelectorAll<HTMLElement>('[data-wo-share]').forEach((root) => {
+		const btn = root.querySelector('[data-wo-share-email]');
+		const status = root.querySelector('[data-wo-share-status]');
+		if (!(btn instanceof HTMLButtonElement && status instanceof HTMLElement)) return;
+
+		btn.addEventListener('click', async () => {
+			if (btn.dataset.hasEmail !== '1') {
+				status.hidden = false;
+				status.dataset.state = 'error';
+				status.textContent = 'Cargá el mail del cliente';
+				return;
+			}
+			if (!window.confirm('¿Enviar la orden de trabajo por mail al cliente (con PDF adjunto)?')) {
+				return;
+			}
+			status.hidden = false;
+			status.dataset.state = 'pending';
+			status.textContent = 'Enviando mail…';
+			btn.disabled = true;
+			try {
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						listKey: btn.dataset.listKey,
+						id: Number(btn.dataset.id),
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo enviar el mail');
+				}
+				status.dataset.state = 'ok';
+				status.textContent = `Mail enviado a ${payload.email || 'el cliente'}.`;
+			} catch (error) {
+				status.dataset.state = 'error';
+				status.textContent =
+					error instanceof Error ? error.message : 'No se pudo enviar el mail';
+				btn.disabled = false;
+			}
+		});
+	});
+</script>
+
+<style>
+	.sg-wo-share {
+		display: grid;
+		gap: 0.65rem;
+		margin-bottom: 1rem;
+		padding: 0.85rem 0.95rem;
+		border-radius: var(--sg-radius-md, 12px);
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		background: rgba(255, 255, 255, 0.03);
+	}
+
+	.sg-wo-share-title {
+		margin: 0;
+		font-size: 0.78rem;
+		font-weight: 650;
+		letter-spacing: 0.04em;
+		text-transform: uppercase;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-wo-share-actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.55rem;
+	}
+
+	.sg-wo-share-actions button,
+	.sg-wo-share-actions a {
+		border: 1px solid rgba(155, 200, 255, 0.45);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.55rem 0.95rem;
+		color: #b7d7ff;
+		background: rgba(25, 45, 75, 0.45);
+		font-size: 0.82rem;
+		font-weight: 650;
+		cursor: pointer;
+		text-decoration: none;
+	}
+
+	.sg-wo-share-wa {
+		border-color: rgba(37, 211, 102, 0.45) !important;
+		color: #9dffc0 !important;
+		background: rgba(20, 55, 35, 0.45) !important;
+	}
+
+	.sg-wo-share-mail {
+		border-color: rgba(255, 200, 120, 0.4) !important;
+		color: #ffd9a8 !important;
+		background: rgba(60, 40, 15, 0.4) !important;
+	}
+
+	.sg-wo-share-actions button:disabled,
+	.sg-wo-share-actions .is-disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+
+	.sg-wo-share-hint,
+	.sg-wo-share-status,
+	.sg-invoice-pdf-inline-status {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-wo-share-hint {
+		color: #ffd9a8;
+	}
+
+	.sg-wo-share-wa-tip {
+		margin: 0;
+		font-size: 0.75rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+
+	.sg-wo-share-status[data-state='error'],
+	.sg-invoice-pdf-inline-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+
+	.sg-wo-share-status[data-state='ok'] {
+		color: #9dffc0;
+	}
+
+	.sg-wo-share-status[data-state='pending'],
+	.sg-invoice-pdf-inline-status[data-state='pending'] {
+		color: #b7d7ff;
+	}
+</style>
