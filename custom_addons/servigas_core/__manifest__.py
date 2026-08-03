@@ -8,7 +8,7 @@ personalización POS y backend Odoo 19, hubs KPI cards de ingreso por sección.
     "author": "Servigas",
     "website": "https://github.com/mauriciosoyastor/servigas",
     "category": "Servigas",
-    "version": "19.0.1.20.46",
+    "version": "19.0.1.20.47",
     "license": "LGPL-3",
     "depends": [
         "base",
@@ -27,6 +27,8 @@ personalización POS y backend Odoo 19, hubs KPI cards de ingreso por sección.
         "security/ir.model.access.csv",
         "views/sg_price_list_import_views.xml",
         "views/sg_workshop_views.xml",
+        "report/sg_work_order_report.xml",
+        "data/mail_template_sg_work_order.xml",
         "data/hub_inventory_data.xml",
         "data/hub_sales_data.xml",
         "data/hub_purchase_data.xml",
