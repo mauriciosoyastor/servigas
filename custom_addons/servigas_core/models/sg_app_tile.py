@@ -261,6 +261,10 @@ class SgAppTile(models.Model):
     def apply_launcher_tile_copy(self):
         """Force-update launcher labels to work language (noupdate XML)."""
         updates = {
+            "servigas_core.launcher_tile_sales": {
+                "label": "Ventas",
+                "hint": "Pedidos y cotizaciones",
+            },
             "servigas_core.launcher_tile_inventory": {
                 "label": "Stock",
                 "hint": "Productos, stock y operaciones",
@@ -291,6 +295,7 @@ class SgAppTile(models.Model):
         """Asigna accent_key preestablecido por xmlid (upgrade seguro)."""
         mapping = {
             "servigas_core.launcher_tile_sales": "flame-yellow",
+            "servigas_core.launcher_tile_customers": "flame-yellow",
             "servigas_core.launcher_tile_inventory": "flame-orange",
             "servigas_core.launcher_tile_purchase": "flame-deep",
             "servigas_core.launcher_tile_accounting": "flame-rust",

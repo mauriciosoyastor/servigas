@@ -10,7 +10,9 @@ describe("labelOdooSelection", () => {
     assert.equal(labelOdooSelection("state", "done"), "Hecho");
     assert.equal(labelOdooSelection("state", "cancel"), "Cancelado");
     assert.equal(labelOdooSelection("state", "sale"), "Confirmado");
-    assert.equal(labelOdooSelection("state", "to_invoice"), "Por facturar");
+    assert.equal(labelOdooSelection("state", "to_invoice"), "Ventas por facturar");
+    assert.equal(labelOdooSelection("state", "to invoice"), "Ventas por facturar");
+    assert.equal(labelOdooSelection("state", "upselling"), "Ventas con saldo por facturar");
     assert.equal(labelOdooSelection("state", "purchase"), "Orden de compra");
     assert.equal(labelOdooSelection("state", "invoiced"), "Facturado");
   });

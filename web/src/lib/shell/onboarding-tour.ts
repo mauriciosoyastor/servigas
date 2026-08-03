@@ -38,14 +38,14 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/",
     target: "home-tile",
     title: "Tus áreas",
-    body: "Abajo están las áreas del negocio (Stock, Ventas, Compras, Cobros). Lo del día a día está en los atajos de arriba.",
+    body: "Abajo están las áreas del negocio (Stock, Ventas, Clientes, Compras, Cobros). Lo del día a día está en los atajos de arriba.",
   },
   {
     id: "home-rail",
     path: "/",
     target: "rail-pos",
     title: "Menú lateral",
-    body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras y Cobros. Tocá Siguiente para ir al Mostrador.",
+    body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras, Clientes y Cobros. Tocá Siguiente para ir al Mostrador.",
     navigateTo: "/pos",
   },
   {

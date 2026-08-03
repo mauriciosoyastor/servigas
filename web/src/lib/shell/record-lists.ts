@@ -96,7 +96,14 @@ export type RecordListDef = {
   limit: number;
   order: string;
   hubBack: string;
-  railApp: "inventory" | "sales" | "purchase" | "accounting" | "workshop" | "home";
+  railApp:
+    | "inventory"
+    | "sales"
+    | "purchase"
+    | "customers"
+    | "accounting"
+    | "workshop"
+    | "home";
   imageField?: string;
   detailPath?: string;
   searchFields?: string[];
@@ -580,8 +587,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/to-invoice": {
     key: "sales/to-invoice",
     path: "/lists/sales/to-invoice",
-    title: "Por facturar",
-    hint: "Pedidos con factura pendiente",
+    title: "Ventas por facturar",
+    hint: "Ventas confirmadas pendientes de factura",
     model: "sale.order",
     domain: [["invoice_status", "=", "to invoice"]],
     fields: [
@@ -603,8 +610,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/upselling": {
     key: "sales/upselling",
     path: "/lists/sales/upselling",
-    title: "Pedidos con más por facturar",
-    hint: "Pedidos con más por facturar",
+    title: "Ventas con saldo por facturar",
+    hint: "Facturación parcial: queda saldo por facturar",
     model: "sale.order",
     domain: [["invoice_status", "=", "upselling"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -619,8 +626,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/ventas-caja": {
     key: "sales/ventas-caja",
     path: "/lists/sales/ventas-caja",
-    title: "Ventas de caja",
-    hint: "Ventas registradas en caja — facturá desde la ficha",
+    title: "Ventas del mostrador",
+    hint: "Historial de caja — facturá desde la ficha",
     model: "pos.order",
     domain: [],
     fields: [
@@ -660,7 +667,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
-    railApp: "sales",
+    railApp: "customers",
     searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
@@ -690,7 +697,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
-    railApp: "sales",
+    railApp: "customers",
     searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
@@ -1963,6 +1970,18 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "sale.order",
+    patterns: [
+      /upsell/i,
+      /venta pendiente/i,
+      /m[aá]s por facturar/i,
+      /saldo por facturar/i,
+      /resto por facturar/i,
+      /facturaci[oó]n parcial/i,
+    ],
+    path: "/lists/sales/upselling",
+  },
+  {
+    model: "sale.order",
     patterns: [/por facturar/i, /a facturar/i],
     path: "/lists/sales/to-invoice",
   },
@@ -1970,11 +1989,6 @@ const LABEL_RULES: LabelRule[] = [
     model: "sale.order",
     patterns: [/historial.*cotizaci/i, /cotizaci.*historial/i],
     path: "/lists/sales/quotations-history",
-  },
-  {
-    model: "sale.order",
-    patterns: [/upsell/i, /venta pendiente/i, /m[aá]s por facturar/i],
-    path: "/lists/sales/upselling",
   },
   {
     model: "sale.order",
@@ -1988,7 +2002,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "pos.order",
-    patterns: [/pos/i, /mostrador/i],
+    patterns: [/pos/i, /mostrador/i, /ventas de caja/i],
     path: "/lists/sales/ventas-caja",
   },
   {

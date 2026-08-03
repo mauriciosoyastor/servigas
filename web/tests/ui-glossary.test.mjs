@@ -27,15 +27,16 @@ describe("ui glossary (canonical labels)", () => {
     assert.equal(AREA_LABELS.workshop, "Taller");
     const byApp = Object.fromEntries(RAIL_ITEMS.map((i) => [i.app, i.label]));
     assert.equal(byApp.inventory, AREA_LABELS.inventory);
+    assert.equal(byApp.customers, AREA_LABELS.customers);
     assert.equal(byApp.workshop, AREA_LABELS.workshop);
     assert.equal(byApp.accounting, AREA_LABELS.accounting);
     assert.equal(byApp.pos, AREA_LABELS.pos);
   });
 
-  it("uses Pedidos a proveedor for RFQ lists and Por facturar for invoice status", () => {
+  it("uses Pedidos a proveedor for RFQ lists and Ventas por facturar for invoice status", () => {
     assert.equal(getRecordListDef("purchase/solicitudes")?.title, "Pedidos a proveedor");
-    assert.equal(getRecordListDef("sales/to-invoice")?.title, "Por facturar");
-    assert.equal(labelOdooSelection("state", "to_invoice"), "Por facturar");
+    assert.equal(getRecordListDef("sales/to-invoice")?.title, "Ventas por facturar");
+    assert.equal(labelOdooSelection("state", "to_invoice"), "Ventas por facturar");
   });
 
   it("labels partners as Cliente in sales and Proveedor in purchase", () => {
@@ -85,7 +86,7 @@ describe("ui glossary (canonical labels)", () => {
     );
     assert.equal(
       getRecordListDef("sales/upselling")?.title,
-      "Pedidos con más por facturar"
+      "Ventas con saldo por facturar"
     );
     assert.equal(getRecordListDef("accounting/receivable-due-today")?.title, "Vence hoy");
     assert.equal(

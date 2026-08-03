@@ -110,6 +110,23 @@ describe("resolveTileNavigation", () => {
     });
   });
 
+  it("routes Clientes launcher tile to Astro customers list", () => {
+    const nav = resolveTileNavigation({
+      target_type: "action",
+      client_tag: "customers",
+      label: "Clientes",
+      action: {
+        type: "ir.actions.act_window",
+        res_model: "res.partner",
+        domain: [["customer_rank", ">", 0]],
+      },
+    });
+    assert.deepEqual(nav, {
+      kind: "list",
+      path: "/lists/sales/customers",
+    });
+  });
+
   it("marks unknown act_window models as coming_soon", () => {
     const nav = resolveTileNavigation({
       target_type: "action",

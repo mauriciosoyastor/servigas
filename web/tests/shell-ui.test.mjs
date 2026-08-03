@@ -229,6 +229,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /addToCart|cartTotal/);
     assert.match(page, /data-pos-pay-method|paymentMethods/);
     assert.match(page, /data-pos-numpad|data-np-mode/);
+    assert.match(page, /mapKeyboardToNumpad|numpad-keyboard/);
+    assert.match(page, /isEditableKeyboardTarget/);
     assert.match(page, /sg-pos-cart-ops/);
     assert.match(page, /sg-pos-numpad-panel|overscroll-behavior/);
     assert.match(page, /sg-pos-cart-footer/);
@@ -709,8 +711,7 @@ describe("shell UI contracts", () => {
     assert.match(form, /Ya atendido/);
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /workshop\/appliances/);
-    assert.match(form, /servigas-logo\.png/);
-    assert.match(form, /alt=["']Servigas["']/);
+    assert.doesNotMatch(form, /servigas-logo\.png/);
     assert.match(orderDetail, /servigas-logo\.png/);
     assert.match(orderDetail, /Cerrar orden/);
     assert.match(orderDetail, /RecordConfirmControl/);

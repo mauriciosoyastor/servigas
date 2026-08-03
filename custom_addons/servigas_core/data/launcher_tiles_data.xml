@@ -3,7 +3,7 @@
     <data noupdate="1">
         <record id="launcher_tile_sales" model="sg.app.tile">
             <field name="label">Ventas</field>
-            <field name="hint">Pedidos, cotizaciones y clientes</field>
+            <field name="hint">Pedidos y cotizaciones</field>
             <field name="icon">fa-line-chart</field>
             <field name="sequence">10</field>
             <field name="accent_key">flame-yellow</field>
@@ -11,6 +11,20 @@
             <field name="client_tag">servigas_sales_hub</field>
             <field name="metric_model">sale.order</field>
             <field name="metric_domain">[('state', 'in', ['sale', 'done'])]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="launcher_tile_customers" model="sg.app.tile">
+            <field name="label">Clientes</field>
+            <field name="hint">Agenda de clientes</field>
+            <field name="icon">fa-users</field>
+            <field name="sequence">15</field>
+            <field name="accent_key">flame-yellow</field>
+            <field name="target_type">action</field>
+            <field name="client_tag">customers</field>
+            <field name="action_id" ref="account.res_partner_action_customer"/>
+            <field name="metric_model">res.partner</field>
+            <field name="metric_domain">[('customer_rank', '>', 0)]</field>
             <field name="metric_aggregate">count</field>
         </record>
 
@@ -68,7 +82,7 @@
 
         <record id="launcher_tile_pos" model="sg.app.tile">
             <field name="label">Mostrador</field>
-            <field name="hint">Ventas de caja Servigas</field>
+            <field name="hint">Ventas del mostrador Servigas</field>
             <field name="icon">fa-shopping-basket</field>
             <field name="sequence">50</field>
             <field name="accent_key">bg-mid</field>
@@ -99,10 +113,25 @@
         </record>
     </data>
 
-    <!-- Actualiza accent_key en bases ya instaladas (noupdate=1 en registros arriba) -->
+    <!-- Actualiza accent_key / copy en bases ya instaladas (noupdate=1 en registros arriba) -->
     <data>
         <record id="launcher_tile_sales" model="sg.app.tile">
             <field name="accent_key">flame-yellow</field>
+            <field name="hint">Pedidos y cotizaciones</field>
+        </record>
+        <record id="launcher_tile_customers" model="sg.app.tile">
+            <field name="label">Clientes</field>
+            <field name="hint">Agenda de clientes</field>
+            <field name="icon">fa-users</field>
+            <field name="sequence">15</field>
+            <field name="accent_key">flame-yellow</field>
+            <field name="target_type">action</field>
+            <field name="client_tag">customers</field>
+            <field name="action_id" ref="account.res_partner_action_customer"/>
+            <field name="metric_model">res.partner</field>
+            <field name="metric_domain">[('customer_rank', '>', 0)]</field>
+            <field name="metric_aggregate">count</field>
+            <field name="active" eval="True"/>
         </record>
         <record id="launcher_tile_inventory" model="sg.app.tile">
             <field name="accent_key">flame-orange</field>

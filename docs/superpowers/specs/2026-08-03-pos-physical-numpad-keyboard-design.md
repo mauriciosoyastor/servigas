@@ -1,7 +1,7 @@
 # Spec — Teclado físico en ticket POS / caja
 
 **Fecha:** 2026-08-03  
-**Estado:** draft (pendiente revisión usuario)  
+**Estado:** implemented  
 **Pantalla:** `/pos` — panel Ticket + numpad en pantalla
 
 ## Problema

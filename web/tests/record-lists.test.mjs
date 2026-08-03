@@ -43,7 +43,7 @@ describe("record-lists allowlist", () => {
     );
     assert.equal(
       getRecordListDef("sales/pos-orders")?.title,
-      "Ventas de caja"
+      "Ventas del mostrador"
     );
     assert.equal(
       getRecordListDef("inventory/quants")?.title,

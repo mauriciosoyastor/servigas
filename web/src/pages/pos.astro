@@ -47,7 +47,7 @@ try {
 			</div>
 			<div class="sg-pos-heading-actions">
 				<a class="sg-pos-link sg-focus-ring" href="/caja">Caja</a>
-				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas de caja</a>
+				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas del mostrador</a>
 				<a class="sg-pos-link sg-focus-ring" href="/">Inicio</a>
 			</div>
 		</header>
@@ -305,6 +305,10 @@ try {
 		selectLine,
 		setNumpadMode,
 	} from '../lib/pos/numpad.ts';
+	import {
+		isEditableKeyboardTarget,
+		mapKeyboardToNumpad,
+	} from '../lib/pos/numpad-keyboard.ts';
 
 	const root = document.querySelector('[data-pos-caja]');
 	if (root) {
@@ -747,6 +751,31 @@ try {
 
 		root.querySelector('[data-np-apply]')?.addEventListener('click', () => {
 			applyNumpad();
+		});
+
+		document.addEventListener('keydown', (event) => {
+			if (isEditableKeyboardTarget(event.target)) return;
+			const action = mapKeyboardToNumpad({
+				key: event.key,
+				code: event.code,
+			});
+			if (!action) return;
+			event.preventDefault();
+			if (action.type === 'digit') {
+				pad = pressDigit(pad, action.digit);
+				syncNumpadChrome();
+			} else if (action.type === 'backspace') {
+				pad = pressBackspace(pad);
+				syncNumpadChrome();
+			} else if (action.type === 'clear') {
+				pad = { ...pad, buffer: '' };
+				syncNumpadChrome();
+			} else if (action.type === 'mode') {
+				pad = setNumpadMode(pad, action.mode);
+				syncNumpadChrome();
+			} else if (action.type === 'apply') {
+				applyNumpad();
+			}
 		});
 
 		checkoutBtn?.addEventListener('click', async () => {

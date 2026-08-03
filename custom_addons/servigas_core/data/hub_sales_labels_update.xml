@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- noupdate=0: refresca labels del hub en DBs ya instaladas -->
+    <data noupdate="0">
+        <record id="hub_card_sales_summary_to_invoice" model="sg.hub.card">
+            <field name="label">Ventas por facturar</field>
+            <field name="hint">Pendientes de facturación</field>
+        </record>
+        <record id="hub_card_sales_orders_orders" model="sg.hub.card">
+            <field name="label">Pedidos confirmados</field>
+        </record>
+        <record id="hub_card_sales_orders_to_invoice" model="sg.hub.card">
+            <field name="label">Ventas por facturar</field>
+        </record>
+        <record id="hub_card_sales_orders_upselling" model="sg.hub.card">
+            <field name="label">Ventas con saldo por facturar</field>
+        </record>
+        <record id="hub_card_sales_orders_pos" model="sg.hub.card">
+            <field name="label">Ventas del mostrador</field>
+            <field name="hint">Historial de caja</field>
+        </record>
+    </data>
+</odoo>
