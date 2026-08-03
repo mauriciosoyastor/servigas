@@ -46,7 +46,7 @@ const {
 const canEdit = Boolean(editFields.length && editApiPath && recordId);
 const editKeySet = new Set(editFields.map((field) => field.key));
 const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field]));
-const HIDDEN_DETAIL_KEYS = new Set(['partner_ref_id']);
+const HIDDEN_DETAIL_KEYS = new Set(['partner_ref_id', 'product_count']);
 const visibleFields = (detail?.fields ?? []).filter(
 	(field) => !HIDDEN_DETAIL_KEYS.has(field.key)
 );
@@ -333,6 +333,12 @@ function displayValue(
 							</ul>
 						</section>
 					) : null}
+
+					{Astro.slots.has('below') ? (
+						<div class="sg-detail-below">
+							<slot name="below" />
+						</div>
+					) : null}
 				</section>
 			</div>
 
@@ -559,5 +565,10 @@ function displayValue(
 		font-size: 0.8rem;
 		line-height: 1.4;
 		color: #ffc107;
+	}
+	.sg-detail-below {
+		margin-top: 0.25rem;
+		padding-top: 1.15rem;
+		border-top: 1px solid var(--sg-glass-border);
 	}
 </style>

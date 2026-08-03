@@ -685,7 +685,11 @@ describe("shell UI contracts", () => {
     assert.match(categoryDetail, /purge-by-category/);
     assert.match(categoryDetail, /editApiPath|editFields/);
     assert.match(categoryDetail, /productCount/);
+    assert.match(categoryDetail, /slot=["']below["']/);
     assert.doesNotMatch(categoryDetail, /sg-category-products-link/);
+    const detailBody = await source("components/RecordDetailBody.astro");
+    assert.match(detailBody, /slot name=["']below["']/);
+    assert.match(detailBody, /sg-detail-below/);
     const purgeCtrl = await source("components/CategoryProductPurgeControl.astro");
     assert.match(purgeCtrl, /Productos/);
     assert.match(purgeCtrl, /Ver productos/);
@@ -693,6 +697,8 @@ describe("shell UI contracts", () => {
     assert.match(purgeCtrl, /delete-category/);
     assert.match(purgeCtrl, /Eliminar categoría completa/);
     assert.match(purgeCtrl, /Eliminar productos/);
+    assert.doesNotMatch(purgeCtrl, /class="sg-category-products sg-glass"/);
+    assert.doesNotMatch(purgeCtrl, /class=['"][^'"]*\bsg-glass\b/);
     assert.match(categoryNew, /inventory\/categories/);
     assert.match(categoryNew, /RecordCreateForm/);
     assert.match(categoryNew, /parent_id/);

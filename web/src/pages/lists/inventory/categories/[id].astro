@@ -104,13 +104,15 @@ if (detail && !error) {
 					]
 				: []
 		}
-	/>
-	{!error && detail ? (
-		<CategoryProductPurgeControl
-			categoryId={id}
-			categoryName={categoryName}
-			apiPath="/api/inventory/products/purge-by-category"
-			productCount={productCount}
-		/>
-	) : null}
+	>
+		{!error && detail ? (
+			<CategoryProductPurgeControl
+				slot="below"
+				categoryId={id}
+				categoryName={categoryName}
+				apiPath="/api/inventory/products/purge-by-category"
+				productCount={productCount}
+			/>
+		) : null}
+	</RecordDetailBody>
 </ShellLayout>
