@@ -600,10 +600,13 @@ describe("shell UI contracts", () => {
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(billNew, /requireAttachment/);
     assert.match(billNew, /showBillSource/);
+    assert.match(billNew, /suggestLinesFromPdf/);
     assert.match(billNew, /purchase\/vendors/);
     assert.match(billNew, /accounting\/vendor-bills/);
     assert.match(form, /data-bill-attachment/);
     assert.match(form, /data-bill-source/);
+    assert.match(form, /data-pdf-suggest/);
+    assert.match(form, /vendor-bill-parse/);
     assert.match(billDetail, /RecordConfirmControl/);
     assert.match(billDetail, /Publicar/);
     assert.match(detailBody, /sg-detail-attachments|Comprobante/);

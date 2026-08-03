@@ -19,6 +19,7 @@ import type {
   PriceListImportApplyLine,
   PriceListImportApplyResult,
   PriceListImportPreview,
+  VendorBillPdfPreview,
   RecordDetailLines,
   RecordDetailPayload,
   RecordListPayload,
@@ -53,6 +54,16 @@ import {
   suggestMapping,
   type PriceListMapping,
 } from "../shell/price-list-import.ts";
+import { extractPdfText, isPdfMagic } from "../shell/pdf-text.ts";
+import {
+  classifyBillLines,
+  countBillLineStatuses,
+  parseVendorBillText,
+} from "../shell/vendor-bill-pdf-parse.ts";
+import {
+  BILL_ATTACHMENT_SIZE_MSG,
+  MAX_BILL_ATTACHMENT_BYTES,
+} from "../shell/bill-attachment.ts";
 import {
   buildDetailPath,
   buildSearchDomain,
@@ -1086,6 +1097,53 @@ export class OdooAdapter implements BackendClient {
     return { created, updated, skipped };
   }
 
+  async previewVendorBillPdf(
+    odooSessionId: string,
+    input: { filename: string; content: string }
+  ): Promise<VendorBillPdfPreview> {
+    const filename = String(input.filename || "").trim().toLowerCase();
+    if (!filename.endsWith(".pdf")) {
+      throw new BffError("validation_error", 400, "Usá un archivo PDF.");
+    }
+    const rawB64 = stripBase64Payload(String(input.content || ""));
+    if (!rawB64) {
+      throw new BffError("validation_error", 400, "Usá un archivo PDF.");
+    }
+    let raw: Buffer;
+    try {
+      raw = Buffer.from(rawB64, "base64");
+    } catch {
+      throw new BffError("validation_error", 400, "Usá un archivo PDF.");
+    }
+    if (!isPdfMagic(raw)) {
+      throw new BffError("validation_error", 400, "Usá un archivo PDF.");
+    }
+    if (raw.length > MAX_BILL_ATTACHMENT_BYTES) {
+      throw new BffError("validation_error", 400, BILL_ATTACHMENT_SIZE_MSG);
+    }
+
+    const text = await extractPdfText(raw);
+    const { lines: rawLines, partnerHint } = parseVendorBillText(text);
+    const catalog = await this.#loadProductVariantCatalog(odooSessionId);
+    const indexes = buildProductIndexes(catalog);
+    const classified = classifyBillLines(rawLines, indexes);
+    const counts = countBillLineStatuses(classified);
+    return {
+      lines: classified.map((row) => ({
+        status: row.status,
+        reason: row.reason,
+        productId: row.productId,
+        candidates: row.candidates,
+        code: row.code,
+        name: row.name,
+        qty: row.qty,
+        price: row.price,
+      })),
+      counts,
+      partnerHint,
+    };
+  }
+
   async #loadProductCatalog(odooSessionId: string) {
     const out: Array<{
       id: number;
@@ -1099,6 +1157,39 @@ export class OdooAdapter implements BackendClient {
       const rows = await this.#searchRead(
         odooSessionId,
         "product.template",
+        [["active", "=", true]],
+        ["id", "name", "default_code", "barcode"],
+        pageSize,
+        offset,
+        "id"
+      );
+      for (const row of rows) {
+        out.push({
+          id: Number(row.id),
+          barcode: row.barcode ? String(row.barcode) : null,
+          default_code: row.default_code ? String(row.default_code) : null,
+          name: row.name ? String(row.name) : null,
+        });
+      }
+      if (rows.length < pageSize) break;
+      offset += pageSize;
+    }
+    return out;
+  }
+
+  async #loadProductVariantCatalog(odooSessionId: string) {
+    const out: Array<{
+      id: number;
+      barcode: string | null;
+      default_code: string | null;
+      name: string | null;
+    }> = [];
+    const pageSize = 2000;
+    let offset = 0;
+    while (true) {
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "product.product",
         [["active", "=", true]],
         ["id", "name", "default_code", "barcode"],
         pageSize,
@@ -4646,4 +4737,12 @@ export class OdooAdapter implements BackendClient {
       return "";
     }
   }
+}
+
+function stripBase64Payload(content: string): string {
+  const trimmed = content.trim();
+  if (!trimmed) return "";
+  const dataMatch = trimmed.match(/^data:[^;]+;base64,([a-z0-9+/=\s]+)$/i);
+  const raw = dataMatch ? dataMatch[1] : trimmed;
+  return raw.replace(/\s+/g, "");
 }
