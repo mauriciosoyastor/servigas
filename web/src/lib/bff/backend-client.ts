@@ -14,6 +14,7 @@ import type {
   PriceListImportApplyLine,
   PriceListImportApplyResult,
   PriceListImportPreview,
+  ProductPurgeByCategoryResult,
   VendorBillPdfPreview,
   RecordDetailPayload,
   RecordListPayload,
@@ -278,6 +279,14 @@ export interface BackendClient {
     odooSessionId: string,
     lines: PriceListImportApplyLine[]
   ): Promise<PriceListImportApplyResult>;
+  countProductsInCategory(
+    odooSessionId: string,
+    categoryId: number
+  ): Promise<number>;
+  purgeProductsByCategory(
+    odooSessionId: string,
+    input: { categoryId: number; confirmName: string }
+  ): Promise<ProductPurgeByCategoryResult>;
   previewVendorBillPdf(
     odooSessionId: string,
     input: { filename: string; content: string }

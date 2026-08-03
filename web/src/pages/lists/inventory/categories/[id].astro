@@ -1,0 +1,44 @@
+---
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import CategoryProductPurgeControl from '../../../../components/CategoryProductPurgeControl.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getRecordListDef } from '../../../../lib/shell/record-lists.ts';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const listKey = 'inventory/categories';
+const def = getRecordListDef(listKey);
+if (!def) {
+	return Astro.redirect('/');
+}
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	listKey,
+	id,
+	'No encontramos esta categoría.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+const categoryName = String(detail?.title || '');
+---
+
+<ShellLayout title={`${detail?.title || def.title} | Servigas`} active={def.railApp} userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow={`Ficha — ${def.title}`}
+		fallbackTitle={def.title}
+		fallbackListPath={def.path}
+	/>
+	{!error && detail ? (
+		<CategoryProductPurgeControl
+			categoryId={id}
+			categoryName={categoryName}
+			apiPath="/api/inventory/products/purge-by-category"
+		/>
+	) : null}
+</ShellLayout>

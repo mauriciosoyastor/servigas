@@ -1,0 +1,197 @@
+---
+interface Props {
+	categoryId: number;
+	categoryName: string;
+	apiPath: string;
+}
+
+const { categoryId, categoryName, apiPath } = Astro.props;
+---
+
+<section
+	class="sg-category-purge sg-glass"
+	data-category-purge
+	data-category-id={categoryId}
+	data-category-name={categoryName}
+	data-api={apiPath}
+>
+	<strong>Eliminar productos de esta categoría</strong>
+	<p class="sg-category-purge-lead">
+		Borra o archiva los productos con esta categoría exacta (no incluye subcategorías).
+		Si un producto tiene historial en Odoo y no se puede borrar, se archiva.
+	</p>
+	<p class="sg-category-purge-count" data-purge-count>Cargando…</p>
+	<label class="sg-category-purge-confirm">
+		<span>Escribí el nombre de la categoría para confirmar</span>
+		<input
+			class="sg-focus-ring"
+			type="text"
+			autocomplete="off"
+			data-purge-confirm
+			placeholder={categoryName}
+		/>
+	</label>
+	<div class="sg-category-purge-actions">
+		<button class="sg-focus-ring" type="button" data-purge-btn disabled>
+			Eliminar productos
+		</button>
+		<span class="sg-category-purge-status" data-purge-status hidden></span>
+	</div>
+</section>
+
+<script>
+	const root = document.querySelector('[data-category-purge]');
+	if (root instanceof HTMLElement) {
+		const api = root.dataset.api || '';
+		const categoryId = Number(root.dataset.categoryId);
+		const expectedName = root.dataset.categoryName || '';
+		const countEl = root.querySelector('[data-purge-count]');
+		const confirmInput = root.querySelector('[data-purge-confirm]');
+		const btn = root.querySelector('[data-purge-btn]');
+		const status = root.querySelector('[data-purge-status]');
+
+		function setStatus(text, state) {
+			if (!(status instanceof HTMLElement)) return;
+			status.hidden = !text;
+			status.textContent = text || '';
+			status.dataset.state = state || '';
+		}
+
+		function syncButton() {
+			if (!(btn instanceof HTMLButtonElement) || !(confirmInput instanceof HTMLInputElement)) {
+				return;
+			}
+			const ok =
+				confirmInput.value.trim().toLowerCase() === expectedName.trim().toLowerCase() &&
+				expectedName.trim().length > 0;
+			btn.disabled = !ok;
+		}
+
+		async function loadPreview() {
+			try {
+				const response = await fetch(api, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'preview', categoryId }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo cargar el preview');
+				}
+				const n = Number(payload.productCount) || 0;
+				if (countEl instanceof HTMLElement) {
+					countEl.textContent =
+						n === 1
+							? '1 producto activo en esta categoría'
+							: `${n} productos activos en esta categoría`;
+				}
+			} catch (error) {
+				if (countEl instanceof HTMLElement) {
+					countEl.textContent =
+						error instanceof Error ? error.message : 'No se pudo cargar el preview';
+				}
+			}
+		}
+
+		confirmInput?.addEventListener('input', syncButton);
+		btn?.addEventListener('click', async () => {
+			if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
+			if (
+				!window.confirm(
+					`¿Eliminar/archivar los productos de «${expectedName}»? Esta acción no se puede deshacer fácilmente.`
+				)
+			) {
+				return;
+			}
+			btn.disabled = true;
+			setStatus('Procesando…', 'pending');
+			try {
+				const confirmName =
+					confirmInput instanceof HTMLInputElement ? confirmInput.value : '';
+				const response = await fetch(api, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'purge',
+						categoryId,
+						confirmName,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo eliminar');
+				}
+				setStatus(payload.summary || 'Listo', 'ok');
+				await loadPreview();
+				syncButton();
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+				syncButton();
+			}
+		});
+
+		loadPreview();
+		syncButton();
+	}
+</script>
+
+<style>
+	.sg-category-purge {
+		max-width: 48rem;
+		margin: 1.25rem auto 0;
+		padding: 1.25rem 1.35rem;
+		display: grid;
+		gap: 0.85rem;
+	}
+	.sg-category-purge strong {
+		font-size: 1.05rem;
+	}
+	.sg-category-purge-lead,
+	.sg-category-purge-count {
+		margin: 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.92rem;
+		line-height: 1.45;
+	}
+	.sg-category-purge-confirm {
+		display: grid;
+		gap: 0.4rem;
+		font-size: 0.88rem;
+	}
+	.sg-category-purge-confirm input {
+		padding: 0.55rem 0.7rem;
+		border-radius: 0.55rem;
+		border: 1px solid color-mix(in srgb, var(--sg-ink) 14%, transparent);
+		background: color-mix(in srgb, white 70%, transparent);
+	}
+	.sg-category-purge-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+	}
+	.sg-category-purge-actions button {
+		padding: 0.55rem 0.9rem;
+		border-radius: 0.6rem;
+		border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
+		background: color-mix(in srgb, #b42318 12%, white);
+		color: #7a1b14;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.sg-category-purge-actions button:disabled {
+		opacity: 0.45;
+		cursor: not-allowed;
+	}
+	.sg-category-purge-status[data-state='ok'] {
+		color: #0f6b3a;
+	}
+	.sg-category-purge-status[data-state='error'] {
+		color: #b42318;
+	}
+	.sg-category-purge-status[data-state='pending'] {
+		color: var(--sg-text-muted-dark);
+	}
+</style>
