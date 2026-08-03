@@ -4675,13 +4675,12 @@ export class OdooAdapter implements BackendClient {
       typeof partnerName === "string" && partnerName ? partnerName : null;
     let partnerEmail: string | null = null;
     let partnerPhone: string | null = null;
-    let partnerMobile: string | null = null;
     if (partnerId > 0) {
       const [partner] = await this.#callKw<Record<string, unknown>[]>(
         odooSessionId,
         "res.partner",
         "read",
-        [[partnerId], ["name", "email", "phone", "mobile"]]
+        [[partnerId], ["name", "email", "phone"]]
       );
       if (partner) {
         partnerName =
@@ -4690,8 +4689,6 @@ export class OdooAdapter implements BackendClient {
           typeof partner.email === "string" ? partner.email : null;
         partnerPhone =
           typeof partner.phone === "string" ? partner.phone : null;
-        partnerMobile =
-          typeof partner.mobile === "string" ? partner.mobile : null;
       }
     }
 
@@ -4700,7 +4697,7 @@ export class OdooAdapter implements BackendClient {
       partnerName,
       partnerEmail,
       partnerPhone,
-      partnerMobile,
+      partnerMobile: null,
       ownerName:
         typeof order.owner_name === "string" ? order.owner_name : null,
       ownerPhone:

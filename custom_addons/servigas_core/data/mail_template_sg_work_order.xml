@@ -4,12 +4,11 @@
     <field name="name">Servigas: Orden de trabajo</field>
     <field name="model_id" ref="model_sg_work_order"/>
     <field name="subject">Orden de trabajo {{ object.name }}</field>
-    <field name="email_to">{{ object.partner_id.email or '' }}</field>
-    <field name="partner_to">{{ object.partner_id.id or '' }}</field>
+    <field name="use_default_to" eval="True"/>
     <field name="body_html" type="html">
       <div>
-        <p>Hola {{ object.partner_id.name or object.owner_name or 'cliente' }},</p>
-        <p>Adjuntamos la orden de trabajo <strong>{{ object.name }}</strong>.</p>
+        <p>Hola <t t-out="object.partner_id.name or object.owner_name or 'cliente'">cliente</t>,</p>
+        <p>Adjuntamos la orden de trabajo <strong t-out="object.name">OT</strong>.</p>
         <p>Saludos,<br/>Servigas</p>
       </div>
     </field>

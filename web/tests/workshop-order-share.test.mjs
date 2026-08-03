@@ -1,6 +1,7 @@
 import { describe, it, mock } from "node:test";
 import assert from "node:assert/strict";
 import { OdooAdapter } from "../src/lib/bff/odoo-adapter.ts";
+import { BffError } from "../src/lib/bff/errors.ts";
 import {
   WORKSHOP_ORDER_EMAIL_TEMPLATE,
   WORKSHOP_ORDER_PDF_REPORT,
@@ -164,14 +165,13 @@ describe("OdooAdapter workshop order PDF + email", () => {
         });
       }
       assert.equal(body.params.model, "res.partner");
-      assert.deepEqual(body.params.args[1], ["name", "email", "phone", "mobile"]);
+      assert.deepEqual(body.params.args[1], ["name", "email", "phone"]);
       return Response.json({
         result: [{
           id: 9,
           name: "Ana",
           email: "ana@x.com",
           phone: false,
-          mobile: "1155559999",
         }],
       });
     });
@@ -189,8 +189,8 @@ describe("OdooAdapter workshop order PDF + email", () => {
 
     assert.equal(meta.displayName, "Ana");
     assert.equal(meta.email, "ana@x.com");
-    assert.equal(meta.phone, "541155559999");
-    assert.match(meta.whatsappUrl || "", /wa\.me\/541155559999/);
+    assert.equal(meta.phone, "541144442222");
+    assert.match(meta.whatsappUrl || "", /wa\.me\/541144442222/);
     assert.equal(
       meta.pdfPath,
       "/api/reports/workshop-order/workshop/orders/12"
@@ -252,6 +252,66 @@ describe("OdooAdapter workshop order PDF + email", () => {
     assert.equal(
       methods.some((entry) => entry.endsWith(".action_quotation_sent")),
       false
+    );
+  });
+
+  it("rejects disallowed lists with 404 before calling Odoo", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: mock.fn(async () => {
+        throw new Error("Odoo should not be called");
+      }),
+    });
+
+    await assert.rejects(
+      adapter.sendWorkshopOrderEmail("sess", "sales/orders", 12),
+      (error) => error instanceof BffError && error.status === 404
+    );
+  });
+
+  it("rejects invalid ids with 404 before calling Odoo", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: mock.fn(async () => {
+        throw new Error("Odoo should not be called");
+      }),
+    });
+
+    await assert.rejects(
+      adapter.sendWorkshopOrderEmail("sess", "workshop/orders", 0),
+      (error) => error instanceof BffError && error.status === 404
+    );
+  });
+
+  it("rejects sending when the customer has no email", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(String(init.body));
+      if (body.params.model === "sg.work.order") {
+        return Response.json({
+          result: [{ id: 12, name: "OT/2026/0012", partner_id: [9, "Ana"] }],
+        });
+      }
+      if (body.params.model === "res.partner") {
+        return Response.json({
+          result: [{ id: 9, name: "Ana", email: false }],
+        });
+      }
+      throw new Error(`unexpected ${body.params.model}.${body.params.method}`);
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      adapter.sendWorkshopOrderEmail("sess", "workshop/orders", 12),
+      (error) =>
+        error instanceof BffError &&
+        error.status === 400 &&
+        error.message === "Cargá el mail del cliente"
     );
   });
 });
