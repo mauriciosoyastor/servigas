@@ -8,6 +8,8 @@ export type PriceListMapping = {
   name?: string;
   list_price?: string;
   standard_price?: string;
+  categoria?: string;
+  proveedor?: string;
 };
 
 export type NormalizedRow = {
@@ -16,6 +18,8 @@ export type NormalizedRow = {
   name: string;
   list_price: number | null;
   standard_price: number | null;
+  categoria: string;
+  proveedor: string;
   priceErrors: string[];
 };
 
@@ -89,11 +93,26 @@ const FIELD_ALIASES: Record<keyof PriceListMapping, string[]> = {
     "precio costo",
     "cost",
   ],
+  categoria: [
+    "categoria",
+    "categoría",
+    "category",
+    "categ",
+    "tipo",
+    "rubro",
+  ],
+  proveedor: [
+    "proveedor",
+    "supplier",
+    "vendor",
+    "fabricante",
+    "marca proveedor",
+  ],
 };
 
 export const TEMPLATE_CSV =
-  "barcode,default_code,name,list_price,standard_price\n" +
-  "7790000000000,SKU-EJEMPLO,Producto ejemplo,1500.00,900.00\n";
+  "barcode,default_code,name,list_price,standard_price,categoria,proveedor\n" +
+  "7790000000000,SKU-EJEMPLO,Producto ejemplo,1500.00,900.00,Filtros,Proveedor Ejemplo\n";
 
 export function isRejectedFilename(filename: string | null | undefined): boolean {
   if (!filename) return false;
@@ -177,6 +196,8 @@ export function normalizeRow(
     name: cell("name"),
     list_price: listParsed.amount,
     standard_price: costParsed.amount,
+    categoria: cell("categoria"),
+    proveedor: cell("proveedor"),
     priceErrors,
   };
 }

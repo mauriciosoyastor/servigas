@@ -31,6 +31,25 @@
 
 ---
 
+### 2026-08-03 — Catálogo por proveedor + purge
+
+**Área:** inventario | web | BFF | datos  
+**Motivo:** vaciar catálogo, reimportar organizado por tipo+proveedor, y poder borrar productos por categoría desde el shell.  
+**Archivos:**
+- `docs/superpowers/specs/2026-08-03-catalog-by-supplier-purge-design.md`
+- `docs/superpowers/plans/2026-08-03-catalog-by-supplier-purge.md`
+- `web/scripts/purge-product-catalog.mjs`, `web/src/lib/shell/product-purge.ts`, `price-list-import.ts`
+- `web/src/lib/bff/odoo-adapter.ts`, `types.ts`, `backend-client.ts`
+- `web/src/pages/api/inventory/products/purge-by-category.ts`
+- `web/src/pages/lists/inventory/categories/[id].astro`, `CategoryProductPurgeControl.astro`
+- `web/src/pages/lists/inventory/products/import.astro`
+**Cambios:**
+- Script wipe híbrido (`npm run purge:products`) — catálogo activo vaciado en `servigas_dev` (unlink o archive)
+- Import CSV con columnas `categoria` + `proveedor` (categ_id + supplierinfo)
+- UI ficha categoría: eliminar productos con confirmación por nombre
+**Verificación:** `npm test` (462 pass); wipe dry-run → 0 activos
+**Automatización:** script de purge reutilizable; plantilla CSV extendida
+
 ### 2026-07-29 — Líneas desde PDF en Alta FP (opción A)
 
 **Área:** contabilidad | web | BFF  

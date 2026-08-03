@@ -661,8 +661,15 @@ describe("shell UI contracts", () => {
     assert.match(productImport, /data-import-error-banner/);
     assert.match(productImport, /labelImportStatus|statusLabels/);
     assert.match(productImport, /Confirmar e importar/);
+    assert.match(productImport, /categoria|Categoría/);
+    assert.match(productImport, /proveedor|Proveedor/);
     assert.match(listPage, /\/lists\/inventory\/products\/import/);
     assert.match(productDetail, /RecordArchiveControl|Archivar producto/);
+    const categoryDetail = await source(
+      "pages/lists/inventory/categories/[id].astro"
+    );
+    assert.match(categoryDetail, /CategoryProductPurgeControl/);
+    assert.match(categoryDetail, /purge-by-category/);
     assert.match(quote, /RecordConfirmControl|Confirmar pedido/);
     assert.match(po, /Confirmar OC|purchase\/solicitudes/);
   });

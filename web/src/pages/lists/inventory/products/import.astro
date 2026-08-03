@@ -45,6 +45,7 @@ const reasonLabels = Object.fromEntries(
 			<h1>Cargar lista de precios/Productos</h1>
 			<p class="sg-import-lead">
 				Subí un CSV para crear productos nuevos y actualizar precio de venta y costo.
+				Podés incluir columnas <code>categoria</code> (tipo) y <code>proveedor</code>.
 				PDF e imágenes no están soportados: convertí a CSV primero.
 			</p>
 		</header>
@@ -74,6 +75,8 @@ const reasonLabels = Object.fromEntries(
 							<th>Estado</th>
 							<th>Código</th>
 							<th>Nombre</th>
+							<th>Categoría</th>
+							<th>Proveedor</th>
 							<th>Venta</th>
 							<th>Costo</th>
 							<th>Motivo</th>
@@ -191,6 +194,8 @@ const reasonLabels = Object.fromEntries(
 					<td>${escapeHtml(labelStatus(line.status))}</td>
 					<td>${escapeHtml(line.default_code || line.barcode || '')}</td>
 					<td>${escapeHtml(line.name || '')}</td>
+					<td>${escapeHtml(line.categoria || '')}</td>
+					<td>${escapeHtml(line.proveedor || '')}</td>
 					<td>${line.list_price ?? ''}</td>
 					<td>${line.standard_price ?? ''}</td>
 					<td>${escapeHtml(labelReason(line.reason || ''))}</td>

@@ -2396,6 +2396,179 @@ describe("OdooAdapter.previewPriceListImport", () => {
     assert.equal(preview.lines[0].productId, 10);
     assert.equal(preview.lines[1].status, "create");
   });
+
+  it("keeps categoria and proveedor on preview lines", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: [] }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const preview = await adapter.previewPriceListImport("sess", {
+      filename: "lista.csv",
+      content:
+        "name,list_price,categoria,proveedor\n" +
+        "Filtro Aceite,1500,Filtros,Acme\n",
+    });
+    assert.equal(preview.lines[0].categoria, "Filtros");
+    assert.equal(preview.lines[0].proveedor, "Acme");
+  });
+});
+
+describe("OdooAdapter.applyPriceListImport category supplier", () => {
+  it("creates product with categ_id and supplierinfo", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      calls.push({ model, method, args: body.params?.args });
+      if (method === "search_read" && model === "product.category") {
+        return Response.json({ result: [] });
+      }
+      if (method === "create" && model === "product.category") {
+        return Response.json({ result: 44 });
+      }
+      if (method === "search_read" && model === "res.partner") {
+        return Response.json({ result: [] });
+      }
+      if (method === "create" && model === "res.partner") {
+        return Response.json({ result: 55 });
+      }
+      if (method === "create" && model === "product.template") {
+        return Response.json({ result: 99 });
+      }
+      if (method === "search_read" && model === "product.supplierinfo") {
+        return Response.json({ result: [] });
+      }
+      if (method === "create" && model === "product.supplierinfo") {
+        return Response.json({ result: 77 });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.applyPriceListImport("sess", [
+      {
+        selected: true,
+        status: "create",
+        name: "Filtro",
+        list_price: 1500,
+        standard_price: 900,
+        categoria: "Filtros",
+        proveedor: "Acme",
+      },
+    ]);
+    assert.equal(result.created, 1);
+    const tmplCreate = calls.find(
+      (c) => c.model === "product.template" && c.method === "create"
+    );
+    assert.equal(tmplCreate.args[0].categ_id, 44);
+    const supplierCreate = calls.find(
+      (c) => c.model === "product.supplierinfo" && c.method === "create"
+    );
+    assert.equal(supplierCreate.args[0].product_tmpl_id, 99);
+    assert.equal(supplierCreate.args[0].partner_id, 55);
+    assert.equal(supplierCreate.args[0].price, 900);
+  });
+});
+
+describe("OdooAdapter.purgeProductsByCategory", () => {
+  it("rejects wrong confirm name", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "search_read") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.purgeProductsByCategory("sess", {
+          categoryId: 3,
+          confirmName: "Otra",
+        }),
+      (err) => err?.code === "validation_error"
+    );
+  });
+
+  it("unlinks products when possible", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      calls.push({ model, method, args: body.params?.args });
+      if (method === "search_read" && model === "product.category") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      if (method === "search" && model === "product.template") {
+        return Response.json({ result: [11, 12] });
+      }
+      if (method === "unlink") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.purgeProductsByCategory("sess", {
+      categoryId: 3,
+      confirmName: "Filtros",
+    });
+    assert.equal(result.deleted, 2);
+    assert.equal(result.archived, 0);
+    assert.equal(result.productCount, 2);
+    assert.match(result.summary, /2 eliminados/);
+  });
+
+  it("archives when unlink fails", async () => {
+    let unlinkAttempts = 0;
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      if (method === "search_read" && model === "product.category") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      if (method === "search" && model === "product.template") {
+        return Response.json({ result: [11] });
+      }
+      if (method === "unlink") {
+        unlinkAttempts += 1;
+        return Response.json({
+          error: { message: "constraint", data: { message: "constraint" } },
+        });
+      }
+      if (method === "write") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.purgeProductsByCategory("sess", {
+      categoryId: 3,
+      confirmName: "filtros",
+    });
+    assert.equal(unlinkAttempts, 1);
+    assert.equal(result.deleted, 0);
+    assert.equal(result.archived, 1);
+  });
 });
 
 describe("OdooAdapter.previewVendorBillPdf", () => {
