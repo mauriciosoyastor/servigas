@@ -177,6 +177,8 @@ export type PriceListImportPreviewLine = {
   name: string;
   list_price: number | null;
   standard_price: number | null;
+  categoria: string;
+  proveedor: string;
   productId: number | null;
   candidates: number[];
   reason: string;
@@ -190,6 +192,8 @@ export type PriceListImportPreview = {
     name?: string;
     list_price?: string;
     standard_price?: string;
+    categoria?: string;
+    proveedor?: string;
   };
   lines: PriceListImportPreviewLine[];
   counts: {
@@ -209,12 +213,22 @@ export type PriceListImportApplyLine = {
   name?: string;
   list_price?: number | null;
   standard_price?: number | null;
+  categoria?: string;
+  proveedor?: string;
 };
 
 export type PriceListImportApplyResult = {
   created: number;
   updated: number;
   skipped: number;
+};
+
+export type ProductPurgeByCategoryResult = {
+  deleted: number;
+  archived: number;
+  errors: Array<{ id: number; message: string }>;
+  productCount: number;
+  summary: string;
 };
 
 export type VendorBillPdfPreviewLine = {

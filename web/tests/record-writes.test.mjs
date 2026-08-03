@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   canArchiveRecord,
   canCreateRecord,
+  canHardDelete,
   customerInvoiceDestError,
   filterCreateValues,
   filterWritableValues,
@@ -179,6 +180,10 @@ describe("record-writes allowlist", () => {
     });
     assert.equal(canCreateRecord("inventory/products"), true);
     assert.equal(canArchiveRecord("inventory/products"), true);
+    assert.equal(canHardDelete("inventory/products"), true);
+    assert.equal(canHardDelete("inventory/categories"), false);
+    assert.equal(canHardDelete("sales/customers"), false);
+    assert.equal(canHardDelete("workshop/orders"), true);
   });
 
   it("builds product create values with numeric list_price", () => {
@@ -211,5 +216,42 @@ describe("record-writes allowlist", () => {
       name: "HACK",
     });
     assert.deepEqual(filtered, { image_1920: png });
+  });
+
+  it("defines category create/update without archive", () => {
+    const def = getRecordWriteDef("inventory/categories");
+    assert.ok(def);
+    assert.equal(def.model, "product.category");
+    assert.deepEqual(def.createFields.sort(), ["name", "parent_id"].sort());
+    assert.deepEqual(def.fields.sort(), ["name", "parent_id"].sort());
+    assert.equal(canCreateRecord("inventory/categories"), true);
+    assert.equal(canArchiveRecord("inventory/categories"), false);
+  });
+
+  it("creates category with optional parent_id as number", () => {
+    assert.deepEqual(
+      filterCreateValues("inventory/categories", {
+        name: "Filtros",
+        parent_id: "12",
+      }),
+      { name: "Filtros", parent_id: 12 }
+    );
+    assert.deepEqual(
+      filterCreateValues("inventory/categories", {
+        name: "Filtros",
+        parent_id: "",
+      }),
+      { name: "Filtros" }
+    );
+  });
+
+  it("clears category parent_id with false on update", () => {
+    assert.deepEqual(
+      filterWritableValues("inventory/categories", {
+        name: "Filtros",
+        parent_id: "",
+      }),
+      { name: "Filtros", parent_id: false }
+    );
   });
 });

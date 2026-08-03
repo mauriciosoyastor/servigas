@@ -11,7 +11,6 @@ import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import { canCreateInvoice } from "../../../lib/shell/invoice-creates.ts";
 import {
   canCreateWorkOrder,
-  canDeleteWorkOrder,
 } from "../../../lib/shell/workshop-creates.ts";
 import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateInvoiceFromPos } from "../../../lib/shell/pos-invoice.ts";
@@ -28,6 +27,7 @@ import {
 import {
   canArchiveRecord,
   canCreateRecord,
+  canHardDelete,
   getRecordWriteDef,
 } from "../../../lib/shell/record-writes.ts";
 
@@ -97,7 +97,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     const canAct =
       Boolean(writes) ||
       (action === "confirm" && canConfirmRecord(slug)) ||
-      (action === "delete" && canDeleteWorkOrder(slug)) ||
+      (action === "delete" && canHardDelete(slug)) ||
       (action === "create_invoice" &&
         (canCreateInvoiceFromOrder(slug) || canCreateInvoiceFromPos(slug))) ||
       (action === "register_payment" && canRegisterPayment(slug)) ||
@@ -139,7 +139,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     }
 
     if (action === "delete") {
-      if (!canDeleteWorkOrder(slug)) {
+      if (!canHardDelete(slug)) {
         throw new BffError("not_found", 404, "Eliminación no permitida");
       }
       await getBackend().deleteRecord(odooSessionId, slug, id);

@@ -1,0 +1,148 @@
+---
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import CategoryProductPurgeControl from '../../../../components/CategoryProductPurgeControl.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getBackend } from '../../../../lib/bff/get-backend.ts';
+import { requireOdooSession } from '../../../../lib/bff/http.ts';
+import { getRecordListDef } from '../../../../lib/shell/record-lists.ts';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const listKey = 'inventory/categories';
+const def = getRecordListDef(listKey);
+if (!def) {
+	return Astro.redirect('/');
+}
+
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	listKey,
+	id,
+	'No encontramos esta categoría.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+const categoryName = String(detail?.title || '');
+
+let productCount = 0;
+if (detail && !error) {
+	try {
+		const { odooSessionId } = requireOdooSession(Astro.cookies);
+		productCount = await getBackend().countProductsInCategory(
+			odooSessionId,
+			id
+		);
+	} catch {
+		productCount = 0;
+	}
+}
+
+function fieldValue(key: string): string {
+	const hit = detail?.fields.find((field) => field.key === key);
+	if (hit?.value === null || hit?.value === undefined || hit.value === false) {
+		return '';
+	}
+	return String(hit.value);
+}
+
+/** @type {{ value: string, label: string }[]} */
+let parentOptions = [{ value: '', label: 'Sin padre' }];
+let parentIdValue = '';
+if (detail && !error) {
+	try {
+		const { odooSessionId } = requireOdooSession(Astro.cookies);
+		const list = await getBackend().getRecordList(odooSessionId, listKey, {
+			page: 1,
+		});
+		parentOptions = [
+			{ value: '', label: 'Sin padre' },
+			...list.rows
+				.filter((row) => Number(row.id) !== id)
+				.map((row) => ({
+					value: String(row.id),
+					label: String(row.complete_name || row.name || row.id),
+				})),
+		];
+		const parentLabel = fieldValue('parent_id');
+		const match = list.rows.find(
+			(row) =>
+				Number(row.id) !== id &&
+				(String(row.complete_name) === parentLabel ||
+					String(row.name) === parentLabel)
+		);
+		if (match) parentIdValue = String(match.id);
+	} catch {
+		/* keep defaults */
+	}
+}
+---
+
+<ShellLayout title={`${detail?.title || def.title} | Servigas`} active={def.railApp} userName={userName}>
+	<RecordDetailBody
+		detail={detail}
+		error={error}
+		eyebrow={`Ficha — ${def.title}`}
+		fallbackTitle={def.title}
+		fallbackListPath={def.path}
+		recordId={id}
+		listKey={listKey}
+		editApiPath="/api/records/inventory/categories"
+		editFields={
+			detail && !error
+				? [
+						{ key: 'name', label: 'Nombre', value: fieldValue('name') || categoryName },
+						{
+							key: 'parent_id',
+							label: 'Categoría padre',
+							value: parentIdValue,
+							type: 'select',
+							options: parentOptions,
+						},
+					]
+				: []
+		}
+	/>
+	{!error && detail ? (
+		<section class="sg-category-products-link sg-glass">
+			<a
+				class="sg-focus-ring"
+				href={`/lists/inventory/products?categ_id=${id}`}
+			>
+				{productCount === 1
+					? 'Ver productos (1)'
+					: `Ver productos (${productCount.toLocaleString('es-AR')})`}
+			</a>
+		</section>
+	) : null}
+	{!error && detail ? (
+		<CategoryProductPurgeControl
+			categoryId={id}
+			categoryName={categoryName}
+			apiPath="/api/inventory/products/purge-by-category"
+		/>
+	) : null}
+</ShellLayout>
+
+<style>
+	.sg-category-products-link {
+		margin: 1rem auto 0;
+		max-width: 78rem;
+		padding: 1rem 1.15rem;
+		border-radius: var(--sg-radius-card);
+	}
+	.sg-category-products-link a {
+		display: inline-flex;
+		align-items: center;
+		font-size: 0.9rem;
+		font-weight: 650;
+		color: var(--sg-text-on-dark);
+		text-decoration: none;
+	}
+	.sg-category-products-link a:hover {
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+</style>

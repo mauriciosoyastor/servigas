@@ -19,6 +19,7 @@ import type {
   PriceListImportApplyLine,
   PriceListImportApplyResult,
   PriceListImportPreview,
+  ProductPurgeByCategoryResult,
   VendorBillPdfPreview,
   RecordDetailLines,
   RecordDetailPayload,
@@ -54,6 +55,13 @@ import {
   suggestMapping,
   type PriceListMapping,
 } from "../shell/price-list-import.ts";
+import {
+  confirmCategoryName,
+  hardPurgeIds,
+  hybridPurgeIds,
+  summarizeHardPurgeResult,
+  summarizePurgeResult,
+} from "../shell/product-purge.ts";
 import { extractPdfText, isPdfMagic } from "../shell/pdf-text.ts";
 import {
   classifyBillLines,
@@ -103,7 +111,6 @@ import {
 } from "../shell/order-creates.ts";
 import {
   canCreateWorkOrder,
-  canDeleteWorkOrder,
   filterWorkOrderCreateValues,
 } from "../shell/workshop-creates.ts";
 import {
@@ -128,6 +135,7 @@ import {
 } from "../shell/fw-bridge.ts";
 import {
   canArchiveRecord,
+  canHardDelete,
   customerInvoiceDestError,
   filterCreateValues,
   filterWritableValues,
@@ -195,6 +203,7 @@ import {
 const COMPUTED_LIST_FIELDS = new Set([
   "sg_doc_type_short",
   "payment_method",
+  "product_count",
 ]);
 /** On account.move only: filled from partner, not a move column. */
 const MOVE_PARTNER_DEST_FIELD = "sg_invoice_dest";
@@ -626,7 +635,9 @@ export class OdooAdapter implements BackendClient {
 
     const page = Math.max(1, Number(query.page) || 1);
     const q = (query.q || "").trim();
-    const domain = buildSearchDomain(def, q);
+    const domain = buildSearchDomain(def, q, new Date(), {
+      categId: query.categId,
+    });
     const offset = (page - 1) * def.limit;
 
     const displayFields = [...def.fields];
@@ -704,6 +715,13 @@ export class OdooAdapter implements BackendClient {
       displayFields.includes("payment_method")
     ) {
       await this.#enrichPosOrdersWithPaymentMethod(odooSessionId, rawRows);
+    }
+
+    if (
+      def.key === "inventory/categories" &&
+      displayFields.includes("product_count")
+    ) {
+      await this.#enrichCategoryProductCounts(odooSessionId, rawRows);
     }
 
     const total = await this.#callKw<number>(
@@ -1052,6 +1070,8 @@ export class OdooAdapter implements BackendClient {
       name: row.name,
       list_price: row.list_price,
       standard_price: row.standard_price,
+      categoria: row.categoria,
+      proveedor: row.proveedor,
       productId: row.productId,
       candidates: row.candidates,
       reason: row.reason,
@@ -1084,6 +1104,15 @@ export class OdooAdapter implements BackendClient {
         continue;
       }
 
+      const categoria = String(line.categoria || "").trim();
+      const proveedor = String(line.proveedor || "").trim();
+      const categId = categoria
+        ? await this.#ensureCategoryId(odooSessionId, categoria)
+        : null;
+      const partnerId = proveedor
+        ? await this.#ensureSupplierPartnerId(odooSessionId, proveedor)
+        : null;
+
       if (action === "create") {
         const name = (line.name || "").trim();
         if (!name) {
@@ -1106,7 +1135,18 @@ export class OdooAdapter implements BackendClient {
         if (line.standard_price != null && Number.isFinite(line.standard_price)) {
           vals.standard_price = line.standard_price;
         }
-        await this.#callKw(odooSessionId, "product.template", "create", [vals]);
+        if (categId) vals.categ_id = categId;
+        const productId = Number(
+          await this.#callKw(odooSessionId, "product.template", "create", [vals])
+        );
+        if (partnerId && Number.isFinite(productId) && productId > 0) {
+          await this.#upsertSupplierInfo(
+            odooSessionId,
+            productId,
+            partnerId,
+            line.standard_price
+          );
+        }
         created += 1;
         continue;
       }
@@ -1142,16 +1182,292 @@ export class OdooAdapter implements BackendClient {
       if (line.default_code && !product.default_code) {
         writeVals.default_code = String(line.default_code).slice(0, 128);
       }
+      if (categId) writeVals.categ_id = categId;
       if (Object.keys(writeVals).length) {
         await this.#callKw(odooSessionId, "product.template", "write", [
           [productId],
           writeVals,
         ]);
       }
+      if (partnerId) {
+        await this.#upsertSupplierInfo(
+          odooSessionId,
+          productId,
+          partnerId,
+          line.standard_price
+        );
+      }
       updated += 1;
     }
 
     return { created, updated, skipped };
+  }
+
+  async countProductsInCategory(
+    odooSessionId: string,
+    categoryId: number
+  ): Promise<number> {
+    const id = Number(categoryId);
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("validation_error", 400, "Categoría inválida.");
+    }
+    const count = await this.#callKw<number>(
+      odooSessionId,
+      "product.template",
+      "search_count",
+      [[["categ_id", "=", id], ["active", "=", true]]]
+    );
+    return Number(count) || 0;
+  }
+
+  async purgeProductsByCategory(
+    odooSessionId: string,
+    input: { categoryId: number; confirmName: string }
+  ): Promise<ProductPurgeByCategoryResult> {
+    const categoryId = Number(input.categoryId);
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      throw new BffError("validation_error", 400, "Categoría inválida.");
+    }
+    const [category] = await this.#searchRead(
+      odooSessionId,
+      "product.category",
+      [["id", "=", categoryId]],
+      ["id", "name", "complete_name"],
+      1,
+      0,
+      "id"
+    );
+    if (!category) {
+      throw new BffError("not_found", 404, "No encontramos esa categoría.");
+    }
+    const expectedName = String(category.name || category.complete_name || "");
+    if (!confirmCategoryName(expectedName, input.confirmName)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Escribí el nombre exacto de la categoría para confirmar."
+      );
+    }
+    const productIds: number[] = [];
+    const pageSize = 500;
+    let offset = 0;
+    while (true) {
+      const batch = await this.#callKw<number[]>(
+        odooSessionId,
+        "product.template",
+        "search",
+        [[["categ_id", "=", categoryId]]],
+        { limit: pageSize, offset, order: "id" }
+      );
+      if (!Array.isArray(batch) || !batch.length) break;
+      for (const raw of batch) {
+        const id = Number(raw);
+        if (id > 0) productIds.push(id);
+      }
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    const result = await hybridPurgeIds(productIds, {
+      unlink: async (id) => {
+        await this.#callKw(odooSessionId, "product.template", "unlink", [[id]]);
+      },
+      archive: async (id) => {
+        await this.#callKw(odooSessionId, "product.template", "write", [
+          [id],
+          { active: false },
+        ]);
+      },
+    });
+    return {
+      ...result,
+      productCount: productIds.length,
+      summary: summarizePurgeResult(result),
+    };
+  }
+
+  async deleteCategoryHard(
+    odooSessionId: string,
+    input: { categoryId: number; confirmName: string }
+  ): Promise<ProductPurgeByCategoryResult & { categoryDeleted: boolean }> {
+    const categoryId = Number(input.categoryId);
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      throw new BffError("validation_error", 400, "Categoría inválida.");
+    }
+    const [category] = await this.#searchRead(
+      odooSessionId,
+      "product.category",
+      [["id", "=", categoryId]],
+      ["id", "name", "complete_name"],
+      1,
+      0,
+      "id"
+    );
+    if (!category) {
+      throw new BffError("not_found", 404, "No encontramos esa categoría.");
+    }
+    const expectedName = String(category.name || category.complete_name || "");
+    if (!confirmCategoryName(expectedName, input.confirmName)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Escribí el nombre exacto de la categoría para confirmar."
+      );
+    }
+    const productIds: number[] = [];
+    const pageSize = 500;
+    let offset = 0;
+    while (true) {
+      const batch = await this.#callKw<number[]>(
+        odooSessionId,
+        "product.template",
+        "search",
+        [[["categ_id", "=", categoryId]]],
+        { limit: pageSize, offset, order: "id" }
+      );
+      if (!Array.isArray(batch) || !batch.length) break;
+      for (const raw of batch) {
+        const id = Number(raw);
+        if (id > 0) productIds.push(id);
+      }
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    const result = await hardPurgeIds(productIds, async (id) => {
+      await this.#callKw(odooSessionId, "product.template", "unlink", [[id]]);
+    });
+    if (result.errors.length > 0) {
+      return {
+        ...result,
+        productCount: productIds.length,
+        summary: summarizeHardPurgeResult(result),
+        categoryDeleted: false,
+      };
+    }
+    await this.#callKw(odooSessionId, "product.category", "unlink", [
+      [categoryId],
+    ]);
+    return {
+      ...result,
+      productCount: productIds.length,
+      summary: `${summarizeHardPurgeResult(result)}; categoría eliminada`,
+      categoryDeleted: true,
+    };
+  }
+
+  async #ensureCategoryId(
+    odooSessionId: string,
+    name: string
+  ): Promise<number> {
+    const trimmed = name.trim().slice(0, 128);
+    const existing = await this.#searchRead(
+      odooSessionId,
+      "product.category",
+      [["name", "=ilike", trimmed]],
+      ["id", "name"],
+      5,
+      0,
+      "id"
+    );
+    const exact = existing.find(
+      (row) => String(row.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exact) return Number(exact.id);
+    return Number(
+      await this.#callKw(odooSessionId, "product.category", "create", [
+        { name: trimmed },
+      ])
+    );
+  }
+
+  async #ensureSupplierPartnerId(
+    odooSessionId: string,
+    name: string
+  ): Promise<number> {
+    const trimmed = name.trim().slice(0, 128);
+    const existing = await this.#searchRead(
+      odooSessionId,
+      "res.partner",
+      [
+        ["name", "=ilike", trimmed],
+        ["supplier_rank", ">", 0],
+      ],
+      ["id", "name", "supplier_rank"],
+      5,
+      0,
+      "id"
+    );
+    const exact = existing.find(
+      (row) => String(row.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exact) return Number(exact.id);
+    const anyPartner = await this.#searchRead(
+      odooSessionId,
+      "res.partner",
+      [["name", "=ilike", trimmed]],
+      ["id", "name", "supplier_rank"],
+      5,
+      0,
+      "id"
+    );
+    const partnerExact = anyPartner.find(
+      (row) => String(row.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (partnerExact) {
+      const id = Number(partnerExact.id);
+      if (Number(partnerExact.supplier_rank || 0) <= 0) {
+        await this.#callKw(odooSessionId, "res.partner", "write", [
+          [id],
+          { supplier_rank: 1 },
+        ]);
+      }
+      return id;
+    }
+    return Number(
+      await this.#callKw(odooSessionId, "res.partner", "create", [
+        { name: trimmed, supplier_rank: 1, company_type: "company" },
+      ])
+    );
+  }
+
+  async #upsertSupplierInfo(
+    odooSessionId: string,
+    productTmplId: number,
+    partnerId: number,
+    price: number | null | undefined
+  ): Promise<void> {
+    const existing = await this.#searchRead(
+      odooSessionId,
+      "product.supplierinfo",
+      [
+        ["product_tmpl_id", "=", productTmplId],
+        ["partner_id", "=", partnerId],
+      ],
+      ["id"],
+      1,
+      0,
+      "id"
+    );
+    const vals: Record<string, number> = {};
+    if (price != null && Number.isFinite(price)) {
+      vals.price = price;
+    }
+    if (existing[0]?.id) {
+      if (Object.keys(vals).length) {
+        await this.#callKw(odooSessionId, "product.supplierinfo", "write", [
+          [Number(existing[0].id)],
+          vals,
+        ]);
+      }
+      return;
+    }
+    await this.#callKw(odooSessionId, "product.supplierinfo", "create", [
+      {
+        product_tmpl_id: productTmplId,
+        partner_id: partnerId,
+        min_qty: 1,
+        ...vals,
+      },
+    ]);
   }
 
   async previewVendorBillPdf(
@@ -1608,6 +1924,45 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
+  async #enrichCategoryProductCounts(
+    odooSessionId: string,
+    rows: Record<string, unknown>[]
+  ): Promise<void> {
+    for (const row of rows) row.product_count = 0;
+    const ids = rows
+      .map((row) => Number(row.id))
+      .filter((id) => Number.isFinite(id) && id > 0);
+    if (!ids.length) return;
+
+    const groups = await this.#callKw<
+      Array<{ categ_id?: unknown; categ_id_count?: number; __count?: number }>
+    >(odooSessionId, "product.template", "read_group", [
+      [
+        ["active", "=", true],
+        ["categ_id", "in", ids],
+      ],
+      ["categ_id"],
+      ["categ_id"],
+    ]);
+
+    const countById = new Map<number, number>();
+    for (const group of groups || []) {
+      const categ = group.categ_id;
+      let categId = 0;
+      if (Array.isArray(categ) && categ.length) {
+        categId = Number(categ[0]) || 0;
+      } else {
+        categId = Number(categ) || 0;
+      }
+      const count = Number(group.categ_id_count ?? group.__count ?? 0) || 0;
+      if (categId > 0) countById.set(categId, count);
+    }
+    for (const row of rows) {
+      const id = Number(row.id) || 0;
+      row.product_count = countById.get(id) || 0;
+    }
+  }
+
   async #enrichPosOrdersWithPaymentMethod(
     odooSessionId: string,
     rows: Record<string, unknown>[]
@@ -1825,7 +2180,7 @@ export class OdooAdapter implements BackendClient {
     listKey: string,
     id: number
   ): Promise<void> {
-    if (!canDeleteWorkOrder(listKey)) {
+    if (!canHardDelete(listKey)) {
       throw new BffError("not_found", 404, "Eliminación no permitida");
     }
     if (!Number.isFinite(id) || id <= 0) {

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
 import {
+  TEMPLATE_CSV,
   classifyRows,
   isRejectedFilename,
   labelImportReason,
@@ -29,6 +30,8 @@ describe("price-list-import mapping", () => {
         "name",
         "list_price",
         "standard_price",
+        "categoria",
+        "proveedor",
       ]),
       {
         barcode: "barcode",
@@ -36,8 +39,27 @@ describe("price-list-import mapping", () => {
         name: "name",
         list_price: "list_price",
         standard_price: "standard_price",
+        categoria: "categoria",
+        proveedor: "proveedor",
       }
     );
+  });
+
+  it("maps spanish aliases for category and supplier", () => {
+    assert.deepEqual(
+      suggestMapping(["Categoría", "Proveedor", "Nombre", "Precio"]),
+      {
+        name: "Nombre",
+        list_price: "Precio",
+        categoria: "Categoría",
+        proveedor: "Proveedor",
+      }
+    );
+  });
+
+  it("template includes categoria and proveedor", () => {
+    assert.match(TEMPLATE_CSV, /categoria/);
+    assert.match(TEMPLATE_CSV, /proveedor/);
   });
 });
 
@@ -162,6 +184,25 @@ describe("price-list-import classify", () => {
     );
     assert.equal(row.list_price, 1234.5);
     assert.equal(row.name, "Gas");
+  });
+
+  it("normalizes categoria and proveedor", () => {
+    const row = normalizeRow(
+      {
+        name: "Filtro",
+        categoria: "  Filtros  ",
+        proveedor: " Acme SA ",
+        list_price: "10",
+      },
+      {
+        name: "name",
+        list_price: "list_price",
+        categoria: "categoria",
+        proveedor: "proveedor",
+      }
+    );
+    assert.equal(row.categoria, "Filtros");
+    assert.equal(row.proveedor, "Acme SA");
   });
 });
 
