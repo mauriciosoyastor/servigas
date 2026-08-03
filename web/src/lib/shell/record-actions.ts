@@ -53,6 +53,10 @@ const ACTIONS: Record<string, { method: string; confirmableStates: string[] }> =
       method: "action_post",
       confirmableStates: ["draft"],
     },
+    "workshop/orders": {
+      method: "action_done",
+      confirmableStates: ["draft"],
+    },
   };
 
 function canonicalActionKey(listKey: string): string {

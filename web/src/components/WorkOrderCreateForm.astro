@@ -1,0 +1,406 @@
+---
+/**
+ * Paper-style work order create form (taller).
+ */
+interface Props {
+	apiPath?: string;
+	listPath?: string;
+	partnerListKey?: string;
+	applianceListKey?: string;
+}
+
+const {
+	apiPath = '/api/records/workshop/orders',
+	listPath = '/lists/workshop/orders',
+	partnerListKey = 'sales/customers',
+	applianceListKey = 'workshop/appliances',
+} = Astro.props;
+
+const today = new Date().toISOString().slice(0, 10);
+---
+
+<section class="sg-wo-create sg-glass" data-wo-create>
+	<strong>Orden de trabajo</strong>
+	<p>Completá como en el papel. La serie identifica el artefacto y arma el historial.</p>
+
+	<form class="sg-wo-form" data-wo-form>
+		<div class="sg-wo-grid">
+			<label>
+				<span>Fecha *</span>
+				<input class="sg-focus-ring" type="date" name="date" value={today} required />
+			</label>
+			<label>
+				<span>Propietario</span>
+				<input class="sg-focus-ring" type="text" name="owner_name" autocomplete="name" />
+			</label>
+			<label>
+				<span>Celular</span>
+				<input class="sg-focus-ring" type="tel" name="owner_phone" autocomplete="tel" />
+			</label>
+			<label class="sg-wo-span">
+				<span>Cliente Odoo (opcional)</span>
+				<input
+					class="sg-focus-ring"
+					type="search"
+					autocomplete="off"
+					placeholder="Buscar cliente…"
+					data-partner-query
+				/>
+				<input type="hidden" name="partnerId" value="" data-partner-id />
+				<ul class="sg-wo-suggest" data-partner-suggest hidden></ul>
+			</label>
+		</div>
+
+		<fieldset class="sg-wo-fieldset">
+			<legend>Artefacto</legend>
+			<div class="sg-wo-grid">
+				<label>
+					<span>Nº de serie *</span>
+					<input
+						class="sg-focus-ring"
+						type="text"
+						name="serial_number"
+						required
+						autocomplete="off"
+						data-serial-input
+					/>
+				</label>
+				<label>
+					<span>Marca</span>
+					<input class="sg-focus-ring" type="text" name="brand" autocomplete="off" data-brand />
+				</label>
+				<label>
+					<span>Modelo</span>
+					<input class="sg-focus-ring" type="text" name="model" autocomplete="off" data-model />
+				</label>
+				<label>
+					<span>Descripción</span>
+					<input
+						class="sg-focus-ring"
+						type="text"
+						name="appliance_name"
+						placeholder="Ej. CALEFON 320"
+						autocomplete="off"
+						data-appliance-name
+					/>
+				</label>
+				<label>
+					<span>Gas</span>
+					<select class="sg-focus-ring" name="gas_type" data-gas>
+						<option value="">—</option>
+						<option value="gn">GN</option>
+						<option value="ge">GE</option>
+					</select>
+				</label>
+				<label>
+					<span>Foto de chapa (opcional)</span>
+					<input class="sg-focus-ring" type="file" accept="image/jpeg,image/png,application/pdf" data-photo />
+				</label>
+			</div>
+			<p class="sg-wo-serial-hint" data-serial-hint hidden></p>
+		</fieldset>
+
+		<div class="sg-wo-grid sg-wo-grid--text">
+			<label class="sg-wo-span">
+				<span>Problema</span>
+				<textarea class="sg-focus-ring" name="problem" rows="2"></textarea>
+			</label>
+			<label class="sg-wo-span">
+				<span>Observación</span>
+				<textarea class="sg-focus-ring" name="observation" rows="2"></textarea>
+			</label>
+			<label class="sg-wo-span">
+				<span>Trabajos realizados</span>
+				<textarea class="sg-focus-ring" name="work_done" rows="2"></textarea>
+			</label>
+			<label class="sg-wo-span">
+				<span>Materiales</span>
+				<textarea class="sg-focus-ring" name="materials" rows="2"></textarea>
+			</label>
+			<label>
+				<span>Importe</span>
+				<input class="sg-focus-ring" type="number" name="amount" min="0" step="0.01" />
+			</label>
+		</div>
+
+		<div class="sg-wo-actions">
+			<button class="sg-focus-ring" type="submit">Guardar OT</button>
+			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
+			<span class="sg-wo-status" data-wo-status hidden></span>
+		</div>
+	</form>
+</section>
+
+<script define:vars={{ apiPath, listPath, partnerListKey, applianceListKey }}>
+	const root = document.querySelector('[data-wo-create]');
+	const form = root?.querySelector('[data-wo-form]');
+	const status = root?.querySelector('[data-wo-status]');
+	const serialInput = root?.querySelector('[data-serial-input]');
+	const serialHint = root?.querySelector('[data-serial-hint]');
+	const partnerQuery = root?.querySelector('[data-partner-query]');
+	const partnerId = root?.querySelector('[data-partner-id]');
+	const partnerSuggest = root?.querySelector('[data-partner-suggest]');
+	const photoInput = root?.querySelector('[data-photo]');
+
+	function setStatus(msg, isError) {
+		if (!status) return;
+		status.hidden = !msg;
+		status.textContent = msg || '';
+		status.classList.toggle('is-error', Boolean(isError));
+	}
+
+	function fileToDataUrl(file) {
+		return new Promise((resolve, reject) => {
+			const reader = new FileReader();
+			reader.onload = () => resolve(String(reader.result || ''));
+			reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+			reader.readAsDataURL(file);
+		});
+	}
+
+	async function lookupSerial() {
+		if (!serialInput || !serialHint) return;
+		const raw = String(serialInput.value || '').trim();
+		if (!raw) {
+			serialHint.hidden = true;
+			return;
+		}
+		const normalized = raw.toUpperCase().replace(/\s+/g, '');
+		try {
+			const res = await fetch(
+				`/api/lists/${applianceListKey}?q=${encodeURIComponent(normalized)}`
+			);
+			const data = await res.json().catch(() => ({}));
+			const rows = Array.isArray(data.rows) ? data.rows : [];
+			const match = rows.find((row) => {
+				const serial = String(row.serial_number || '')
+					.toUpperCase()
+					.replace(/\s+/g, '');
+				return serial === normalized;
+			});
+			if (!match) {
+				serialHint.hidden = false;
+				serialHint.innerHTML = 'Serie nueva — se creará el artefacto al guardar.';
+				return;
+			}
+			const count = Number(match.work_order_count) || 0;
+			const id = Number(match.id);
+			const brand = root?.querySelector('[data-brand]');
+			const model = root?.querySelector('[data-model]');
+			const name = root?.querySelector('[data-appliance-name]');
+			const gas = root?.querySelector('[data-gas]');
+			if (brand && !brand.value && match.brand) brand.value = String(match.brand);
+			if (model && !model.value && match.model) model.value = String(match.model);
+			if (name && !name.value && match.name) name.value = String(match.name);
+			if (gas && !gas.value && match.gas_type) gas.value = String(match.gas_type);
+			serialHint.hidden = false;
+			serialHint.innerHTML =
+				count > 0
+					? `Ya atendido <strong>${count}</strong> veces. <a class="sg-focus-ring" href="/lists/workshop/appliances/${id}">Ver historial</a>`
+					: `Artefacto conocido. <a class="sg-focus-ring" href="/lists/workshop/appliances/${id}">Ver ficha</a>`;
+		} catch {
+			serialHint.hidden = true;
+		}
+	}
+
+	let partnerTimer = 0;
+	async function searchPartners(q) {
+		if (!partnerSuggest || !partnerId) return;
+		const term = String(q || '').trim();
+		if (term.length < 2) {
+			partnerSuggest.hidden = true;
+			partnerSuggest.innerHTML = '';
+			return;
+		}
+		const res = await fetch(
+			`/api/lists/${partnerListKey}?q=${encodeURIComponent(term)}`
+		);
+		const data = await res.json().catch(() => ({}));
+		const rows = Array.isArray(data.rows) ? data.rows : [];
+		if (!rows.length) {
+			partnerSuggest.hidden = true;
+			partnerSuggest.innerHTML = '';
+			return;
+		}
+		partnerSuggest.hidden = false;
+		partnerSuggest.innerHTML = rows
+			.map((row) => {
+				const id = Number(row.id);
+				const label = String(row.name || row.display_name || id);
+				return `<li><button type="button" data-pick-partner="${id}" data-pick-label="${label.replace(/"/g, '&quot;')}">${label}</button></li>`;
+			})
+			.join('');
+	}
+
+	partnerQuery?.addEventListener('input', () => {
+		partnerId.value = '';
+		window.clearTimeout(partnerTimer);
+		partnerTimer = window.setTimeout(() => searchPartners(partnerQuery.value), 220);
+	});
+
+	partnerSuggest?.addEventListener('click', (event) => {
+		const btn = event.target.closest('[data-pick-partner]');
+		if (!btn || !partnerQuery || !partnerId) return;
+		partnerId.value = btn.getAttribute('data-pick-partner') || '';
+		partnerQuery.value = btn.getAttribute('data-pick-label') || '';
+		partnerSuggest.hidden = true;
+		partnerSuggest.innerHTML = '';
+	});
+
+	serialInput?.addEventListener('blur', lookupSerial);
+	serialInput?.addEventListener('change', lookupSerial);
+
+	form?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		setStatus('Guardando…', false);
+		const fd = new FormData(form);
+		const values = {
+			date: String(fd.get('date') || ''),
+			owner_name: String(fd.get('owner_name') || ''),
+			owner_phone: String(fd.get('owner_phone') || ''),
+			partnerId: Number(fd.get('partnerId') || 0) || undefined,
+			serial_number: String(fd.get('serial_number') || ''),
+			brand: String(fd.get('brand') || ''),
+			model: String(fd.get('model') || ''),
+			appliance_name: String(fd.get('appliance_name') || ''),
+			gas_type: String(fd.get('gas_type') || ''),
+			problem: String(fd.get('problem') || ''),
+			observation: String(fd.get('observation') || ''),
+			work_done: String(fd.get('work_done') || ''),
+			materials: String(fd.get('materials') || ''),
+			amount: fd.get('amount') === '' || fd.get('amount') == null ? undefined : Number(fd.get('amount')),
+		};
+
+		const file = photoInput?.files?.[0];
+		if (file) {
+			try {
+				const content = await fileToDataUrl(file);
+				values.attachment = {
+					filename: file.name,
+					mimetype: file.type || 'image/jpeg',
+					content,
+				};
+			} catch (err) {
+				setStatus(err?.message || 'No se pudo leer la foto', true);
+				return;
+			}
+		}
+
+		try {
+			const res = await fetch(apiPath, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ action: 'create', values }),
+			});
+			const data = await res.json().catch(() => ({}));
+			if (!res.ok) {
+				setStatus(data?.error || data?.message || 'No se pudo guardar', true);
+				return;
+			}
+			const path = data.detailPath || `${listPath}/${data.id}`;
+			window.location.assign(path);
+		} catch {
+			setStatus('Error de red al guardar', true);
+		}
+	});
+</script>
+
+<style>
+	.sg-wo-create {
+		padding: 1.25rem 1.5rem 1.5rem;
+		max-width: 52rem;
+	}
+	.sg-wo-create > strong {
+		display: block;
+		font-size: 1.1rem;
+		margin-bottom: 0.25rem;
+	}
+	.sg-wo-create > p {
+		margin: 0 0 1.25rem;
+		opacity: 0.8;
+	}
+	.sg-wo-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+		gap: 0.85rem 1rem;
+	}
+	.sg-wo-grid--text {
+		margin-top: 1rem;
+	}
+	.sg-wo-span {
+		grid-column: 1 / -1;
+	}
+	.sg-wo-form label {
+		display: flex;
+		flex-direction: column;
+		gap: 0.35rem;
+		font-size: 0.9rem;
+		position: relative;
+	}
+	.sg-wo-form input,
+	.sg-wo-form select,
+	.sg-wo-form textarea {
+		border: 1px solid color-mix(in srgb, var(--sg-ink) 18%, transparent);
+		border-radius: 8px;
+		padding: 0.55rem 0.7rem;
+		background: color-mix(in srgb, white 70%, transparent);
+	}
+	.sg-wo-fieldset {
+		margin: 1.1rem 0 0;
+		padding: 0.85rem 1rem 1rem;
+		border: 1px solid color-mix(in srgb, var(--sg-ink) 12%, transparent);
+		border-radius: 10px;
+	}
+	.sg-wo-fieldset legend {
+		padding: 0 0.35rem;
+		font-weight: 600;
+	}
+	.sg-wo-serial-hint {
+		margin: 0.75rem 0 0;
+		font-size: 0.9rem;
+	}
+	.sg-wo-suggest {
+		list-style: none;
+		margin: 0.25rem 0 0;
+		padding: 0;
+		border-radius: 8px;
+		background: white;
+		box-shadow: 0 8px 24px color-mix(in srgb, black 12%, transparent);
+		position: absolute;
+		inset-inline: 0;
+		top: 100%;
+		z-index: 5;
+		max-height: 12rem;
+		overflow: auto;
+	}
+	.sg-wo-suggest button {
+		display: block;
+		width: 100%;
+		text-align: left;
+		border: 0;
+		background: transparent;
+		padding: 0.55rem 0.75rem;
+		cursor: pointer;
+	}
+	.sg-wo-suggest button:hover {
+		background: color-mix(in srgb, var(--sg-ember-amber) 18%, transparent);
+	}
+	.sg-wo-actions {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.75rem;
+		margin-top: 1.25rem;
+	}
+	.sg-wo-actions button[type='submit'] {
+		background: var(--sg-ember-amber);
+		border: 0;
+		border-radius: 999px;
+		padding: 0.65rem 1.25rem;
+		font-weight: 600;
+		cursor: pointer;
+	}
+	.sg-wo-status.is-error {
+		color: var(--sg-ember-scarlet, #c62828);
+	}
+</style>

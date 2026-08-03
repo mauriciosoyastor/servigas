@@ -42,9 +42,11 @@ describe("shell UI contracts", () => {
     assert.match(railNav, /href: "\/caja"/);
     assert.match(railNav, /href: "\/hubs\/inventory"/);
     assert.match(railNav, /href: "\/hubs\/purchase"/);
+    assert.match(railNav, /href: "\/hubs\/workshop"/);
     assert.match(railNav, /href: "\/hubs\/accounting"/);
     assert.doesNotMatch(railNav, /hubs\/sales/);
     assert.match(railNav, /AREA_LABELS\.inventory|label: "Stock"/);
+    assert.match(railNav, /AREA_LABELS\.workshop|label: "Taller"/);
     assert.match(railNav, /AREA_LABELS\.accounting|label: "Cobros"/);
     assert.match(rail, /data-tour=\{`rail-\$\{item\.app\}`\}/);
     assert.match(rail, /servigas-mark\.png/);
@@ -693,6 +695,39 @@ describe("shell UI contracts", () => {
     assert.match(form, /action:\s*['"]create['"]/);
     // <select> is only for optional FP bill source (gated by showBillSource).
     assert.match(form, /showBillSource/);
+  });
+
+  it("renders workshop hub OT create, detail and appliance history", async () => {
+    const page = await source("pages/lists/workshop/orders/new.astro");
+    const form = await source("components/WorkOrderCreateForm.astro");
+    const orderDetail = await source("pages/lists/workshop/orders/[id].astro");
+    const applianceDetail = await source(
+      "pages/lists/workshop/appliances/[id].astro"
+    );
+    const hubApps = await source("lib/shell/hub-apps.ts");
+    const glossary = await source("lib/shell/ui-glossary.ts");
+    assert.match(hubApps, /servigas_workshop_hub/);
+    assert.match(hubApps, /"workshop"/);
+    assert.match(glossary, /workshop:\s*"Taller"/);
+    assert.match(page, /WorkOrderCreateForm/);
+    assert.match(page, /Nueva orden de trabajo/);
+    assert.match(form, /data-wo-create/);
+    assert.match(form, /serial_number/);
+    assert.match(form, /Ya atendido/);
+    assert.match(form, /\/api\/lists\//);
+    assert.match(form, /workshop\/appliances/);
+    assert.match(orderDetail, /Cerrar orden/);
+    assert.match(orderDetail, /RecordConfirmControl/);
+    assert.match(orderDetail, /Eliminar orden/);
+    assert.match(orderDetail, /action=["']delete["']/);
+    assert.match(orderDetail, /sg-ficha-secondary-actions/);
+    assert.match(orderDetail, /sg-ficha-action/);
+    const archiveCtrl = await source("components/RecordArchiveControl.astro");
+    assert.match(archiveCtrl, /sg-glass-rim|backdrop-filter/);
+    assert.match(archiveCtrl, /is-delete/);
+    assert.match(archiveCtrl, /prefers-reduced-motion/);
+    assert.match(applianceDetail, /Historial de OT/);
+    assert.match(applianceDetail, /workshop\/orders\//);
   });
 
   it("renders purchase order create page with searchable pickers", async () => {

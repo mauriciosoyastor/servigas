@@ -12,6 +12,7 @@ class SgHubSection(models.Model):
             ("sales", "Ventas"),
             ("purchase", "Compras"),
             ("accounting", "Cobros"),
+            ("workshop", "Taller"),
         ],
         required=True,
         index=True,

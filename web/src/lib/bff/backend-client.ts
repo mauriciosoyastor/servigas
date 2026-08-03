@@ -73,6 +73,11 @@ export interface BackendClient {
     listKey: string,
     id: number
   ): Promise<void>;
+  deleteRecord(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<void>;
   listRecordNotes(
     odooSessionId: string,
     listKey: string,

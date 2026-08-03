@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        <record id="hub_section_workshop_summary" model="sg.hub.section">
+            <field name="app">workshop</field>
+            <field name="code">summary</field>
+            <field name="name">Resumen</field>
+            <field name="icon">fa-th-large</field>
+            <field name="sequence">1</field>
+        </record>
+        <record id="hub_section_workshop_orders" model="sg.hub.section">
+            <field name="app">workshop</field>
+            <field name="code">orders</field>
+            <field name="name">Órdenes</field>
+            <field name="icon">fa-wrench</field>
+            <field name="sequence">2</field>
+        </record>
+        <record id="hub_section_workshop_appliances" model="sg.hub.section">
+            <field name="app">workshop</field>
+            <field name="code">appliances</field>
+            <field name="name">Artefactos</field>
+            <field name="icon">fa-fire</field>
+            <field name="sequence">3</field>
+        </record>
+
+        <record id="hub_card_workshop_summary_new" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">10</field>
+            <field name="label">Nueva orden</field>
+            <field name="hint">Cargar OT del taller</field>
+            <field name="icon">fa-plus-circle</field>
+            <field name="enter_label">Crear →</field>
+            <field name="action_id" ref="action_sg_work_order_new"/>
+            <field name="metric_model">sg.work.order</field>
+            <field name="metric_domain">[('state', '=', 'draft')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_workshop_summary_orders" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">20</field>
+            <field name="label">Órdenes de trabajo</field>
+            <field name="hint">Todas las OT</field>
+            <field name="icon">fa-list</field>
+            <field name="enter_label">Ver órdenes →</field>
+            <field name="action_id" ref="action_sg_work_order"/>
+            <field name="metric_model">sg.work.order</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_workshop_summary_appliances" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">30</field>
+            <field name="label">Artefactos</field>
+            <field name="hint">Historial por nº de serie</field>
+            <field name="icon">fa-fire</field>
+            <field name="enter_label">Ver artefactos →</field>
+            <field name="action_id" ref="action_sg_appliance"/>
+            <field name="metric_model">sg.appliance</field>
+            <field name="metric_domain">[]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="hub_card_workshop_orders_all" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">orders</field>
+            <field name="sequence">10</field>
+            <field name="label">Todas las órdenes</field>
+            <field name="hint">Borrador y cerradas</field>
+            <field name="icon">fa-list</field>
+            <field name="enter_label">Abrir →</field>
+            <field name="action_id" ref="action_sg_work_order"/>
+            <field name="metric_model">sg.work.order</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+        <record id="hub_card_workshop_orders_draft" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">orders</field>
+            <field name="sequence">20</field>
+            <field name="label">Borradores</field>
+            <field name="hint">OT abiertas</field>
+            <field name="icon">fa-pencil</field>
+            <field name="enter_label">Abrir →</field>
+            <field name="action_id" ref="action_sg_work_order"/>
+            <field name="domain">[('state', '=', 'draft')]</field>
+            <field name="metric_model">sg.work.order</field>
+            <field name="metric_domain">[('state', '=', 'draft')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
+        <record id="hub_card_workshop_appliances_all" model="sg.hub.card">
+            <field name="app">workshop</field>
+            <field name="section">appliances</field>
+            <field name="sequence">10</field>
+            <field name="label">Todos los artefactos</field>
+            <field name="hint">Por número de serie</field>
+            <field name="icon">fa-fire</field>
+            <field name="enter_label">Abrir →</field>
+            <field name="action_id" ref="action_sg_appliance"/>
+            <field name="metric_model">sg.appliance</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+    </data>
+</odoo>

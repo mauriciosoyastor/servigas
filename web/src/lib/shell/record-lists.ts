@@ -72,6 +72,8 @@ export type RecordListKey =
   | "accounting/factura-web-pending"
   | "accounting/invoice-analysis"
   | "accounting/moves"
+  | "workshop/orders"
+  | "workshop/appliances"
   | "integrations/all";
 
 export type RecordListColumnDef = {
@@ -94,7 +96,7 @@ export type RecordListDef = {
   limit: number;
   order: string;
   hubBack: string;
-  railApp: "inventory" | "sales" | "purchase" | "accounting" | "home";
+  railApp: "inventory" | "sales" | "purchase" | "accounting" | "workshop" | "home";
   imageField?: string;
   detailPath?: string;
   searchFields?: string[];
@@ -1688,6 +1690,77 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     searchFields: ["name", "ref"],
     detailPath: "/lists/accounting/moves/:id",
   },
+  "workshop/orders": {
+    key: "workshop/orders",
+    path: "/lists/workshop/orders",
+    title: "Órdenes de trabajo",
+    hint: "OT del taller — buscá por serie, propietario o nº",
+    model: "sg.work.order",
+    domain: [],
+    fields: [
+      "name",
+      "date",
+      "serial_number",
+      "owner_name",
+      "owner_phone",
+      "partner_id",
+      "problem",
+      "observation",
+      "work_done",
+      "materials",
+      "amount",
+      "state",
+      "appliance_id",
+      "brand",
+      "model",
+    ],
+    columns: [
+      { key: "date", label: "Fecha" },
+      { key: "name", label: "OT" },
+      { key: "serial_number", label: "Serie" },
+      { key: "owner_name", label: "Propietario" },
+      { key: "amount", label: "Importe" },
+      { key: "state", label: "Estado" },
+    ],
+    limit: 50,
+    order: "date desc, id desc",
+    hubBack: "/hubs/workshop",
+    railApp: "workshop",
+    searchFields: ["name", "serial_number", "owner_name", "owner_phone"],
+    detailPath: "/lists/workshop/orders/:id",
+  },
+  "workshop/appliances": {
+    key: "workshop/appliances",
+    path: "/lists/workshop/appliances",
+    title: "Artefactos",
+    hint: "Historial por nº de serie — marca, modelo o descripción",
+    model: "sg.appliance",
+    domain: [],
+    fields: [
+      "display_name",
+      "serial_number",
+      "brand",
+      "model",
+      "name",
+      "gas_type",
+      "partner_id",
+      "work_order_count",
+    ],
+    columns: [
+      { key: "serial_number", label: "Serie" },
+      { key: "brand", label: "Marca" },
+      { key: "model", label: "Modelo" },
+      { key: "name", label: "Descripción" },
+      { key: "gas_type", label: "Gas" },
+      { key: "work_order_count", label: "OT" },
+    ],
+    limit: 50,
+    order: "serial_number asc",
+    hubBack: "/hubs/workshop",
+    railApp: "workshop",
+    searchFields: ["serial_number", "brand", "model", "name"],
+    detailPath: "/lists/workshop/appliances/:id",
+  },
   "integrations/all": {
     key: "integrations/all",
     path: "/lists/integrations",
@@ -2143,6 +2216,21 @@ const LABEL_RULES: LabelRule[] = [
     patterns: [/an.lisis/i, /factura/i],
     path: "/lists/accounting/invoice-analysis",
   },
+  {
+    model: "sg.work.order",
+    patterns: [/nueva orden/i],
+    path: "/lists/workshop/orders/new",
+  },
+  {
+    model: "sg.work.order",
+    patterns: [/orden/i, /ot/i],
+    path: "/lists/workshop/orders",
+  },
+  {
+    model: "sg.appliance",
+    patterns: [/artefacto/i],
+    path: "/lists/workshop/appliances",
+  },
 ];
 
 function resolveLabelPath(
@@ -2456,6 +2544,14 @@ const ROUTE_RULES: RouteRule[] = [
   {
     model: "account.invoice.report",
     path: "/lists/accounting/invoice-analysis",
+  },
+  {
+    model: "sg.work.order",
+    path: "/lists/workshop/orders",
+  },
+  {
+    model: "sg.appliance",
+    path: "/lists/workshop/appliances",
   },
 ];
 
