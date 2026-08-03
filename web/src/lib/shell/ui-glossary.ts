@@ -8,6 +8,7 @@ export const AREA_LABELS = {
   sales: "Ventas",
   purchase: "Compras",
   accounting: "Cobros",
+  workshop: "Taller",
   pos: "Mostrador",
   home: "Inicio",
   caja: "Caja",

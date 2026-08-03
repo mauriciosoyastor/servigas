@@ -294,6 +294,7 @@ class SgAppTile(models.Model):
             "servigas_core.launcher_tile_inventory": "flame-orange",
             "servigas_core.launcher_tile_purchase": "flame-deep",
             "servigas_core.launcher_tile_accounting": "flame-rust",
+            "servigas_core.launcher_tile_workshop": "ember-amber",
             "servigas_core.launcher_tile_pos": "ember-coral",
             "servigas_core.launcher_tile_apps": "ember-scarlet",
             "servigas_core.launcher_tile_settings": "ember-wine",

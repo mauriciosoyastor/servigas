@@ -242,15 +242,22 @@
 }
 
 .sg-ficha-aside [data-record-confirm],
-.sg-ficha-aside [data-record-create-invoice] {
+.sg-ficha-aside [data-record-create-invoice],
+.sg-ficha-aside [data-record-archive] {
 	margin-top: 0;
 }
 
-.sg-ficha-aside [data-record-confirm] button {
+.sg-ficha-aside [data-record-confirm] button,
+.sg-ficha-aside [data-record-archive] button {
 	width: 100%;
 	justify-content: center;
 	text-align: center;
 	box-sizing: border-box;
+}
+
+.sg-ficha-secondary-actions [data-record-confirm],
+.sg-ficha-secondary-actions [data-record-archive] {
+	margin-top: 0;
 }
 
 .sg-detail {

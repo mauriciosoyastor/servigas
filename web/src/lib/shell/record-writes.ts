@@ -5,6 +5,7 @@
 import { getRecordListDef } from "./record-lists.ts";
 import { canCreateInvoice } from "./invoice-creates.ts";
 import { canCreateOrder } from "./order-creates.ts";
+import { canCreateWorkOrder } from "./workshop-creates.ts";
 import {
   INVOICE_DEST_CF,
   invoiceDestVatError,
@@ -84,7 +85,8 @@ export function canCreateRecord(listKey: string): boolean {
   return (
     Boolean(def?.createFields.length) ||
     canCreateOrder(listKey) ||
-    canCreateInvoice(listKey)
+    canCreateInvoice(listKey) ||
+    canCreateWorkOrder(listKey)
   );
 }
 

@@ -5,6 +5,9 @@ interface Props {
 	apiPath: string;
 	listPath: string;
 	label?: string;
+	/** archive (default) or delete */
+	action?: 'archive' | 'delete';
+	confirmMessage?: string;
 }
 
 const {
@@ -13,17 +16,27 @@ const {
 	apiPath,
 	listPath,
 	label = 'Archivar',
+	action = 'archive',
+	confirmMessage = '¿Archivar este registro? Dejará de verse en la lista activa.',
 } = Astro.props;
+
+const isDelete = action === 'delete';
 ---
 
-<section class="sg-record-archive" data-record-archive data-list-key={listKey}>
+<section
+	class:list={['sg-record-archive', isDelete && 'is-delete']}
+	data-record-archive
+	data-list-key={listKey}
+>
 	<button
-		class="sg-focus-ring"
+		class="sg-focus-ring sg-record-archive-btn"
 		type="button"
 		data-record-archive-btn
 		data-id={recordId}
 		data-api={apiPath}
 		data-list={listPath}
+		data-action={action}
+		data-confirm={confirmMessage}
 	>
 		{label}
 	</button>
@@ -31,16 +44,26 @@ const {
 </section>
 
 <script>
-	const root = document.querySelector('[data-record-archive]');
-	const btn = root?.querySelector('[data-record-archive-btn]');
-	const status = root?.querySelector('[data-record-archive-status]');
-	if (btn instanceof HTMLButtonElement && status instanceof HTMLElement) {
+	document.querySelectorAll<HTMLElement>('[data-record-archive]').forEach((root) => {
+		const btn = root.querySelector('[data-record-archive-btn]');
+		const status = root.querySelector('[data-record-archive-status]');
+		if (!(btn instanceof HTMLButtonElement && status instanceof HTMLElement)) return;
+
 		btn.addEventListener('click', async () => {
-			if (!window.confirm('¿Archivar este contacto? Dejará de verse en la lista activa.')) {
-				return;
-			}
+			const actionName = btn.dataset.action || 'archive';
+			const confirmMsg =
+				btn.dataset.confirm ||
+				(actionName === 'delete'
+					? '¿Eliminar este registro? No se puede deshacer.'
+					: '¿Archivar este registro?');
+			if (!window.confirm(confirmMsg)) return;
+
+			const pending = actionName === 'delete' ? 'Eliminando…' : 'Archivando…';
+			const done = actionName === 'delete' ? 'Eliminado' : 'Archivado';
+			const fail =
+				actionName === 'delete' ? 'No se pudo eliminar' : 'No se pudo archivar';
 			status.hidden = false;
-			status.textContent = 'Archivando…';
+			status.textContent = pending;
 			status.dataset.state = 'pending';
 			btn.disabled = true;
 			try {
@@ -49,49 +72,75 @@ const {
 					credentials: 'same-origin',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
-						action: 'archive',
+						action: actionName,
 						id: Number(btn.dataset.id),
 					}),
 				});
 				const payload = await response.json().catch(() => ({}));
 				if (!response.ok) {
-					throw new Error(payload?.error?.message || 'No se pudo archivar');
+					throw new Error(payload?.error?.message || fail);
 				}
-				status.textContent = 'Archivado';
+				status.textContent = done;
 				status.dataset.state = 'ok';
 				window.setTimeout(() => {
 					window.location.href = btn.dataset.list || '/';
 				}, 400);
 			} catch (error) {
 				status.textContent =
-					error instanceof Error ? error.message : 'No se pudo archivar';
+					error instanceof Error ? error.message : fail;
 				status.dataset.state = 'error';
 				btn.disabled = false;
 			}
 		});
-	}
+	});
 </script>
 
 <style>
 	.sg-record-archive {
 		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		margin-top: 1rem;
+		flex-direction: column;
+		align-items: stretch;
+		gap: 0.45rem;
+		margin-top: 0;
 	}
-	.sg-record-archive button {
-		border: 1px solid rgba(255, 140, 120, 0.45);
+	.sg-record-archive-btn {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid rgba(255, 255, 255, 0.22);
 		border-radius: var(--sg-radius-pill);
 		padding: 0.55rem 0.95rem;
-		color: #ffb4a2;
-		background: rgba(80, 20, 10, 0.35);
+		color: var(--sg-text-on-dark);
+		background: rgba(255, 255, 255, 0.06);
+		box-shadow: var(--sg-glass-rim);
+		backdrop-filter: blur(var(--sg-glass-blur));
+		-webkit-backdrop-filter: blur(var(--sg-glass-blur));
 		font-size: 0.82rem;
 		font-weight: 650;
+		line-height: 1.2;
+		text-align: center;
 		cursor: pointer;
+		transition:
+			border-color 160ms ease,
+			background 160ms ease,
+			transform 160ms ease;
 	}
-	.sg-record-archive button:disabled {
+	.sg-record-archive-btn:hover {
+		border-color: rgba(255, 255, 255, 0.35);
+		background: rgba(255, 255, 255, 0.1);
+	}
+	.sg-record-archive.is-delete .sg-record-archive-btn {
+		border-color: color-mix(in srgb, var(--sg-ember-scarlet) 55%, transparent);
+		color: #ffb4a2;
+		background: color-mix(in srgb, var(--sg-ember-wine) 42%, transparent);
+	}
+	.sg-record-archive.is-delete .sg-record-archive-btn:hover {
+		border-color: color-mix(in srgb, var(--sg-ember-scarlet) 75%, white);
+		background: color-mix(in srgb, var(--sg-ember-wine) 55%, transparent);
+	}
+	.sg-record-archive-btn:disabled {
 		opacity: 0.5;
-		cursor: not-allowed;
+		cursor: wait;
+		transform: none;
 	}
 	.sg-record-archive-status {
 		font-size: 0.8rem;
@@ -102,5 +151,11 @@ const {
 	}
 	.sg-record-archive-status[data-state='error'] {
 		color: #ffb4a2;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.sg-record-archive-btn {
+			transition: none;
+		}
 	}
 </style>

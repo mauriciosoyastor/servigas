@@ -9,6 +9,13 @@ describe("resolveTileNavigation", () => {
       client_tag: "servigas_inventory_hub",
     });
     assert.deepEqual(nav, { kind: "hub", path: "/hubs/inventory" });
+    assert.deepEqual(
+      resolveTileNavigation({
+        target_type: "hub",
+        client_tag: "servigas_workshop_hub",
+      }),
+      { kind: "hub", path: "/hubs/workshop" }
+    );
   });
 
   it("marks action without payload as coming_soon", () => {

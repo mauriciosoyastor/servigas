@@ -80,11 +80,9 @@ import {
   filterInvoiceCreateValues,
   getInvoiceCreateDef,
 } from "../shell/invoice-creates.ts";
-import {
-  canUpdateInvoiceDraft,
+import { canUpdateInvoiceDraft,
   filterInvoiceDraftUpdateValues,
 } from "../shell/invoice-updates.ts";
-import { billSourceLabel } from "../shell/bill-attachment.ts";
 import {
   publishInvoiceDestError,
   SUGGESTED_DOC_TYPE_NOTE,
@@ -103,6 +101,15 @@ import {
   filterOrderCreateValues,
   getOrderCreateDef,
 } from "../shell/order-creates.ts";
+import {
+  canCreateWorkOrder,
+  canDeleteWorkOrder,
+  filterWorkOrderCreateValues,
+} from "../shell/workshop-creates.ts";
+import {
+  billSourceLabel,
+  normalizeBillAttachment,
+} from "../shell/bill-attachment.ts";
 import {
   filterPaymentRegisterValues,
   getPaymentRegisterDef,
@@ -273,6 +280,20 @@ const DETAIL_LINES: Record<string, DetailLineDef> = {
     ],
     order: "id asc",
     title: "Movimientos",
+  },
+  "sg.appliance": {
+    model: "sg.work.order",
+    domainField: "appliance_id",
+    fields: ["date", "name", "owner_name", "amount", "state"],
+    columns: [
+      { key: "date", label: "Fecha" },
+      { key: "name", label: "OT" },
+      { key: "owner_name", label: "Propietario" },
+      { key: "amount", label: "Importe" },
+      { key: "state", label: "Estado" },
+    ],
+    order: "date desc, id desc",
+    title: "Historial de órdenes",
   },
 };
 
@@ -814,6 +835,22 @@ export class OdooAdapter implements BackendClient {
       sg_fw_loaded: "Factura Web",
       sg_fw_number: "N° Factura Web",
       sg_fw_loaded_at: "Cargada el",
+      serial_number: "Nº de serie",
+      brand: "Marca",
+      model: "Modelo",
+      gas_type: "Tipo de gas",
+      owner_name: "Propietario",
+      owner_phone: "Celular",
+      problem: "Problema",
+      observation: "Observación",
+      work_done: "Trabajos",
+      materials: "Materiales",
+      amount: "Importe",
+      appliance_id: "Artefacto",
+      work_order_count: "Órdenes",
+      date: "Fecha",
+      state: "Estado",
+      partner_id: "Cliente",
     };
     for (const column of def.columns) {
       if (column.kind === "image") continue;
@@ -859,8 +896,12 @@ export class OdooAdapter implements BackendClient {
     }
 
     const attachments =
-      def.key === "accounting/vendor-bills"
-        ? await this.#loadMoveAttachments(odooSessionId, id)
+      def.key === "accounting/vendor-bills" || def.key === "workshop/orders"
+        ? await this.#loadRecordAttachments(
+            odooSessionId,
+            def.model,
+            id
+          )
         : undefined;
 
     return {
@@ -920,6 +961,9 @@ export class OdooAdapter implements BackendClient {
     }
     if (getOrderCreateDef(listKey)) {
       return this.#createMinimalOrder(odooSessionId, listKey, values);
+    }
+    if (canCreateWorkOrder(listKey)) {
+      return this.#createWorkOrder(odooSessionId, listKey, values);
     }
 
     const writeDef = getRecordWriteDef(listKey);
@@ -1630,6 +1674,77 @@ export class OdooAdapter implements BackendClient {
     return Number.isFinite(id) && id > 0 ? id : 0;
   }
 
+  async #createWorkOrder(
+    odooSessionId: string,
+    listKey: string,
+    values: Record<string, unknown>
+  ): Promise<{ id: number; detailPath: string }> {
+    if (!canCreateWorkOrder(listKey)) {
+      throw new BffError("not_found", 404, "Alta no permitida");
+    }
+    const filtered = filterWorkOrderCreateValues(values);
+    if (!filtered) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Indicá el número de serie del artefacto"
+      );
+    }
+
+    let attachment: { filename: string; mimetype: string; content: string } | undefined;
+    if (filtered.attachment) {
+      const normalized = normalizeBillAttachment(filtered.attachment);
+      attachment = {
+        filename: normalized.filename,
+        mimetype: normalized.mimetype,
+        content: normalized.content,
+      };
+    }
+
+    const payload: Record<string, unknown> = { ...filtered };
+    delete payload.attachment;
+
+    const id = Number(
+      await this.#callKw<number>(
+        odooSessionId,
+        "sg.work.order",
+        "create_from_shell",
+        [payload]
+      )
+    );
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("backend_error", 502, "No se pudo crear la OT");
+    }
+
+    if (attachment) {
+      try {
+        await this.#callKw(odooSessionId, "ir.attachment", "create", [
+          {
+            name: attachment.filename,
+            type: "binary",
+            datas: attachment.content,
+            mimetype: attachment.mimetype,
+            res_model: "sg.work.order",
+            res_id: id,
+          },
+        ]);
+      } catch (cause) {
+        try {
+          await this.#callKw(odooSessionId, "sg.work.order", "unlink", [[id]]);
+        } catch {
+          // Best-effort rollback
+        }
+        if (cause instanceof BffError) throw cause;
+        throw new BffError("backend_error", 502, "No se pudo guardar la foto");
+      }
+    }
+
+    const list = getRecordListDef(listKey);
+    const detailPath =
+      (list && buildDetailPath(list, id)) || `/lists/${listKey}/${id}`;
+    return { id, detailPath };
+  }
+
   async #createMinimalOrder(
     odooSessionId: string,
     listKey: string,
@@ -1690,6 +1805,25 @@ export class OdooAdapter implements BackendClient {
       [id],
       { active: false },
     ]);
+  }
+
+  async deleteRecord(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<void> {
+    if (!canDeleteWorkOrder(listKey)) {
+      throw new BffError("not_found", 404, "Eliminación no permitida");
+    }
+    if (!Number.isFinite(id) || id <= 0) {
+      throw new BffError("not_found", 404, "Registro no encontrado");
+    }
+    const list = getRecordListDef(listKey);
+    if (!list) {
+      throw new BffError("not_found", 404, "Eliminación no permitida");
+    }
+
+    await this.#callKw(odooSessionId, list.model, "unlink", [[id]]);
   }
 
   async listRecordNotes(
@@ -4435,22 +4569,26 @@ export class OdooAdapter implements BackendClient {
       "read",
       [[attachmentId], ["name", "mimetype", "res_model", "res_id"]]
     );
-    if (!attachment || String(attachment.res_model) !== "account.move") {
+    if (!attachment) {
+      throw new BffError("not_found", 404, "Adjunto no encontrado");
+    }
+    const resModel = String(attachment.res_model || "");
+    const resId = Number(attachment.res_id);
+    if (!Number.isFinite(resId) || resId <= 0) {
       throw new BffError("not_found", 404, "Adjunto no encontrado");
     }
 
-    const moveId = Number(attachment.res_id);
-    if (!Number.isFinite(moveId) || moveId <= 0) {
-      throw new BffError("not_found", 404, "Adjunto no encontrado");
-    }
-
-    const [move] = await this.#callKw<Record<string, unknown>[]>(
-      odooSessionId,
-      "account.move",
-      "read",
-      [[moveId], ["move_type"]]
-    );
-    if (!move || String(move.move_type) !== "in_invoice") {
+    if (resModel === "account.move") {
+      const [move] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "account.move",
+        "read",
+        [[resId], ["move_type"]]
+      );
+      if (!move || String(move.move_type) !== "in_invoice") {
+        throw new BffError("not_found", 404, "Adjunto no encontrado");
+      }
+    } else if (resModel !== "sg.work.order") {
       throw new BffError("not_found", 404, "Adjunto no encontrado");
     }
 
@@ -4477,9 +4615,10 @@ export class OdooAdapter implements BackendClient {
     }
   }
 
-  async #loadMoveAttachments(
+  async #loadRecordAttachments(
     odooSessionId: string,
-    moveId: number
+    resModel: string,
+    resId: number
   ): Promise<
     { id: number; name: string; mimetype: string; url: string }[]
   > {
@@ -4488,8 +4627,8 @@ export class OdooAdapter implements BackendClient {
         odooSessionId,
         "ir.attachment",
         [
-          ["res_model", "=", "account.move"],
-          ["res_id", "=", moveId],
+          ["res_model", "=", resModel],
+          ["res_id", "=", resId],
         ],
         ["id", "name", "mimetype"],
         20,
@@ -4502,7 +4641,7 @@ export class OdooAdapter implements BackendClient {
           if (!Number.isFinite(id) || id <= 0) return null;
           return {
             id,
-            name: String(row.name || "comprobante"),
+            name: String(row.name || "adjunto"),
             mimetype: String(row.mimetype || "application/octet-stream"),
             url: `/api/attachments/${id}`,
           };
@@ -4523,6 +4662,15 @@ export class OdooAdapter implements BackendClient {
       }
       return [];
     }
+  }
+
+  async #loadMoveAttachments(
+    odooSessionId: string,
+    moveId: number
+  ): Promise<
+    { id: number; name: string; mimetype: string; url: string }[]
+  > {
+    return this.#loadRecordAttachments(odooSessionId, "account.move", moveId);
   }
 
   #searchRead(

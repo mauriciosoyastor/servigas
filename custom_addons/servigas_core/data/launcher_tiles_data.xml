@@ -53,6 +53,19 @@
             <field name="metric_aggregate">count</field>
         </record>
 
+        <record id="launcher_tile_workshop" model="sg.app.tile">
+            <field name="label">Taller</field>
+            <field name="hint">Órdenes de trabajo y artefactos</field>
+            <field name="icon">fa-wrench</field>
+            <field name="sequence">45</field>
+            <field name="accent_key">ember-amber</field>
+            <field name="target_type">hub</field>
+            <field name="client_tag">servigas_workshop_hub</field>
+            <field name="metric_model">sg.work.order</field>
+            <field name="metric_domain">[('state', '=', 'draft')]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
+
         <record id="launcher_tile_pos" model="sg.app.tile">
             <field name="label">Mostrador</field>
             <field name="hint">Ventas de caja Servigas</field>

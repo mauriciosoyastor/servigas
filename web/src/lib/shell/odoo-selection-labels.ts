@@ -41,10 +41,16 @@ const RECEIPT_STATUS_LABELS: Record<string, string> = {
   full: "Completa",
 };
 
+const GAS_TYPE_LABELS: Record<string, string> = {
+  gn: "GN",
+  ge: "GE",
+};
+
 const BY_FIELD: Record<string, Record<string, string>> = {
   state: STATE_LABELS,
   payment_state: PAYMENT_STATE_LABELS,
   receipt_status: RECEIPT_STATUS_LABELS,
+  gas_type: GAS_TYPE_LABELS,
 };
 
 export function labelOdooSelection(

@@ -12,6 +12,7 @@ export const HUB_LABELS: Record<HubApp, string> = {
   sales: AREA_LABELS.sales,
   purchase: AREA_LABELS.purchase,
   accounting: AREA_LABELS.accounting,
+  workshop: AREA_LABELS.workshop,
 };
 
 /** Sections shown as primary pills; everything else goes under «Más». */
@@ -20,6 +21,7 @@ export const HUB_PRIMARY_SECTIONS: Record<HubApp, readonly string[]> = {
   sales: ["summary", "quotations", "orders", "customers"],
   purchase: ["summary", "orders", "vendors"],
   accounting: ["summary", "receivables", "payables"],
+  workshop: ["summary", "orders", "appliances"],
 };
 
 /** Override Odoo section names with work language. */
