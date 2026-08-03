@@ -217,6 +217,27 @@ export type PriceListImportApplyResult = {
   skipped: number;
 };
 
+export type VendorBillPdfPreviewLine = {
+  status: "matched" | "review" | "error";
+  reason: string;
+  productId: number | null;
+  candidates: number[];
+  code: string;
+  name: string;
+  qty: number;
+  price: number;
+};
+
+export type VendorBillPdfPreview = {
+  lines: VendorBillPdfPreviewLine[];
+  counts: {
+    matched: number;
+    review: number;
+    error: number;
+  };
+  partnerHint: { vat?: string; name?: string } | null;
+};
+
 export type CashSessionState = "open" | "closed";
 export type CashShift = "manana" | "tarde" | "noche";
 

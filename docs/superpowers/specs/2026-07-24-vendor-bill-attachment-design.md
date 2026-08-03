@@ -110,10 +110,12 @@ Si el adjunto falla tras create: unlink de la FP y error (no éxito silencioso).
 
 ## No-objetivos
 
-- OCR, APIs de mail/WhatsApp
+- OCR de fotos/escaneos, APIs de mail/WhatsApp
 - AFIP, NC proveedor
 - Reemplazar adjunto post-create (backlog)
 - Editar líneas post-publicado
+
+**Seguimiento:** extracción de **líneas desde PDF con texto** (sin OCR) → [2026-07-29-vendor-bill-pdf-lines-design.md](./2026-07-29-vendor-bill-pdf-lines-design.md).
 
 ## Verificación
 

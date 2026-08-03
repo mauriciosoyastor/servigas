@@ -14,6 +14,7 @@ import type {
   PriceListImportApplyLine,
   PriceListImportApplyResult,
   PriceListImportPreview,
+  VendorBillPdfPreview,
   RecordDetailPayload,
   RecordListPayload,
   RecordNote,
@@ -272,4 +273,8 @@ export interface BackendClient {
     odooSessionId: string,
     lines: PriceListImportApplyLine[]
   ): Promise<PriceListImportApplyResult>;
+  previewVendorBillPdf(
+    odooSessionId: string,
+    input: { filename: string; content: string }
+  ): Promise<VendorBillPdfPreview>;
 }

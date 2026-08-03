@@ -31,6 +31,23 @@
 
 ---
 
+### 2026-07-29 — Líneas desde PDF en Alta FP (opción A)
+
+**Área:** contabilidad | web | BFF  
+**Motivo:** el adjunto FP no rellenaba líneas; PDFs con texto pueden sugerir ítems.  
+**Archivos:**
+- `web/src/lib/shell/vendor-bill-pdf-parse.ts`, `pdf-text.ts`
+- `web/src/pages/api/accounting/vendor-bill-parse.ts`
+- `odoo-adapter.previewVendorBillPdf` + `OrderCreateForm` (`suggestLinesFromPdf`)
+- Spec/plan en `docs/superpowers/`
+
+**Cambios:**
+- Parse PDF texto → match barcode/código/nombre → prellenar líneas matched; review sin auto-crear.
+- Dep `pdf-parse`; UI solo en Alta FP.
+
+**Verificación:** `cd web && npm test` → 448 pass.  
+**Automatización:** motor reutilizable para NC proveedor / remitos / lista precios PDF.
+
 ### 2026-07-25 — Volver a borrador y anular comprobantes (P1.1)
 
 **Área:** contabilidad | web | BFF

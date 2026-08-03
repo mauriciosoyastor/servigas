@@ -29,6 +29,8 @@ interface Props {
 	showBillSource?: boolean;
 	/** Hide CF/CUIT fiscal hints (vendor bills) */
 	suppressFiscalHints?: boolean;
+	/** FP: after PDF upload, suggest matched catalog lines */
+	suggestLinesFromPdf?: boolean;
 	/** update_invoice_draft mode */
 	recordId?: number;
 	formAction?: 'create' | 'update_invoice_draft';
@@ -53,6 +55,7 @@ const {
 	requireAttachment = false,
 	showBillSource = false,
 	suppressFiscalHints = false,
+	suggestLinesFromPdf = false,
 	recordId = 0,
 	formAction = 'create',
 	initialPartner = null,
@@ -70,6 +73,7 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 	data-order-create
 	data-require-attachment={requireAttachment ? '1' : '0'}
 	data-suppress-fiscal={suppressFiscalHints ? '1' : '0'}
+	data-suggest-pdf={suggestLinesFromPdf ? '1' : '0'}
 >
 	<strong>{title}</strong>
 	<p>{hint}</p>
@@ -153,6 +157,22 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 						<span class="sg-order-attachment-name" data-bill-attachment-name>Sin archivo</span>
 					</span>
 				</label>
+			) : null}
+
+			{suggestLinesFromPdf ? (
+				<div class="sg-pdf-suggest" data-pdf-suggest hidden>
+					<p class="sg-pdf-suggest-status" data-pdf-suggest-status></p>
+					<p class="sg-pdf-suggest-hint" data-pdf-suggest-partner hidden></p>
+					<ul class="sg-pdf-suggest-list" data-pdf-suggest-list hidden></ul>
+					<button
+						class="sg-focus-ring"
+						type="button"
+						data-pdf-suggest-apply
+						hidden
+					>
+						Usar líneas detectadas
+					</button>
+				</div>
 			) : null}
 
 			<div
@@ -365,6 +385,171 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 
 	const billAttachment = root?.querySelector('[data-bill-attachment]');
 	const billAttachmentName = root?.querySelector('[data-bill-attachment-name]');
+	const pdfSuggest = root?.querySelector('[data-pdf-suggest]');
+	const pdfSuggestStatus = root?.querySelector('[data-pdf-suggest-status]');
+	const pdfSuggestPartner = root?.querySelector('[data-pdf-suggest-partner]');
+	const pdfSuggestList = root?.querySelector('[data-pdf-suggest-list]');
+	const pdfSuggestApply = root?.querySelector('[data-pdf-suggest-apply]');
+	/** @type {Array<{ status: string, reason: string, productId: number | null, code: string, name: string, qty: number, price: number }>} */
+	let pendingPdfLines = [];
+
+	function setPdfSuggestStatus(text, state) {
+		if (!(pdfSuggest instanceof HTMLElement) || !(pdfSuggestStatus instanceof HTMLElement)) {
+			return;
+		}
+		if (!text) {
+			pdfSuggest.hidden = true;
+			pdfSuggestStatus.textContent = '';
+			pdfSuggestStatus.dataset.state = '';
+			return;
+		}
+		pdfSuggest.hidden = false;
+		pdfSuggestStatus.textContent = text;
+		pdfSuggestStatus.dataset.state = state || '';
+	}
+
+	function renderPdfReviewList() {
+		if (!(pdfSuggestList instanceof HTMLElement)) return;
+		pdfSuggestList.replaceChildren();
+		const review = pendingPdfLines.filter((l) => l.status === 'review');
+		if (!review.length) {
+			pdfSuggestList.hidden = true;
+			return;
+		}
+		pdfSuggestList.hidden = false;
+		review.forEach((row) => {
+			const li = document.createElement('li');
+			li.textContent = `${row.code || '—'} · ${row.name || 'sin nombre'} · cant ${row.qty} · $${row.price}`;
+			const pick = document.createElement('button');
+			pick.type = 'button';
+			pick.className = 'sg-focus-ring';
+			pick.textContent = 'Elegir producto';
+			pick.addEventListener('click', () => {
+				if (draftQty instanceof HTMLInputElement) draftQty.value = String(row.qty);
+				if (draftPrice instanceof HTMLInputElement) draftPrice.value = String(row.price);
+				const productPicker = root?.querySelector('[data-picker-kind="product"]');
+				const q = productPicker?.querySelector('[data-picker-query]');
+				if (q instanceof HTMLInputElement) {
+					q.value = row.code || row.name || '';
+					q.focus();
+					q.dispatchEvent(new Event('input', { bubbles: true }));
+				}
+				pendingPdfLines = pendingPdfLines.filter((l) => l !== row);
+				renderPdfReviewList();
+			});
+			const discard = document.createElement('button');
+			discard.type = 'button';
+			discard.className = 'sg-focus-ring';
+			discard.textContent = 'Descartar';
+			discard.addEventListener('click', () => {
+				pendingPdfLines = pendingPdfLines.filter((l) => l !== row);
+				renderPdfReviewList();
+			});
+			li.appendChild(pick);
+			li.appendChild(discard);
+			pdfSuggestList.appendChild(li);
+		});
+	}
+
+	function applyMatchedPdfLines() {
+		const matched = pendingPdfLines.filter(
+			(l) => l.status === 'matched' && Number(l.productId) > 0
+		);
+		for (const row of matched) {
+			const already = lines.some(
+				(l) => l.productId === row.productId && l.qty === row.qty && l.price === row.price
+			);
+			if (already) continue;
+			lines.push({
+				productId: Number(row.productId),
+				label: row.code ? `[${row.code}] ${row.name}` : row.name || String(row.productId),
+				qty: row.qty,
+				price: row.price,
+			});
+		}
+		pendingPdfLines = pendingPdfLines.filter((l) => l.status !== 'matched');
+		renderLines();
+		renderPdfReviewList();
+		if (pdfSuggestApply instanceof HTMLButtonElement) {
+			pdfSuggestApply.hidden = true;
+		}
+	}
+
+	async function maybeParseVendorBillPdf(file) {
+		if (root?.getAttribute('data-suggest-pdf') !== '1') return;
+		if (!(file instanceof File)) return;
+		const isPdf =
+			file.type === 'application/pdf' || /\.pdf$/i.test(file.name || '');
+		if (!isPdf) {
+			pendingPdfLines = [];
+			if (pdfSuggestPartner instanceof HTMLElement) pdfSuggestPartner.hidden = true;
+			if (pdfSuggestList instanceof HTMLElement) pdfSuggestList.hidden = true;
+			if (pdfSuggestApply instanceof HTMLButtonElement) pdfSuggestApply.hidden = true;
+			setPdfSuggestStatus('', '');
+			return;
+		}
+		setPdfSuggestStatus('Leyendo comprobante…', 'pending');
+		if (pdfSuggestApply instanceof HTMLButtonElement) pdfSuggestApply.hidden = true;
+		try {
+			const content = await readFileAsDataUrl(file);
+			const response = await fetch('/api/accounting/vendor-bill-parse', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({ filename: file.name, content }),
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (response.status === 401) {
+				window.location.assign('/login');
+				return;
+			}
+			if (!response.ok) {
+				throw new Error(payload?.error?.message || 'No se pudo leer el PDF');
+			}
+			pendingPdfLines = Array.isArray(payload.lines) ? payload.lines : [];
+			const matched = Number(payload.counts?.matched || 0);
+			const review = Number(payload.counts?.review || 0);
+			const error = Number(payload.counts?.error || 0);
+			if (pdfSuggestPartner instanceof HTMLElement) {
+				const vat = payload.partnerHint?.vat;
+				if (vat) {
+					pdfSuggestPartner.hidden = false;
+					pdfSuggestPartner.textContent = `CUIT detectado: ${vat}${
+						payload.partnerHint?.name ? ` · ${payload.partnerHint.name}` : ''
+					}`;
+				} else {
+					pdfSuggestPartner.hidden = true;
+					pdfSuggestPartner.textContent = '';
+				}
+			}
+			if (!pendingPdfLines.length) {
+				setPdfSuggestStatus(
+					'No se pudieron leer líneas de este PDF. Agregálas a mano.',
+					'muted'
+				);
+				renderPdfReviewList();
+				return;
+			}
+			setPdfSuggestStatus(
+				`Detectamos ${matched} listas · ${review} a revisar · ${error} error. Revisá antes de crear el borrador.`,
+				'ok'
+			);
+			if (matched > 0 && pdfSuggestApply instanceof HTMLButtonElement) {
+				pdfSuggestApply.hidden = false;
+			}
+			renderPdfReviewList();
+			// Auto-apply matched so the form is usable immediately
+			if (matched > 0) applyMatchedPdfLines();
+		} catch (error) {
+			setPdfSuggestStatus(
+				error instanceof Error
+					? error.message
+					: 'No se pudieron leer líneas de este PDF. Agregálas a mano.',
+				'error'
+			);
+		}
+	}
+
 	if (
 		billAttachment instanceof HTMLInputElement &&
 		billAttachmentName instanceof HTMLElement
@@ -373,7 +558,12 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 			const file = billAttachment.files?.[0];
 			billAttachmentName.textContent = file?.name || 'Sin archivo';
 			billAttachmentName.dataset.state = file ? 'ready' : 'empty';
+			void maybeParseVendorBillPdf(file || null);
 		});
+	}
+
+	if (pdfSuggestApply instanceof HTMLButtonElement) {
+		pdfSuggestApply.addEventListener('click', () => applyMatchedPdfLines());
 	}
 
 	function buildSearchUrl(listKey, q) {
@@ -1094,6 +1284,56 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 	}
 	.sg-order-create-status[data-state='error'] {
 		color: #ffb4a2;
+	}
+	.sg-pdf-suggest {
+		display: grid;
+		gap: 0.55rem;
+		padding: 0.75rem 0.85rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.85rem;
+		background: rgba(0, 0, 0, 0.18);
+	}
+	.sg-pdf-suggest-status {
+		margin: 0;
+		font-size: 0.82rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-pdf-suggest-status[data-state='ok'] {
+		color: #9be7b0;
+	}
+	.sg-pdf-suggest-status[data-state='error'] {
+		color: #ffb4a2;
+	}
+	.sg-pdf-suggest-hint {
+		margin: 0;
+		font-size: 0.78rem;
+		color: var(--sg-text-on-dark);
+	}
+	.sg-pdf-suggest-list {
+		list-style: none;
+		margin: 0;
+		padding: 0;
+		display: grid;
+		gap: 0.45rem;
+	}
+	.sg-pdf-suggest-list li {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-on-dark);
+	}
+	.sg-pdf-suggest-list button,
+	.sg-pdf-suggest [data-pdf-suggest-apply] {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.35rem 0.7rem;
+		color: var(--sg-text-on-dark);
+		background: var(--sg-glass-fill);
+		font-size: 0.75rem;
+		font-weight: 650;
+		cursor: pointer;
 	}
 	@media (max-width: 900px) {
 		.sg-order-create-body {
