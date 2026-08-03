@@ -3,9 +3,16 @@ const TAG_TO_APP: Record<string, string> = {
   servigas_sales_hub: "sales",
   servigas_purchase_hub: "purchase",
   servigas_accounting_hub: "accounting",
+  servigas_workshop_hub: "workshop",
 };
 
-export const HUB_APPS = ["inventory", "sales", "purchase", "accounting"] as const;
+export const HUB_APPS = [
+  "inventory",
+  "sales",
+  "purchase",
+  "accounting",
+  "workshop",
+] as const;
 export type HubApp = (typeof HUB_APPS)[number];
 
 export function isHubApp(app: string): app is HubApp {

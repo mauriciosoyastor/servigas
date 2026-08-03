@@ -21,3 +21,7 @@ access_sg_cash_session_user,sg.cash.session user,model_sg_cash_session,base.grou
 access_sg_cash_session_system,sg.cash.session system,model_sg_cash_session,base.group_system,1,1,1,1
 access_sg_cash_movement_user,sg.cash.movement user,model_sg_cash_movement,base.group_user,1,1,1,0
 access_sg_cash_movement_system,sg.cash.movement system,model_sg_cash_movement,base.group_system,1,1,1,1
+access_sg_appliance_user,sg.appliance user,model_sg_appliance,base.group_user,1,1,1,0
+access_sg_appliance_system,sg.appliance system,model_sg_appliance,base.group_system,1,1,1,1
+access_sg_work_order_user,sg.work.order user,model_sg_work_order,base.group_user,1,1,1,1
+access_sg_work_order_system,sg.work.order system,model_sg_work_order,base.group_system,1,1,1,1

@@ -18,6 +18,7 @@ class SgHubCard(models.Model):
             ("sales", "Ventas"),
             ("purchase", "Compras"),
             ("accounting", "Cobros"),
+            ("workshop", "Taller"),
         ],
         required=True,
         index=True,
@@ -427,11 +428,16 @@ class SgHubCard(models.Model):
         self._setup_hub_card_accents_for_app("accounting")
 
     @api.model
+    def setup_workshop_hub_card_accents(self):
+        self._setup_hub_card_accents_for_app("workshop")
+
+    @api.model
     def setup_all_hub_card_accents(self):
         self.setup_inventory_hub_card_accents()
         self.setup_sales_hub_card_accents()
         self.setup_purchase_hub_card_accents()
         self.setup_accounting_hub_card_accents()
+        self.setup_workshop_hub_card_accents()
 
     @api.model
     def get_hub_payload(self, app, section="summary"):

@@ -11,6 +11,7 @@ const HUB_TILE_LABELS: Record<string, string> = {
   servigas_sales_hub: AREA_LABELS.sales,
   servigas_purchase_hub: AREA_LABELS.purchase,
   servigas_accounting_hub: AREA_LABELS.accounting,
+  servigas_workshop_hub: AREA_LABELS.workshop,
 };
 
 export type PartitionedLauncher = {

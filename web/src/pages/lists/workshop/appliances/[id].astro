@@ -1,0 +1,96 @@
+---
+import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
+
+const listKey = 'workshop/appliances';
+const id = Number(Astro.params.id);
+const loaded = await loadRecordDetail(
+	Astro.cookies,
+	listKey,
+	id,
+	'No encontramos este artefacto.'
+);
+if (loaded.kind === 'redirect') {
+	return Astro.redirect(loaded.path);
+}
+if (loaded.status) Astro.response.status = loaded.status;
+const { userName, detail, error } = loaded;
+
+const history = detail?.lines;
+const detailForBody = detail ? { ...detail, lines: null } : null;
+---
+
+<ShellLayout title={`${detail?.title || 'Artefacto'} | Servigas`} active="workshop" userName={userName}>
+	<RecordDetailBody
+		detail={detailForBody}
+		error={error}
+		eyebrow="Ficha de artefacto"
+		fallbackTitle="Artefacto"
+		fallbackListPath="/lists/workshop/appliances"
+		recordId={id}
+	>
+		{detail && !error ? (
+			<section class="sg-wo-history sg-glass" slot="notes">
+				<strong>Historial de OT</strong>
+				{history?.rows?.length ? (
+					<ol>
+						{history.rows.map((row) => {
+							const oid = Number(row.id);
+							const name = String(row.name || `OT ${oid}`);
+							const date = String(row.date || '—');
+							const owner = String(row.owner_name || '—');
+							const state = String(row.state || '');
+							return (
+								<li>
+									<a class="sg-focus-ring" href={`/lists/workshop/orders/${oid}`}>
+										<span>{date}</span>
+										<span>{name}</span>
+										<span>{owner}</span>
+										<span>{state}</span>
+									</a>
+								</li>
+							);
+						})}
+					</ol>
+				) : (
+					<p>Sin órdenes todavía.</p>
+				)}
+				<a class="sg-focus-ring" href="/lists/workshop/orders/new">Nueva OT →</a>
+			</section>
+		) : null}
+	</RecordDetailBody>
+</ShellLayout>
+
+<style>
+	.sg-wo-history {
+		padding: 1rem 1.25rem;
+		margin-top: 1rem;
+	}
+	.sg-wo-history strong {
+		display: block;
+		margin-bottom: 0.75rem;
+	}
+	.sg-wo-history ol {
+		list-style: none;
+		margin: 0 0 1rem;
+		padding: 0;
+		display: grid;
+		gap: 0.5rem;
+	}
+	.sg-wo-history a {
+		display: grid;
+		grid-template-columns: 6.5rem 1fr 1fr auto;
+		gap: 0.75rem;
+		padding: 0.55rem 0.7rem;
+		border-radius: 8px;
+		text-decoration: none;
+		color: inherit;
+		background: color-mix(in srgb, white 55%, transparent);
+	}
+	@media (max-width: 640px) {
+		.sg-wo-history a {
+			grid-template-columns: 1fr 1fr;
+		}
+	}
+</style>

@@ -1,0 +1,30 @@
+---
+import WorkOrderCreateForm from '../../../../components/WorkOrderCreateForm.astro';
+import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/http.ts';
+
+let userName = '';
+try {
+	const { session } = requireOdooSession(Astro.cookies);
+	userName = session.name || session.login;
+} catch {
+	invalidateBffSession(Astro.cookies);
+	return Astro.redirect('/login');
+}
+---
+
+<ShellLayout title="Nueva OT | Servigas" active="workshop" userName={userName}>
+	<main class="sg-create-page">
+		<header class="sg-create-heading">
+			<div>
+				<p>Taller</p>
+				<h1>Nueva orden de trabajo</h1>
+			</div>
+			<nav class="sg-create-heading-meta" aria-label="Navegación taller">
+				<a class="sg-list-back sg-focus-ring" href="/lists/workshop/orders">Ver órdenes</a>
+				<a class="sg-list-back sg-focus-ring" href="/hubs/workshop">← Hub Taller</a>
+			</nav>
+		</header>
+		<WorkOrderCreateForm />
+	</main>
+</ShellLayout>

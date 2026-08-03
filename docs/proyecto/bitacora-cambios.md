@@ -31,6 +31,26 @@
 
 ---
 
+### 2026-08-03 — Taller: OT digitales + historial por serie
+
+**Área:** taller | web | BFF | Odoo  
+**Motivo:** digitalizar la orden de trabajo en papel y armar historial de artefactos por nº de serie.  
+**Archivos:**
+- `custom_addons/servigas_core/models/sg_appliance.py`, `sg_work_order.py`, `sg_workshop_logic.py`
+- `custom_addons/servigas_core/views/sg_workshop_views.xml`, `data/hub_workshop_data.xml`, ACL, launcher tile
+- `web/src/lib/shell/workshop-creates.ts`, `record-lists.ts`, `hub-apps.ts`, `hub-nav.ts`, `ui-glossary.ts`
+- `web/src/components/WorkOrderCreateForm.astro`
+- `web/src/pages/lists/workshop/orders/{new,[id]}.astro`, `appliances/[id].astro`
+**Cambios:**
+- Modelos `sg.appliance` + `sg.work.order` con upsert por serie normalizada
+- Hub launcher **Taller** (`/hubs/workshop`) con Nueva OT / Órdenes / Artefactos
+- Alta OT estilo papel + lookup “Ya atendido N veces”; ficha artefacto con timeline
+- Sin FC / stock / OCR en v1
+**Verificación:** `cd web && npm test` (455+ pass); upgrade `servigas_core` y smoke en `/hubs/workshop`
+**Automatización:** patrón hub + allowlist BFF + create_from_shell reutilizable para otros formularios taller
+
+---
+
 ### 2026-07-29 — Líneas desde PDF en Alta FP (opción A)
 
 **Área:** contabilidad | web | BFF  

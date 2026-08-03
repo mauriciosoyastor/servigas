@@ -23,8 +23,11 @@ describe("ui glossary (canonical labels)", () => {
     assert.equal(HUB_LABELS.accounting, AREA_LABELS.accounting);
     assert.equal(HUB_LABELS.sales, AREA_LABELS.sales);
     assert.equal(HUB_LABELS.purchase, AREA_LABELS.purchase);
+    assert.equal(HUB_LABELS.workshop, AREA_LABELS.workshop);
+    assert.equal(AREA_LABELS.workshop, "Taller");
     const byApp = Object.fromEntries(RAIL_ITEMS.map((i) => [i.app, i.label]));
     assert.equal(byApp.inventory, AREA_LABELS.inventory);
+    assert.equal(byApp.workshop, AREA_LABELS.workshop);
     assert.equal(byApp.accounting, AREA_LABELS.accounting);
     assert.equal(byApp.pos, AREA_LABELS.pos);
   });

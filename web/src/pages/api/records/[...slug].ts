@@ -7,10 +7,14 @@ import {
   requireOdooSession,
 } from "../../../lib/bff/http.ts";
 import { canConfirmRecord } from "../../../lib/shell/record-actions.ts";
+import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import { canCreateInvoice } from "../../../lib/shell/invoice-creates.ts";
+import {
+  canCreateWorkOrder,
+  canDeleteWorkOrder,
+} from "../../../lib/shell/workshop-creates.ts";
 import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateInvoiceFromPos } from "../../../lib/shell/pos-invoice.ts";
-import { canCreateOrder } from "../../../lib/shell/order-creates.ts";
 import { canRegisterPayment } from "../../../lib/shell/payment-registers.ts";
 import {
   canMarkFwLoaded,
@@ -31,6 +35,7 @@ type RecordAction =
   | "create"
   | "update"
   | "archive"
+  | "delete"
   | "confirm"
   | "create_invoice"
   | "register_payment"
@@ -74,6 +79,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         "create",
         "update",
         "archive",
+        "delete",
         "confirm",
         "create_invoice",
         "register_payment",
@@ -91,6 +97,7 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
     const canAct =
       Boolean(writes) ||
       (action === "confirm" && canConfirmRecord(slug)) ||
+      (action === "delete" && canDeleteWorkOrder(slug)) ||
       (action === "create_invoice" &&
         (canCreateInvoiceFromOrder(slug) || canCreateInvoiceFromPos(slug))) ||
       (action === "register_payment" && canRegisterPayment(slug)) ||
@@ -100,7 +107,9 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       (action === "reset_invoice_draft" && canResetInvoiceDraft(slug)) ||
       (action === "cancel_invoice" && canCancelInvoice(slug)) ||
       (action === "create" &&
-        (canCreateOrder(slug) || canCreateInvoice(slug)));
+        (canCreateOrder(slug) ||
+          canCreateInvoice(slug) ||
+          canCreateWorkOrder(slug)));
     if (!canAct) {
       throw new BffError("not_found", 404, "Escritura no permitida");
     }
@@ -126,6 +135,14 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
         throw new BffError("not_found", 404, "Archivado no permitido");
       }
       await getBackend().archiveRecord(odooSessionId, slug, id);
+      return json({ ok: true });
+    }
+
+    if (action === "delete") {
+      if (!canDeleteWorkOrder(slug)) {
+        throw new BffError("not_found", 404, "Eliminación no permitida");
+      }
+      await getBackend().deleteRecord(odooSessionId, slug, id);
       return json({ ok: true });
     }
 

@@ -569,6 +569,43 @@ describe("record-lists allowlist", () => {
     );
   });
 
+  it("defines workshop order and appliance lists and routes hub cards", () => {
+    const orders = getRecordListDef("workshop/orders");
+    const appliances = getRecordListDef("workshop/appliances");
+    assert.equal(orders?.model, "sg.work.order");
+    assert.equal(orders?.hubBack, "/hubs/workshop");
+    assert.equal(orders?.detailPath, "/lists/workshop/orders/:id");
+    assert.equal(appliances?.model, "sg.appliance");
+    assert.equal(appliances?.detailPath, "/lists/workshop/appliances/:id");
+    assert.equal(
+      resolveRecordListPath(
+        {
+          type: "ir.actions.act_window",
+          res_model: "sg.work.order",
+          domain: [],
+        },
+        { label: "Nueva orden" }
+      ),
+      "/lists/workshop/orders/new"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "sg.work.order",
+        domain: [],
+      }),
+      "/lists/workshop/orders"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "sg.appliance",
+        domain: [],
+      }),
+      "/lists/workshop/appliances"
+    );
+  });
+
   it("defines purchase/uom with Odoo 19 uom.uom fields", () => {
     const def = getRecordListDef("purchase/uom");
     assert.ok(def);
