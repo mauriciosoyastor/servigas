@@ -172,6 +172,19 @@ import {
   type SaleOrderShareMeta,
 } from "../shell/sale-order-share.ts";
 import {
+  canFetchWorkshopOrderPdf,
+  canSendWorkshopOrderEmail,
+  missingWorkshopContactHint,
+  resolveWorkshopShareContacts,
+  workshopOrderPdfFilename,
+  workshopOrderPdfPath,
+  workshopOrderWhatsappMessage,
+  workshopOrderWhatsappUrl,
+  WORKSHOP_ORDER_EMAIL_TEMPLATE,
+  WORKSHOP_ORDER_PDF_REPORT,
+  type WorkshopOrderShareMeta,
+} from "../shell/workshop-order-share.ts";
+import {
   canCancelInvoice,
   canResetInvoiceDraft,
   getInvoiceLifecycleMoveType,
@@ -4548,6 +4561,236 @@ export class OdooAdapter implements BackendClient {
       email,
       orderName: String(order.name || `S-${id}`),
       markedSent,
+    };
+  }
+
+  async fetchWorkshopOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }> {
+    if (
+      !canFetchWorkshopOrderPdf(listKey) ||
+      !Number.isFinite(id) ||
+      id <= 0
+    ) {
+      throw new BffError("not_found", 404, "PDF no permitido");
+    }
+
+    let title: string | null = null;
+    try {
+      const [row] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "sg.work.order",
+        "read",
+        [[id], ["name", "display_name"]]
+      );
+      if (!row) {
+        throw new BffError("not_found", 404, "OT no encontrada");
+      }
+      title = String(row.display_name || row.name || "") || null;
+    } catch (cause) {
+      if (cause instanceof BffError) throw cause;
+      this.#mapFetchFailure(cause);
+    }
+
+    try {
+      const response = await this.#fetch(
+        `${this.#baseUrl}/report/pdf/${WORKSHOP_ORDER_PDF_REPORT}/${id}`,
+        {
+          headers: { cookie: `session_id=${odooSessionId}` },
+          signal: this.#abortSignal(),
+        }
+      );
+      if (!response.ok) {
+        if (response.status === 422) {
+          throw new BffError(
+            "action_failed",
+            503,
+            "Odoo no puede generar PDF: falta wkhtmltopdf en el servidor"
+          );
+        }
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo generar el PDF de la OT"
+        );
+      }
+      const contentType =
+        response.headers.get("content-type") || "application/pdf";
+      const body = await response.arrayBuffer();
+      const head = new Uint8Array(body.slice(0, 5));
+      const isPdf =
+        head.length >= 5 &&
+        head[0] === 0x25 &&
+        head[1] === 0x50 &&
+        head[2] === 0x44 &&
+        head[3] === 0x46 &&
+        head[4] === 0x2d;
+      if (!isPdf) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "Odoo no devolvió un PDF válido"
+        );
+      }
+      return {
+        body,
+        contentType: contentType.includes("pdf")
+          ? contentType
+          : "application/pdf",
+        filename: workshopOrderPdfFilename(title, id),
+      };
+    } catch (cause) {
+      this.#mapFetchFailure(cause);
+    }
+  }
+
+  async getWorkshopOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<WorkshopOrderShareMeta> {
+    if (
+      !canFetchWorkshopOrderPdf(listKey) ||
+      !Number.isFinite(id) ||
+      id <= 0
+    ) {
+      throw new BffError("not_found", 404, "OT no encontrada");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sg.work.order",
+      "read",
+      [[id], ["name", "partner_id", "owner_name", "owner_phone"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "OT no encontrada");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    let partnerName = this.#cellValue(order.partner_id);
+    partnerName =
+      typeof partnerName === "string" && partnerName ? partnerName : null;
+    let partnerEmail: string | null = null;
+    let partnerPhone: string | null = null;
+    let partnerMobile: string | null = null;
+    if (partnerId > 0) {
+      const [partner] = await this.#callKw<Record<string, unknown>[]>(
+        odooSessionId,
+        "res.partner",
+        "read",
+        [[partnerId], ["name", "email", "phone", "mobile"]]
+      );
+      if (partner) {
+        partnerName =
+          typeof partner.name === "string" ? partner.name : partnerName;
+        partnerEmail =
+          typeof partner.email === "string" ? partner.email : null;
+        partnerPhone =
+          typeof partner.phone === "string" ? partner.phone : null;
+        partnerMobile =
+          typeof partner.mobile === "string" ? partner.mobile : null;
+      }
+    }
+
+    const orderName = String(order.name || `OT-${id}`);
+    const contacts = resolveWorkshopShareContacts({
+      partnerName,
+      partnerEmail,
+      partnerPhone,
+      partnerMobile,
+      ownerName:
+        typeof order.owner_name === "string" ? order.owner_name : null,
+      ownerPhone:
+        typeof order.owner_phone === "string" ? order.owner_phone : null,
+    });
+    const message = workshopOrderWhatsappMessage(
+      orderName,
+      contacts.displayName
+    );
+    return {
+      orderName,
+      ...contacts,
+      whatsappUrl: workshopOrderWhatsappUrl(contacts.phone, message),
+      pdfPath: workshopOrderPdfPath(listKey, id),
+      missingContactHint: missingWorkshopContactHint(contacts),
+    };
+  }
+
+  async sendWorkshopOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; email: string; orderName: string }> {
+    if (
+      !canSendWorkshopOrderEmail(listKey) ||
+      !Number.isFinite(id) ||
+      id <= 0
+    ) {
+      throw new BffError("not_found", 404, "Envío no permitido");
+    }
+
+    const [order] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "sg.work.order",
+      "read",
+      [[id], ["name", "partner_id"]]
+    );
+    if (!order) {
+      throw new BffError("not_found", 404, "OT no encontrada");
+    }
+
+    const partnerId = this.#partnerIdFromM2o(order.partner_id);
+    if (partnerId <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del cliente"
+      );
+    }
+    const [partner] = await this.#callKw<Record<string, unknown>[]>(
+      odooSessionId,
+      "res.partner",
+      "read",
+      [[partnerId], ["email", "name"]]
+    );
+    const email =
+      typeof partner?.email === "string" && partner.email.trim()
+        ? partner.email.trim()
+        : null;
+    if (!email) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Cargá el mail del cliente"
+      );
+    }
+
+    const templateId = await this.#resolveXmlId(
+      odooSessionId,
+      WORKSHOP_ORDER_EMAIL_TEMPLATE
+    );
+    if (!Number.isFinite(templateId) || templateId <= 0) {
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se encontró la plantilla de correo de OT"
+      );
+    }
+    await this.#callKw(
+      odooSessionId,
+      "mail.template",
+      "send_mail",
+      [templateId, id],
+      { force_send: true }
+    );
+
+    return {
+      ok: true,
+      email,
+      orderName: String(order.name || `OT-${id}`),
     };
   }
 
