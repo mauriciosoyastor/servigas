@@ -14,6 +14,8 @@ interface Props {
 	rowSelect?: boolean;
 	/** Campo de número Factura Web por fila seleccionable. */
 	fwNumberInput?: boolean;
+	/** Hard-delete por fila (p. ej. productos). */
+	rowDeleteApiPath?: string;
 }
 
 const {
@@ -24,15 +26,17 @@ const {
 	invoicePdfListKey = '',
 	rowSelect = false,
 	fwNumberInput = false,
+	rowDeleteApiPath = '',
 } = Astro.props;
 
 const showInvoicePdf = Boolean(invoicePdfListKey);
+const showRowDelete = Boolean(rowDeleteApiPath);
 
 function formatCell(key: string, value: string | number | boolean | null): string {
 	if (value === null || value === undefined || value === '') return '—';
 	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
 	if (key === 'sg_invoice_dest') return invoiceDestBadge(value);
-	if ((key === 'qty_available' || key === 'id') && typeof value === 'number') {
+	if ((key === 'qty_available' || key === 'id' || key === 'product_count') && typeof value === 'number') {
 		return value.toLocaleString('es-AR');
 	}
 	return String(labelOdooSelection(key, value));
@@ -42,6 +46,12 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 	const name = row.name;
 	if (typeof name === 'string' && name.trim()) return name.trim();
 	return `Comprobante ${id}`;
+}
+
+function rowDeleteLabel(row: RecordListRow, id: number): string {
+	const name = row.name ?? row.display_name;
+	if (typeof name === 'string' && name.trim()) return name.trim();
+	return `producto ${id}`;
 }
 ---
 
@@ -74,6 +84,11 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 				{showInvoicePdf ? (
 					<th scope="col" data-col="pdf" data-kind="action">
 						PDF
+					</th>
+				) : null}
+				{showRowDelete ? (
+					<th scope="col" data-col="delete" data-kind="action">
+						<span class="sr-only">Eliminar</span>
 					</th>
 				) : null}
 			</tr>
@@ -205,6 +220,21 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 								)}
 							</td>
 						) : null}
+						{showRowDelete ? (
+							<td data-col="delete" data-kind="action" data-label="Eliminar">
+								<button
+									type="button"
+									class="sg-record-delete-btn sg-focus-ring"
+									data-row-delete
+									data-record-id={String(recordId)}
+									data-record-name={rowDeleteLabel(row, recordId)}
+									data-api-path={rowDeleteApiPath}
+									aria-label={`Eliminar ${rowDeleteLabel(row, recordId)}`}
+								>
+									Eliminar
+								</button>
+							</td>
+						) : null}
 					</tr>
 				);
 			})}
@@ -225,8 +255,22 @@ function rowPdfTitle(row: RecordListRow, id: number): string {
 		white-space: nowrap;
 	}
 
+	.sg-record-delete-btn {
+		border: 1px solid rgba(180, 35, 24, 0.45);
+		border-radius: var(--sg-radius-pill);
+		padding: 0.35rem 0.7rem;
+		color: #ffb4a8;
+		background: rgba(90, 20, 16, 0.45);
+		font-size: 0.75rem;
+		font-weight: 650;
+		cursor: pointer;
+		white-space: nowrap;
+	}
+
 	.sg-record-table th[data-col='pdf'],
-	.sg-record-table td[data-col='pdf'] {
+	.sg-record-table td[data-col='pdf'],
+	.sg-record-table th[data-col='delete'],
+	.sg-record-table td[data-col='delete'] {
 		width: 1%;
 		text-align: right;
 		white-space: nowrap;

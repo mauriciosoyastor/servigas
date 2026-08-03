@@ -5,7 +5,10 @@
 import { getRecordListDef } from "./record-lists.ts";
 import { canCreateInvoice } from "./invoice-creates.ts";
 import { canCreateOrder } from "./order-creates.ts";
-import { canCreateWorkOrder } from "./workshop-creates.ts";
+import {
+  canCreateWorkOrder,
+  canDeleteWorkOrder,
+} from "./workshop-creates.ts";
 import {
   INVOICE_DEST_CF,
   invoiceDestVatError,
@@ -28,6 +31,8 @@ type WriteConfig = {
   createFields: string[];
   createDefaults: Record<string, string | number | boolean>;
   numericCreateFields?: string[];
+  /** Many2one ids: empty omitted on create; empty → false on update */
+  relationIdFields?: string[];
   canArchive: boolean;
 };
 
@@ -63,6 +68,13 @@ const WRITES: Record<string, WriteConfig> = {
     numericCreateFields: ["list_price"],
     canArchive: true,
   },
+  "inventory/categories": {
+    fields: ["name", "parent_id"],
+    createFields: ["name", "parent_id"],
+    createDefaults: {},
+    relationIdFields: ["parent_id"],
+    canArchive: false,
+  },
 };
 
 export function getRecordWriteDef(listKey: string): RecordWriteDef | null {
@@ -94,6 +106,13 @@ export function canArchiveRecord(listKey: string): boolean {
   return Boolean(getRecordWriteDef(listKey)?.canArchive);
 }
 
+/** Hard unlink allowlist for records API (products + workshop OT). */
+export function canHardDelete(listKey: string): boolean {
+  return (
+    listKey === "inventory/products" || canDeleteWorkOrder(listKey)
+  );
+}
+
 function asTrimmedString(raw: unknown): string | null {
   if (raw === null || raw === undefined) return "";
   if (typeof raw !== "string" && typeof raw !== "number") return null;
@@ -103,15 +122,28 @@ function asTrimmedString(raw: unknown): string | null {
 export function filterWritableValues(
   listKey: string,
   values: Record<string, unknown>
-): Record<string, string> | null {
+): Record<string, string | number | boolean> | null {
+  const cfg = WRITES[listKey];
   const def = getRecordWriteDef(listKey);
   if (!def) return null;
 
-  const out: Record<string, string> = {};
+  const relationIds = new Set(cfg?.relationIdFields || []);
+  const out: Record<string, string | number | boolean> = {};
   for (const field of def.fields) {
     if (!(field in values)) continue;
     if (field === "image_1920") {
       out.image_1920 = normalizeProductImage1920(values.image_1920);
+      continue;
+    }
+    if (relationIds.has(field)) {
+      const raw = asTrimmedString(values[field]);
+      if (raw === null) continue;
+      if (!raw) {
+        out[field] = false;
+        continue;
+      }
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) out[field] = n;
       continue;
     }
     const next = asTrimmedString(values[field]);
@@ -140,6 +172,7 @@ export function filterCreateValues(
   if (!def?.createFields.length || !cfg) return null;
 
   const numeric = new Set(cfg.numericCreateFields || []);
+  const relationIds = new Set(cfg.relationIdFields || []);
   const out: Record<string, string | number | boolean> = {
     ...def.createDefaults,
   };
@@ -150,6 +183,13 @@ export function filterCreateValues(
       const n = Number(values[field]);
       if (!Number.isFinite(n)) continue;
       out[field] = n;
+      continue;
+    }
+    if (relationIds.has(field)) {
+      const raw = asTrimmedString(values[field]);
+      if (!raw) continue;
+      const n = Number(raw);
+      if (Number.isFinite(n) && n > 0) out[field] = n;
       continue;
     }
     const next = asTrimmedString(values[field]);

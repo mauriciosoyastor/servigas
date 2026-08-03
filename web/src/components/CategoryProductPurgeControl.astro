@@ -35,8 +35,16 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		<button class="sg-focus-ring" type="button" data-purge-btn disabled>
 			Eliminar productos
 		</button>
+		<button class="sg-focus-ring sg-category-delete-btn" type="button" data-delete-category-btn disabled>
+			Eliminar categoría completa
+		</button>
 		<span class="sg-category-purge-status" data-purge-status hidden></span>
 	</div>
+	<p class="sg-category-purge-lead">
+		<strong>Eliminar categoría completa</strong> borra definitivamente todos los productos
+		de esta categoría y luego la categoría. Si algún producto no se puede borrar, la categoría
+		se conserva.
+	</p>
 </section>
 
 <script>
@@ -48,6 +56,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		const countEl = root.querySelector('[data-purge-count]');
 		const confirmInput = root.querySelector('[data-purge-confirm]');
 		const btn = root.querySelector('[data-purge-btn]');
+		const deleteCatBtn = root.querySelector('[data-delete-category-btn]');
 		const status = root.querySelector('[data-purge-status]');
 
 		function setStatus(text, state) {
@@ -57,14 +66,13 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 			status.dataset.state = state || '';
 		}
 
-		function syncButton() {
-			if (!(btn instanceof HTMLButtonElement) || !(confirmInput instanceof HTMLInputElement)) {
-				return;
-			}
+		function syncButtons() {
 			const ok =
+				confirmInput instanceof HTMLInputElement &&
 				confirmInput.value.trim().toLowerCase() === expectedName.trim().toLowerCase() &&
 				expectedName.trim().length > 0;
-			btn.disabled = !ok;
+			if (btn instanceof HTMLButtonElement) btn.disabled = !ok;
+			if (deleteCatBtn instanceof HTMLButtonElement) deleteCatBtn.disabled = !ok;
 		}
 
 		async function loadPreview() {
@@ -94,7 +102,8 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 			}
 		}
 
-		confirmInput?.addEventListener('input', syncButton);
+		confirmInput?.addEventListener('input', syncButtons);
+
 		btn?.addEventListener('click', async () => {
 			if (!(btn instanceof HTMLButtonElement) || btn.disabled) return;
 			if (
@@ -105,6 +114,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 				return;
 			}
 			btn.disabled = true;
+			if (deleteCatBtn instanceof HTMLButtonElement) deleteCatBtn.disabled = true;
 			setStatus('Procesando…', 'pending');
 			try {
 				const confirmName =
@@ -125,15 +135,64 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 				}
 				setStatus(payload.summary || 'Listo', 'ok');
 				await loadPreview();
-				syncButton();
+				syncButtons();
 			} catch (error) {
 				setStatus(error instanceof Error ? error.message : 'Error', 'error');
-				syncButton();
+				syncButtons();
+			}
+		});
+
+		deleteCatBtn?.addEventListener('click', async () => {
+			if (!(deleteCatBtn instanceof HTMLButtonElement) || deleteCatBtn.disabled) return;
+			if (
+				!window.confirm(
+					`¿Eliminar permanentemente la categoría «${expectedName}» y todos sus productos? No se puede deshacer.`
+				)
+			) {
+				return;
+			}
+			deleteCatBtn.disabled = true;
+			if (btn instanceof HTMLButtonElement) btn.disabled = true;
+			setStatus('Eliminando categoría…', 'pending');
+			try {
+				const confirmName =
+					confirmInput instanceof HTMLInputElement ? confirmInput.value : '';
+				const response = await fetch(api, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						action: 'delete-category',
+						categoryId,
+						confirmName,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(payload?.error?.message || 'No se pudo eliminar la categoría');
+				}
+				if (payload.categoryDeleted) {
+					setStatus(payload.summary || 'Categoría eliminada', 'ok');
+					window.setTimeout(() => {
+						window.location.href = '/lists/inventory/categories';
+					}, 500);
+					return;
+				}
+				setStatus(
+					payload.summary ||
+						'No se pudo borrar algún producto; la categoría se conservó.',
+					'error'
+				);
+				await loadPreview();
+				syncButtons();
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+				syncButtons();
 			}
 		});
 
 		loadPreview();
-		syncButton();
+		syncButtons();
 	}
 </script>
 
@@ -184,6 +243,10 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 	.sg-category-purge-actions button:disabled {
 		opacity: 0.45;
 		cursor: not-allowed;
+	}
+	.sg-category-delete-btn {
+		border-color: color-mix(in srgb, #7a1b14 55%, transparent) !important;
+		background: color-mix(in srgb, #b42318 22%, white) !important;
 	}
 	.sg-category-purge-status[data-state='ok'] {
 		color: #0f6b3a;

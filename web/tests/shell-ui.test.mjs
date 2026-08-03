@@ -189,6 +189,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /parsePositiveIntParam|categ_id/);
     assert.match(page, /categId/);
     assert.match(page, /Quitar filtro/);
+    assert.match(page, /rowDeleteApiPath|ProductRowDeleteHost|data-row-delete/);
     assert.match(page, /<RecordTable/);
     assert.match(page, /<ListToolbar/);
     const toolbar = await source("components/ListToolbar.astro");
@@ -199,6 +200,9 @@ describe("shell UI contracts", () => {
     assert.match(toolbar, /categId|categ_id/);
     assert.match(page, /Sin resultados/);
     assert.match(page, /active=\{def\.railApp\}/);
+    const recordTable = await source("components/RecordTable.astro");
+    assert.match(recordTable, /data-row-delete/);
+    assert.match(recordTable, /Eliminar/);
   });
 
   it("renders product detail from the BFF", async () => {
@@ -683,6 +687,9 @@ describe("shell UI contracts", () => {
     assert.match(categoryDetail, /\/lists\/inventory\/products\?categ_id=/);
     assert.match(categoryDetail, /Ver productos/);
     assert.match(categoryDetail, /countProductsInCategory/);
+    const purgeCtrl = await source("components/CategoryProductPurgeControl.astro");
+    assert.match(purgeCtrl, /delete-category/);
+    assert.match(purgeCtrl, /Eliminar categoría completa/);
     assert.match(categoryNew, /inventory\/categories/);
     assert.match(categoryNew, /RecordCreateForm/);
     assert.match(categoryNew, /parent_id/);

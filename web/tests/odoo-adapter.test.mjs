@@ -380,6 +380,39 @@ describe("OdooAdapter.getRecordList", () => {
       (err) => err instanceof BffError && err.code === "not_found"
     );
   });
+
+  it("enriches category rows with product_count via read_group", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(String(init.body));
+      if (body.params.method === "search_read") {
+        return Response.json({
+          result: [
+            { id: 3, name: "Filtros", complete_name: "Filtros", parent_id: false },
+            { id: 4, name: "Vacía", complete_name: "Vacía", parent_id: false },
+          ],
+        });
+      }
+      if (body.params.method === "read_group") {
+        assert.equal(body.params.model, "product.template");
+        return Response.json({
+          result: [{ categ_id: [3, "Filtros"], categ_id_count: 12 }],
+        });
+      }
+      if (body.params.method === "search_count") {
+        return Response.json({ result: 2 });
+      }
+      return Response.json({ result: null });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const payload = await adapter.getRecordList("sess", "inventory/categories");
+    assert.equal(payload.rows[0].product_count, 12);
+    assert.equal(payload.rows[1].product_count, 0);
+    assert.ok(payload.columns.some((c) => c.key === "product_count"));
+  });
 });
 
 describe("OdooAdapter.getRecordDetail", () => {
@@ -2568,6 +2601,111 @@ describe("OdooAdapter.purgeProductsByCategory", () => {
     assert.equal(unlinkAttempts, 1);
     assert.equal(result.deleted, 0);
     assert.equal(result.archived, 1);
+  });
+});
+
+describe("OdooAdapter.deleteCategoryHard", () => {
+  it("rejects wrong confirm name", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "search_read") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.deleteCategoryHard("sess", {
+          categoryId: 3,
+          confirmName: "Otra",
+        }),
+      (err) => err?.code === "validation_error"
+    );
+  });
+
+  it("hard-unlinks products then category when all succeed", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      calls.push({ model, method, args: body.params?.args });
+      if (method === "search_read" && model === "product.category") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      if (method === "search" && model === "product.template") {
+        return Response.json({ result: [10, 11] });
+      }
+      if (method === "unlink") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.deleteCategoryHard("sess", {
+      categoryId: 3,
+      confirmName: "Filtros",
+    });
+    assert.equal(result.deleted, 2);
+    assert.equal(result.archived, 0);
+    assert.equal(result.errors.length, 0);
+    assert.equal(result.categoryDeleted, true);
+    assert.ok(
+      calls.some(
+        (c) => c.model === "product.category" && c.method === "unlink"
+      )
+    );
+  });
+
+  it("does not unlink category when a product unlink fails", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      calls.push({ model, method, args: body.params?.args });
+      if (method === "search_read" && model === "product.category") {
+        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+      }
+      if (method === "search" && model === "product.template") {
+        return Response.json({ result: [10, 11] });
+      }
+      if (method === "unlink" && model === "product.template") {
+        const id = body.params?.args?.[0]?.[0];
+        if (id === 11) {
+          return Response.json({
+            error: { data: { message: "constraint" } },
+          });
+        }
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.deleteCategoryHard("sess", {
+      categoryId: 3,
+      confirmName: "Filtros",
+    });
+    assert.equal(result.categoryDeleted, false);
+    assert.ok(result.errors.length >= 1);
+    assert.ok(
+      !calls.some(
+        (c) => c.model === "product.category" && c.method === "unlink"
+      )
+    );
   });
 });
 

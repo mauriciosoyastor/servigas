@@ -57,7 +57,9 @@ import {
 } from "../shell/price-list-import.ts";
 import {
   confirmCategoryName,
+  hardPurgeIds,
   hybridPurgeIds,
+  summarizeHardPurgeResult,
   summarizePurgeResult,
 } from "../shell/product-purge.ts";
 import { extractPdfText, isPdfMagic } from "../shell/pdf-text.ts";
@@ -109,7 +111,6 @@ import {
 } from "../shell/order-creates.ts";
 import {
   canCreateWorkOrder,
-  canDeleteWorkOrder,
   filterWorkOrderCreateValues,
 } from "../shell/workshop-creates.ts";
 import {
@@ -134,6 +135,7 @@ import {
 } from "../shell/fw-bridge.ts";
 import {
   canArchiveRecord,
+  canHardDelete,
   customerInvoiceDestError,
   filterCreateValues,
   filterWritableValues,
@@ -1270,6 +1272,75 @@ export class OdooAdapter implements BackendClient {
     };
   }
 
+  async deleteCategoryHard(
+    odooSessionId: string,
+    input: { categoryId: number; confirmName: string }
+  ): Promise<ProductPurgeByCategoryResult & { categoryDeleted: boolean }> {
+    const categoryId = Number(input.categoryId);
+    if (!Number.isFinite(categoryId) || categoryId <= 0) {
+      throw new BffError("validation_error", 400, "Categoría inválida.");
+    }
+    const [category] = await this.#searchRead(
+      odooSessionId,
+      "product.category",
+      [["id", "=", categoryId]],
+      ["id", "name", "complete_name"],
+      1,
+      0,
+      "id"
+    );
+    if (!category) {
+      throw new BffError("not_found", 404, "No encontramos esa categoría.");
+    }
+    const expectedName = String(category.name || category.complete_name || "");
+    if (!confirmCategoryName(expectedName, input.confirmName)) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Escribí el nombre exacto de la categoría para confirmar."
+      );
+    }
+    const productIds: number[] = [];
+    const pageSize = 500;
+    let offset = 0;
+    while (true) {
+      const batch = await this.#callKw<number[]>(
+        odooSessionId,
+        "product.template",
+        "search",
+        [[["categ_id", "=", categoryId]]],
+        { limit: pageSize, offset, order: "id" }
+      );
+      if (!Array.isArray(batch) || !batch.length) break;
+      for (const raw of batch) {
+        const id = Number(raw);
+        if (id > 0) productIds.push(id);
+      }
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    const result = await hardPurgeIds(productIds, async (id) => {
+      await this.#callKw(odooSessionId, "product.template", "unlink", [[id]]);
+    });
+    if (result.errors.length > 0) {
+      return {
+        ...result,
+        productCount: productIds.length,
+        summary: summarizeHardPurgeResult(result),
+        categoryDeleted: false,
+      };
+    }
+    await this.#callKw(odooSessionId, "product.category", "unlink", [
+      [categoryId],
+    ]);
+    return {
+      ...result,
+      productCount: productIds.length,
+      summary: `${summarizeHardPurgeResult(result)}; categoría eliminada`,
+      categoryDeleted: true,
+    };
+  }
+
   async #ensureCategoryId(
     odooSessionId: string,
     name: string
@@ -2096,7 +2167,7 @@ export class OdooAdapter implements BackendClient {
     listKey: string,
     id: number
   ): Promise<void> {
-    if (!canDeleteWorkOrder(listKey)) {
+    if (!canHardDelete(listKey)) {
       throw new BffError("not_found", 404, "Eliminación no permitida");
     }
     if (!Number.isFinite(id) || id <= 0) {

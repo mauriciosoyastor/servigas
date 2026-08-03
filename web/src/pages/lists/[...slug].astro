@@ -3,6 +3,7 @@ import ShellLayout from '../../layouts/ShellLayout.astro';
 import FwBulkMarkBar from '../../components/FwBulkMarkBar.astro';
 import InvoicePdfModalHost from '../../components/InvoicePdfModalHost.astro';
 import ProductImageUploadHost from '../../components/ProductImageUploadHost.astro';
+import ProductRowDeleteHost from '../../components/ProductRowDeleteHost.astro';
 import RecordTable from '../../components/RecordTable.astro';
 import ListToolbar from '../../components/ListToolbar.astro';
 import { BffError } from '../../lib/bff/errors.ts';
@@ -197,6 +198,11 @@ if (!def) {
 								? '/api/records/inventory/products'
 								: undefined
 						}
+						rowDeleteApiPath={
+							listKey === 'inventory/products'
+								? '/api/records/inventory/products'
+								: undefined
+						}
 						invoicePdfListKey={
 							canFetchInvoicePdf(listKey) ? listKey : undefined
 						}
@@ -204,6 +210,7 @@ if (!def) {
 						fwNumberInput={showFwBulk}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
+					{listKey === 'inventory/products' ? <ProductRowDeleteHost /> : null}
 					{canFetchInvoicePdf(listKey) ? <InvoicePdfModalHost /> : null}
 				</>
 			) : (

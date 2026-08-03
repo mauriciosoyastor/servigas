@@ -287,6 +287,10 @@ export interface BackendClient {
     odooSessionId: string,
     input: { categoryId: number; confirmName: string }
   ): Promise<ProductPurgeByCategoryResult>;
+  deleteCategoryHard(
+    odooSessionId: string,
+    input: { categoryId: number; confirmName: string }
+  ): Promise<ProductPurgeByCategoryResult & { categoryDeleted: boolean }>;
   previewVendorBillPdf(
     odooSessionId: string,
     input: { filename: string; content: string }

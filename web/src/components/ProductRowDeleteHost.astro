@@ -1,0 +1,44 @@
+---
+/** Host for hard-delete buttons on product list rows (data-row-delete). */
+---
+
+<script>
+	document.querySelectorAll('[data-row-delete]').forEach((btn) => {
+		if (!(btn instanceof HTMLButtonElement)) return;
+		btn.addEventListener('click', async () => {
+			const id = Number(btn.dataset.recordId);
+			const name = btn.dataset.recordName || `producto ${id}`;
+			const api = btn.dataset.apiPath || '';
+			if (!Number.isFinite(id) || id <= 0 || !api) return;
+			if (
+				!window.confirm(
+					`¿Eliminar permanentemente «${name}»? No se puede deshacer.`
+				)
+			) {
+				return;
+			}
+			btn.disabled = true;
+			try {
+				const response = await fetch(api, {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({ action: 'delete', id }),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(
+						payload?.error?.message || 'No se pudo eliminar el producto'
+					);
+				}
+				const row = btn.closest('tr');
+				if (row) row.remove();
+			} catch (error) {
+				window.alert(
+					error instanceof Error ? error.message : 'No se pudo eliminar el producto'
+				);
+				btn.disabled = false;
+			}
+		});
+	});
+</script>
