@@ -8,7 +8,7 @@ import {
 } from "../../../../lib/bff/http.ts";
 
 type Body = {
-  action?: "preview" | "purge";
+  action?: "preview" | "purge" | "delete-category";
   categoryId?: number;
   confirmName?: string;
 };
@@ -42,15 +42,23 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       return json({ ok: true, productCount: count });
     }
 
-    if (action !== "purge") {
-      throw new BffError("validation_error", 400, "Acción inválida");
+    if (action === "purge") {
+      const result = await getBackend().purgeProductsByCategory(odooSessionId, {
+        categoryId,
+        confirmName: String(body.confirmName || ""),
+      });
+      return json({ ok: true, ...result });
     }
 
-    const result = await getBackend().purgeProductsByCategory(odooSessionId, {
-      categoryId,
-      confirmName: String(body.confirmName || ""),
-    });
-    return json({ ok: true, ...result });
+    if (action === "delete-category") {
+      const result = await getBackend().deleteCategoryHard(odooSessionId, {
+        categoryId,
+        confirmName: String(body.confirmName || ""),
+      });
+      return json({ ok: true, ...result });
+    }
+
+    throw new BffError("validation_error", 400, "Acción inválida");
   } catch (err) {
     return bffErrorResponse(err, cookies);
   }

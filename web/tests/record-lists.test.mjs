@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildSearchDomain,
   getRecordListDef,
+  parsePositiveIntParam,
   resolveRecordListKey,
   resolveRecordListPath,
 } from "../src/lib/shell/record-lists.ts";
@@ -382,6 +383,55 @@ describe("record-lists allowlist", () => {
     assert.deepEqual(domain[3], ["name", "ilike", "calefa"]);
     assert.deepEqual(domain[4], ["default_code", "ilike", "calefa"]);
     assert.deepEqual(domain[5], ["barcode", "ilike", "calefa"]);
+  });
+
+  it("parses positive int query params and rejects junk", () => {
+    assert.equal(parsePositiveIntParam("42"), 42);
+    assert.equal(parsePositiveIntParam("0"), undefined);
+    assert.equal(parsePositiveIntParam("-3"), undefined);
+    assert.equal(parsePositiveIntParam("abc"), undefined);
+    assert.equal(parsePositiveIntParam(null), undefined);
+    assert.equal(parsePositiveIntParam(undefined), undefined);
+  });
+
+  it("appends categ_id only for inventory/products when categId is valid", () => {
+    const products = getRecordListDef("inventory/products");
+    const categories = getRecordListDef("inventory/categories");
+    assert.ok(products);
+    assert.ok(categories);
+
+    const withCateg = buildSearchDomain(products, "", new Date(), {
+      categId: 17,
+    });
+    assert.deepEqual(withCateg, [
+      ["active", "=", true],
+      ["categ_id", "=", 17],
+    ]);
+
+    const invalid = buildSearchDomain(products, "", new Date(), {
+      categId: 0,
+    });
+    assert.deepEqual(invalid, [["active", "=", true]]);
+
+    const otherList = buildSearchDomain(categories, "", new Date(), {
+      categId: 17,
+    });
+    assert.ok(!JSON.stringify(otherList).includes("categ_id"));
+
+    const withQ = buildSearchDomain(products, "tuerca", new Date(), {
+      categId: 17,
+    });
+    assert.deepEqual(withQ[0], ["active", "=", true]);
+    assert.deepEqual(withQ[1], ["categ_id", "=", 17]);
+    assert.ok(withQ.includes("|"));
+    assert.ok(
+      withQ.some(
+        (clause) =>
+          Array.isArray(clause) &&
+          clause[0] === "name" &&
+          clause[2] === "tuerca"
+      )
+    );
   });
 
   it("routes empty-domain sale.report cards by label", () => {

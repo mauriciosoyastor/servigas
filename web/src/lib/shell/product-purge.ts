@@ -53,6 +53,28 @@ export async function hybridPurgeIds(
   return result;
 }
 
+/** Hard delete only — never archives. Accumulates per-id errors. */
+export async function hardPurgeIds(
+  ids: number[],
+  unlink: (id: number) => Promise<void>
+): Promise<PurgeResult> {
+  const result: PurgeResult = { deleted: 0, archived: 0, errors: [] };
+  for (const id of ids) {
+    try {
+      await unlink(id);
+      result.deleted += 1;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unlink_failed";
+      result.errors.push({ id, message });
+    }
+  }
+  return result;
+}
+
 export function summarizePurgeResult(result: PurgeResult): string {
   return `${result.deleted} eliminados, ${result.archived} archivados, ${result.errors.length} errores`;
+}
+
+export function summarizeHardPurgeResult(result: PurgeResult): string {
+  return `${result.deleted} eliminados, ${result.errors.length} errores`;
 }

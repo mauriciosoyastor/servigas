@@ -3,7 +3,9 @@ import { describe, it } from "node:test";
 
 import {
   confirmCategoryName,
+  hardPurgeIds,
   hybridPurgeIds,
+  summarizeHardPurgeResult,
   summarizePurgeResult,
 } from "../src/lib/shell/product-purge.ts";
 
@@ -61,6 +63,40 @@ describe("hybridPurgeIds", () => {
     assert.equal(result.archived, 0);
     assert.equal(result.errors.length, 1);
     assert.equal(result.errors[0].id, 9);
+  });
+});
+
+describe("hardPurgeIds", () => {
+  it("unlinks when possible without archiving", async () => {
+    const unlinked = [];
+    const result = await hardPurgeIds([1, 2], async (id) => {
+      unlinked.push(id);
+    });
+    assert.deepEqual(unlinked, [1, 2]);
+    assert.deepEqual(result, { deleted: 2, archived: 0, errors: [] });
+  });
+
+  it("records error and never archives when unlink fails", async () => {
+    const result = await hardPurgeIds([5, 6], async (id) => {
+      if (id === 5) throw new Error("constraint");
+    });
+    assert.equal(result.deleted, 1);
+    assert.equal(result.archived, 0);
+    assert.equal(result.errors.length, 1);
+    assert.equal(result.errors[0].id, 5);
+  });
+});
+
+describe("summarizeHardPurgeResult", () => {
+  it("omits archived count", () => {
+    const text = summarizeHardPurgeResult({
+      deleted: 3,
+      archived: 0,
+      errors: [{ id: 7, message: "x" }],
+    });
+    assert.match(text, /3 eliminados/);
+    assert.match(text, /1 errores/);
+    assert.ok(!/archivados/.test(text));
   });
 });
 
