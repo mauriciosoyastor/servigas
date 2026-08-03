@@ -684,12 +684,15 @@ describe("shell UI contracts", () => {
     assert.match(categoryDetail, /CategoryProductPurgeControl/);
     assert.match(categoryDetail, /purge-by-category/);
     assert.match(categoryDetail, /editApiPath|editFields/);
-    assert.match(categoryDetail, /\/lists\/inventory\/products\?categ_id=/);
-    assert.match(categoryDetail, /Ver productos/);
-    assert.match(categoryDetail, /countProductsInCategory/);
+    assert.match(categoryDetail, /productCount/);
+    assert.doesNotMatch(categoryDetail, /sg-category-products-link/);
     const purgeCtrl = await source("components/CategoryProductPurgeControl.astro");
+    assert.match(purgeCtrl, /Productos/);
+    assert.match(purgeCtrl, /Ver productos/);
+    assert.match(purgeCtrl, /\/lists\/inventory\/products\?categ_id=/);
     assert.match(purgeCtrl, /delete-category/);
     assert.match(purgeCtrl, /Eliminar categoría completa/);
+    assert.match(purgeCtrl, /Eliminar productos/);
     assert.match(categoryNew, /inventory\/categories/);
     assert.match(categoryNew, /RecordCreateForm/);
     assert.match(categoryNew, /parent_id/);

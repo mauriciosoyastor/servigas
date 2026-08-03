@@ -3,26 +3,43 @@ interface Props {
 	categoryId: number;
 	categoryName: string;
 	apiPath: string;
+	productCount?: number;
 }
 
-const { categoryId, categoryName, apiPath } = Astro.props;
+const { categoryId, categoryName, apiPath, productCount = 0 } = Astro.props;
+const productsHref = `/lists/inventory/products?categ_id=${categoryId}`;
+const countLabel =
+	productCount === 1
+		? '1 producto activo'
+		: `${productCount.toLocaleString('es-AR')} productos activos`;
 ---
 
 <section
-	class="sg-category-purge sg-glass"
+	class="sg-category-products sg-glass"
 	data-category-purge
 	data-category-id={categoryId}
 	data-category-name={categoryName}
 	data-api={apiPath}
 >
-	<strong>Eliminar productos de esta categoría</strong>
-	<p class="sg-category-purge-lead">
-		Borra o archiva los productos con esta categoría exacta (no incluye subcategorías).
-		Si un producto tiene historial en Odoo y no se puede borrar, se archiva.
+	<header class="sg-category-products-head">
+		<div>
+			<strong>Productos</strong>
+			<p class="sg-category-products-count" data-purge-count>{countLabel}</p>
+		</div>
+		<a class="sg-focus-ring sg-category-products-view" href={productsHref} data-view-products>
+			{productCount === 1
+				? 'Ver productos (1)'
+				: `Ver productos (${productCount.toLocaleString('es-AR')})`}
+		</a>
+	</header>
+
+	<p class="sg-category-products-lead">
+		Podés abrir el listado, eliminar solo los productos (híbrido: borrar o archivar) o eliminar
+		la categoría completa (borrado definitivo de productos + categoría). No incluye subcategorías.
 	</p>
-	<p class="sg-category-purge-count" data-purge-count>Cargando…</p>
-	<label class="sg-category-purge-confirm">
-		<span>Escribí el nombre de la categoría para confirmar</span>
+
+	<label class="sg-category-products-confirm">
+		<span>Escribí el nombre de la categoría para confirmar eliminaciones</span>
 		<input
 			class="sg-focus-ring"
 			type="text"
@@ -31,20 +48,24 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 			placeholder={categoryName}
 		/>
 	</label>
-	<div class="sg-category-purge-actions">
+
+	<div class="sg-category-products-actions">
+		<a class="sg-focus-ring sg-category-products-view-btn" href={productsHref}>
+			Ver productos
+		</a>
 		<button class="sg-focus-ring" type="button" data-purge-btn disabled>
 			Eliminar productos
 		</button>
-		<button class="sg-focus-ring sg-category-delete-btn" type="button" data-delete-category-btn disabled>
+		<button
+			class="sg-focus-ring sg-category-delete-btn"
+			type="button"
+			data-delete-category-btn
+			disabled
+		>
 			Eliminar categoría completa
 		</button>
-		<span class="sg-category-purge-status" data-purge-status hidden></span>
+		<span class="sg-category-products-status" data-purge-status hidden></span>
 	</div>
-	<p class="sg-category-purge-lead">
-		<strong>Eliminar categoría completa</strong> borra definitivamente todos los productos
-		de esta categoría y luego la categoría. Si algún producto no se puede borrar, la categoría
-		se conserva.
-	</p>
 </section>
 
 <script>
@@ -54,6 +75,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		const categoryId = Number(root.dataset.categoryId);
 		const expectedName = root.dataset.categoryName || '';
 		const countEl = root.querySelector('[data-purge-count]');
+		const viewLink = root.querySelector('[data-view-products]');
 		const confirmInput = root.querySelector('[data-purge-confirm]');
 		const btn = root.querySelector('[data-purge-btn]');
 		const deleteCatBtn = root.querySelector('[data-delete-category-btn]');
@@ -75,6 +97,15 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 			if (deleteCatBtn instanceof HTMLButtonElement) deleteCatBtn.disabled = !ok;
 		}
 
+		function formatCount(n) {
+			if (n === 1) return '1 producto activo';
+			return `${n.toLocaleString('es-AR')} productos activos`;
+		}
+
+		function formatViewLabel(n) {
+			return n === 1 ? 'Ver productos (1)' : `Ver productos (${n.toLocaleString('es-AR')})`;
+		}
+
 		async function loadPreview() {
 			try {
 				const response = await fetch(api, {
@@ -88,12 +119,8 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 					throw new Error(payload?.error?.message || 'No se pudo cargar el preview');
 				}
 				const n = Number(payload.productCount) || 0;
-				if (countEl instanceof HTMLElement) {
-					countEl.textContent =
-						n === 1
-							? '1 producto activo en esta categoría'
-							: `${n} productos activos en esta categoría`;
-				}
+				if (countEl instanceof HTMLElement) countEl.textContent = formatCount(n);
+				if (viewLink instanceof HTMLAnchorElement) viewLink.textContent = formatViewLabel(n);
 			} catch (error) {
 				if (countEl instanceof HTMLElement) {
 					countEl.textContent =
@@ -197,41 +224,70 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 </script>
 
 <style>
-	.sg-category-purge {
+	.sg-category-products {
 		max-width: 48rem;
 		margin: 1.25rem auto 0;
 		padding: 1.25rem 1.35rem;
 		display: grid;
-		gap: 0.85rem;
+		gap: 0.9rem;
 	}
-	.sg-category-purge strong {
-		font-size: 1.05rem;
+	.sg-category-products-head {
+		display: flex;
+		flex-wrap: wrap;
+		align-items: flex-start;
+		justify-content: space-between;
+		gap: 0.75rem 1rem;
 	}
-	.sg-category-purge-lead,
-	.sg-category-purge-count {
-		margin: 0;
+	.sg-category-products-head strong {
+		display: block;
+		font-size: 1.1rem;
+	}
+	.sg-category-products-count,
+	.sg-category-products-lead {
+		margin: 0.35rem 0 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.92rem;
 		line-height: 1.45;
 	}
-	.sg-category-purge-confirm {
+	.sg-category-products-lead {
+		margin: 0;
+	}
+	.sg-category-products-view {
+		font-size: 0.88rem;
+		font-weight: 650;
+		color: var(--sg-text-on-dark);
+		text-decoration: underline;
+		text-underline-offset: 0.15em;
+	}
+	.sg-category-products-confirm {
 		display: grid;
 		gap: 0.4rem;
 		font-size: 0.88rem;
 	}
-	.sg-category-purge-confirm input {
+	.sg-category-products-confirm input {
 		padding: 0.55rem 0.7rem;
 		border-radius: 0.55rem;
 		border: 1px solid color-mix(in srgb, var(--sg-ink) 14%, transparent);
 		background: color-mix(in srgb, white 70%, transparent);
 	}
-	.sg-category-purge-actions {
+	.sg-category-products-actions {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.75rem;
 	}
-	.sg-category-purge-actions button {
+	.sg-category-products-view-btn {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.55rem 0.9rem;
+		border-radius: 0.6rem;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		color: var(--sg-text-on-dark);
+		font-weight: 600;
+		text-decoration: none;
+	}
+	.sg-category-products-actions button {
 		padding: 0.55rem 0.9rem;
 		border-radius: 0.6rem;
 		border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
@@ -240,7 +296,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		font-weight: 600;
 		cursor: pointer;
 	}
-	.sg-category-purge-actions button:disabled {
+	.sg-category-products-actions button:disabled {
 		opacity: 0.45;
 		cursor: not-allowed;
 	}
@@ -248,13 +304,13 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		border-color: color-mix(in srgb, #7a1b14 55%, transparent) !important;
 		background: color-mix(in srgb, #b42318 22%, white) !important;
 	}
-	.sg-category-purge-status[data-state='ok'] {
+	.sg-category-products-status[data-state='ok'] {
 		color: #0f6b3a;
 	}
-	.sg-category-purge-status[data-state='error'] {
+	.sg-category-products-status[data-state='error'] {
 		color: #b42318;
 	}
-	.sg-category-purge-status[data-state='pending'] {
+	.sg-category-products-status[data-state='pending'] {
 		color: var(--sg-text-muted-dark);
 	}
 </style>
