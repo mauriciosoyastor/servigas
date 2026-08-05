@@ -6,7 +6,7 @@ import {
 } from "../src/lib/shell/rail-nav.ts";
 
 describe("rail-nav (trabajo del día)", () => {
-  it("lists Inicio, Mostrador, Caja, Stock, Compras, Clientes, Taller, Cobros in order", () => {
+  it("lists Inicio, Mostrador, Caja, Stock, Compras, Clientes, Cobros, Taller in order", () => {
     assert.deepEqual(
       RAIL_ITEMS.map((item) => ({ app: item.app, label: item.label, href: item.href })),
       [
@@ -16,8 +16,8 @@ describe("rail-nav (trabajo del día)", () => {
         { app: "inventory", label: "Stock", href: "/hubs/inventory" },
         { app: "purchase", label: "Compras", href: "/hubs/purchase" },
         { app: "customers", label: "Clientes", href: "/lists/sales/customers" },
-        { app: "workshop", label: "Taller", href: "/hubs/workshop" },
         { app: "accounting", label: "Cobros", href: "/hubs/accounting" },
+        { app: "workshop", label: "Taller", href: "/hubs/workshop" },
       ]
     );
   });
