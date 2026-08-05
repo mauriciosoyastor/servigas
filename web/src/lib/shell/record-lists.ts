@@ -2660,6 +2660,8 @@ export type RecordListQuery = {
   page?: number;
   /** Allowlisted on inventory/products only — exact categ_id filter. */
   categId?: number;
+  /** Allowlisted on inventory/products only — supplier via seller_ids. */
+  partnerId?: number;
 };
 
 export function parsePositiveIntParam(
@@ -2675,7 +2677,7 @@ export function buildSearchDomain(
   def: RecordListDef,
   q: string | undefined,
   now: Date = new Date(),
-  opts?: { categId?: number }
+  opts?: { categId?: number; partnerId?: number }
 ): unknown[] {
   const base = [...def.domain];
   if (def.agingBucket) {
@@ -2689,6 +2691,15 @@ export function buildSearchDomain(
     categId > 0
   ) {
     base.push(["categ_id", "=", categId]);
+  }
+  const partnerId = opts?.partnerId;
+  if (
+    def.key === "inventory/products" &&
+    typeof partnerId === "number" &&
+    Number.isInteger(partnerId) &&
+    partnerId > 0
+  ) {
+    base.push(["seller_ids.partner_id", "=", partnerId]);
   }
   const term = (q || "").trim();
   if (!term || !def.searchFields?.length) return base;

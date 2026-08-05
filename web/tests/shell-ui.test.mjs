@@ -191,6 +191,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /getRecordList\(odooSessionId,\s*listKey/);
     assert.match(page, /parsePositiveIntParam|categ_id/);
     assert.match(page, /categId/);
+    assert.match(page, /partner_id/);
+    assert.match(page, /partnerId/);
     assert.match(page, /Quitar filtro/);
     assert.match(page, /rowDeleteApiPath|ProductRowDeleteHost|data-row-delete/);
     assert.match(page, /<RecordTable/);
@@ -203,11 +205,20 @@ describe("shell UI contracts", () => {
     assert.match(toolbar, /−10/);
     assert.match(toolbar, /Avanzar 10 páginas/);
     assert.match(toolbar, /categId|categ_id/);
+    assert.match(toolbar, /partnerId|partner_id/);
     assert.match(page, /Sin resultados/);
     assert.match(page, /active=\{def\.railApp\}/);
     const recordTable = await source("components/RecordTable.astro");
     assert.match(recordTable, /data-row-delete/);
     assert.match(recordTable, /Eliminar/);
+  });
+
+  it("links vendor detail to products filtered by partner_id", async () => {
+    const vendorDetail = await source("pages/lists/purchase/vendors/[id].astro");
+    assert.match(
+      vendorDetail,
+      /\/lists\/inventory\/products\?partner_id=/
+    );
   });
 
   it("renders product detail from the BFF", async () => {
