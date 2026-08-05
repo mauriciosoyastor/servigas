@@ -6,7 +6,7 @@ import {
 } from "../src/lib/shell/rail-nav.ts";
 
 describe("rail-nav (trabajo del día)", () => {
-  it("lists Inicio, Mostrador, Caja, Stock, Compras, Taller, Cobros in order", () => {
+  it("lists Inicio, Mostrador, Caja, Stock, Compras, Clientes, Taller, Cobros in order", () => {
     assert.deepEqual(
       RAIL_ITEMS.map((item) => ({ app: item.app, label: item.label, href: item.href })),
       [
@@ -15,6 +15,7 @@ describe("rail-nav (trabajo del día)", () => {
         { app: "caja", label: "Caja", href: "/caja" },
         { app: "inventory", label: "Stock", href: "/hubs/inventory" },
         { app: "purchase", label: "Compras", href: "/hubs/purchase" },
+        { app: "customers", label: "Clientes", href: "/lists/sales/customers" },
         { app: "workshop", label: "Taller", href: "/hubs/workshop" },
         { app: "accounting", label: "Cobros", href: "/hubs/accounting" },
       ]
@@ -28,13 +29,14 @@ describe("rail-nav (trabajo del día)", () => {
     );
   });
 
-  it("accepts rail apps including pos, caja and workshop", () => {
+  it("accepts rail apps including customers, pos, caja and workshop", () => {
     for (const app of [
       "home",
       "pos",
       "caja",
       "inventory",
       "purchase",
+      "customers",
       "workshop",
       "accounting",
     ]) {
@@ -43,3 +45,4 @@ describe("rail-nav (trabajo del día)", () => {
     assert.equal(isRailApp("sales"), false);
   });
 });
+

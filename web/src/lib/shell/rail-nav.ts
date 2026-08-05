@@ -10,6 +10,7 @@ export type RailApp =
   | "caja"
   | "inventory"
   | "purchase"
+  | "customers"
   | "workshop"
   | "accounting";
 
@@ -51,6 +52,12 @@ export const RAIL_ITEMS: readonly RailItem[] = [
     label: AREA_LABELS.purchase,
     href: "/hubs/purchase",
     icon: "M6 8h12l1 12H5zm3 0V6a3 3 0 0 1 6 0v2",
+  },
+  {
+    app: "customers",
+    label: AREA_LABELS.customers,
+    href: "/lists/sales/customers",
+    icon: "M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m9-14a4 4 0 1 1-8 0 4 4 0 0 1 8 0zm6.5 5a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM22 21v-1.5a3.5 3.5 0 0 0-2.6-3.4",
   },
   {
     app: "workshop",

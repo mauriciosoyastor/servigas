@@ -84,4 +84,42 @@ describe("launcher-nav", () => {
       ["Mostrador", "Ajustes"]
     );
   });
+
+  it("puts Clientes action tile in areas (not Más accesos)", () => {
+    const { areas, more } = partitionLauncherTiles([
+      tile({
+        id: 1,
+        label: "Ventas",
+        target_type: "hub",
+        client_tag: "servigas_sales_hub",
+      }),
+      tile({
+        id: 2,
+        label: "Clientes",
+        target_type: "action",
+        client_tag: "customers",
+        action: {
+          type: "ir.actions.act_window",
+          res_model: "res.partner",
+          domain: [["customer_rank", ">", 0]],
+        },
+      }),
+      tile({
+        id: 3,
+        label: "Mostrador",
+        target_type: "action",
+        client_tag: "pos",
+        action: { type: "ir.actions.act_window", res_model: "pos.config" },
+      }),
+    ]);
+    assert.deepEqual(
+      areas.map((t) => t.label),
+      ["Ventas", "Clientes"]
+    );
+    assert.deepEqual(
+      more.map((t) => t.label),
+      ["Mostrador"]
+    );
+  });
 });
+

@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <template id="report_sg_work_order_document">
+    <t t-call="web.html_container">
+      <t t-foreach="docs" t-as="o">
+        <div class="page" style="font-family: DejaVu Sans, sans-serif; color: #1a1a1a;">
+          <!-- charset hint for wkhtmltopdf on Windows -->
+          <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+          <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px; border-bottom:2px solid #c45c26; padding-bottom:12px;">
+            <img t-att-src="o.get_report_brand_mark_src()"
+                 style="height:56px; width:auto;" alt="Servigas"/>
+            <div>
+              <div style="font-size:20px; font-weight:700;">Orden de trabajo</div>
+              <div style="font-size:13px; color:#555;">
+                <span t-esc="o.name"/> &#183;
+                <span t-esc="dict(o._fields['state'].selection).get(o.state)"/> &#183;
+                <span t-field="o.date"/>
+              </div>
+            </div>
+          </div>
+
+          <h3 style="font-size:14px; margin:16px 0 8px;">Cliente</h3>
+          <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <tr>
+              <td style="padding:4px 8px 4px 0; width:30%; color:#666;">Propietario</td>
+              <td style="padding:4px 0;"><span t-esc="o.owner_name or '-'"/></td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px 4px 0; color:#666;">Celular</td>
+              <td style="padding:4px 0;"><span t-esc="o.owner_phone or '-'"/></td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px 4px 0; color:#666;">Cliente</td>
+              <td style="padding:4px 0;"><span t-esc="o.partner_id.display_name if o.partner_id else '-'"/></td>
+            </tr>
+          </table>
+
+          <h3 style="font-size:14px; margin:16px 0 8px;">Artefacto</h3>
+          <table style="width:100%; font-size:12px; border-collapse:collapse;">
+            <tr>
+              <td style="padding:4px 8px 4px 0; width:30%; color:#666;">N&#186; de serie</td>
+              <td style="padding:4px 0;"><span t-esc="o.serial_number or '-'"/></td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px 4px 0; color:#666;">Marca / modelo</td>
+              <td style="padding:4px 0;">
+                <span t-esc="o.brand or ''"/>
+                <t t-if="o.model"> / <span t-esc="o.model"/></t>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px 4px 0; color:#666;">Descripci&#243;n</td>
+              <td style="padding:4px 0;"><span t-esc="o.appliance_id.name or '-'"/></td>
+            </tr>
+            <tr>
+              <td style="padding:4px 8px 4px 0; color:#666;">Gas</td>
+              <td style="padding:4px 0;">
+                <span t-esc="dict(o.appliance_id._fields['gas_type'].selection).get(o.appliance_id.gas_type) if o.appliance_id.gas_type else '-'"/>
+              </td>
+            </tr>
+          </table>
+
+          <h3 style="font-size:14px; margin:16px 0 8px;">Detalle</h3>
+          <div style="font-size:12px; margin-bottom:10px;">
+            <div style="color:#666; margin-bottom:2px;">Problema</div>
+            <div style="white-space:pre-wrap;" t-esc="o.problem or '-'"/>
+          </div>
+          <div style="font-size:12px; margin-bottom:10px;">
+            <div style="color:#666; margin-bottom:2px;">Observaci&#243;n</div>
+            <div style="white-space:pre-wrap;" t-esc="o.observation or '-'"/>
+          </div>
+          <div style="font-size:12px; margin-bottom:10px;">
+            <div style="color:#666; margin-bottom:2px;">Trabajos realizados</div>
+            <div style="white-space:pre-wrap;" t-esc="o.work_done or '-'"/>
+          </div>
+          <div style="font-size:12px; margin-bottom:10px;">
+            <div style="color:#666; margin-bottom:2px;">Materiales</div>
+            <div style="white-space:pre-wrap;" t-esc="o.materials or '-'"/>
+          </div>
+          <t t-if="o.amount">
+            <div style="font-size:13px; margin-top:12px;">
+              <strong>Importe:</strong>
+              <span t-esc="'%.2f' % (o.amount,)"/>
+            </div>
+          </t>
+
+          <div style="margin-top:28px; font-size:11px; color:#888; border-top:1px solid #ddd; padding-top:8px;">
+            Servigas
+          </div>
+        </div>
+      </t>
+    </t>
+  </template>
+
+  <record id="report_sg_work_order" model="ir.actions.report">
+    <field name="name">Orden de trabajo</field>
+    <field name="model">sg.work.order</field>
+    <field name="report_type">qweb-pdf</field>
+    <field name="report_name">servigas_core.report_sg_work_order_document</field>
+    <field name="report_file">servigas_core.report_sg_work_order_document</field>
+    <field name="paperformat_id" ref="base.paperformat_euro"/>
+    <field name="print_report_name">(object.name or 'OT').replace('/', '-')</field>
+    <field name="binding_model_id" ref="model_sg_work_order"/>
+    <field name="binding_type">report</field>
+  </record>
+</odoo>

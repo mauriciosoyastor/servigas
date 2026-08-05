@@ -53,7 +53,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
         throw new BffError(
           "validation_error",
           400,
-          "Subí un archivo CSV con nombre y contenido."
+          "Subí un archivo Excel (.xlsx / .xls) o CSV con nombre y contenido."
         );
       }
       const preview = await getBackend().previewPriceListImport(odooSessionId, {

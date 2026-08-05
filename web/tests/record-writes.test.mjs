@@ -254,4 +254,33 @@ describe("record-writes allowlist", () => {
       { name: "Filtros", parent_id: false }
     );
   });
+
+  it("defines workshop order update-only writes", () => {
+    const def = getRecordWriteDef("workshop/orders");
+    assert.ok(def);
+    assert.equal(def.model, "sg.work.order");
+    assert.deepEqual(def.createFields, []);
+    assert.ok(def.fields.includes("owner_name"));
+    assert.ok(def.fields.includes("amount"));
+    assert.ok(def.fields.includes("problem"));
+    assert.equal(def.fields.includes("amount_collected"), false);
+    assert.equal(def.fields.includes("state"), false);
+    assert.equal(canArchiveRecord("workshop/orders"), false);
+    assert.equal(canCreateRecord("workshop/orders"), true);
+  });
+
+  it("filters workshop order updates with numeric amount", () => {
+    const filtered = filterWritableValues("workshop/orders", {
+      owner_name: "  Juan  ",
+      amount: "1500.5",
+      amount_collected: 999,
+      state: "done",
+      problem: "No enciende",
+    });
+    assert.deepEqual(filtered, {
+      owner_name: "Juan",
+      amount: 1500.5,
+      problem: "No enciende",
+    });
+  });
 });

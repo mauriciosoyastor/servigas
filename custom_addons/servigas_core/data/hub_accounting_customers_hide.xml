@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- noupdate=0: Clientes sale de Cobros (queda en Ventas / tile Clientes / rail) -->
+    <data noupdate="0">
+        <record id="hub_card_acc_recv_customers" model="sg.hub.card">
+            <field name="active" eval="False"/>
+        </record>
+    </data>
+</odoo>

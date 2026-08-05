@@ -54,7 +54,10 @@ const createLabel =
 									? 'Cargar factura de proveedor'
 									: listKey === 'accounting/vendor-refunds'
 										? 'Nueva nota de crédito proveedor'
-										: 'Nuevo';
+										: listKey === 'workshop/orders' ||
+											  listKey === 'workshop/orders-draft'
+											? 'Nueva OT'
+											: 'Nuevo';
 
 const showFwExport = listKey === 'accounting/factura-web-pending';
 const showFwBulk = listKey === 'accounting/factura-web-pending';
@@ -208,6 +211,14 @@ if (!def) {
 						}
 						rowSelect={showFwBulk}
 						fwNumberInput={showFwBulk}
+					/>
+					<ListToolbar
+						action={def.path}
+						q={payload.q}
+						page={payload.page}
+						pageSize={payload.pageSize}
+						total={payload.total}
+						categId={categId}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
 					{listKey === 'inventory/products' ? <ProductRowDeleteHost /> : null}

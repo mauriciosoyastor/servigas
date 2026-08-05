@@ -14,6 +14,9 @@ const HUB_TILE_LABELS: Record<string, string> = {
   servigas_workshop_hub: AREA_LABELS.workshop,
 };
 
+/** Action tiles promoted into «Áreas del negocio» (not «Más accesos»). */
+const AREA_ACTION_TAGS = new Set(["customers"]);
+
 export type PartitionedLauncher = {
   areas: LauncherTile[];
   more: LauncherTile[];
@@ -37,6 +40,7 @@ export function displayLauncherLabel(tile: LauncherTile): string {
   if (tile.target_type === "hub") {
     return HUB_TILE_LABELS[tile.client_tag] || canonicalizeAreaLabel(tile.label);
   }
+  if (tile.client_tag === "customers") return AREA_LABELS.customers;
   if (isPosTile(tile)) return AREA_LABELS.pos;
   return canonicalizeAreaLabel(tile.label);
 }
@@ -46,15 +50,22 @@ export function withDisplayLabel(tile: LauncherTile): LauncherTile {
   return label === tile.label ? tile : { ...tile, label };
 }
 
+function isAreaTile(tile: LauncherTile): boolean {
+  return (
+    tile.target_type === "hub" || AREA_ACTION_TAGS.has(tile.client_tag || "")
+  );
+}
+
 /**
- * Hub tiles → «Áreas del negocio». Action tiles (POS, Apps, Ajustes, Integraciones) → «Más accesos».
+ * Hub tiles (+ Clientes) → «Áreas del negocio».
+ * Other action tiles (POS, Apps, Ajustes, Integraciones) → «Más accesos».
  */
 export function partitionLauncherTiles(tiles: LauncherTile[]): PartitionedLauncher {
   const areas: LauncherTile[] = [];
   const more: LauncherTile[] = [];
   for (const tile of tiles) {
     const labeled = withDisplayLabel(tile);
-    if (tile.target_type === "hub") areas.push(labeled);
+    if (isAreaTile(tile)) areas.push(labeled);
     else more.push(labeled);
   }
   return { areas, more };

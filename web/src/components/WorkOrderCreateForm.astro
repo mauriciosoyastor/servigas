@@ -20,39 +20,44 @@ const today = new Date().toISOString().slice(0, 10);
 ---
 
 <section class="sg-wo-create sg-glass" data-wo-create>
-	<strong>Orden de trabajo</strong>
-	<p>Completá como en el papel. La serie identifica el artefacto y arma el historial.</p>
+	<header class="sg-wo-brand">
+		<strong>Orden de trabajo</strong>
+		<p>Completá como en el papel. La serie identifica el artefacto y arma el historial.</p>
+	</header>
 
 	<form class="sg-wo-form" data-wo-form>
-		<div class="sg-wo-grid">
-			<label>
-				<span>Fecha *</span>
-				<input class="sg-focus-ring" type="date" name="date" value={today} required />
-			</label>
-			<label>
-				<span>Propietario</span>
-				<input class="sg-focus-ring" type="text" name="owner_name" autocomplete="name" />
-			</label>
-			<label>
-				<span>Celular</span>
-				<input class="sg-focus-ring" type="tel" name="owner_phone" autocomplete="tel" />
-			</label>
-			<label class="sg-wo-span">
-				<span>Cliente Odoo (opcional)</span>
-				<input
-					class="sg-focus-ring"
-					type="search"
-					autocomplete="off"
-					placeholder="Buscar cliente…"
-					data-partner-query
-				/>
-				<input type="hidden" name="partnerId" value="" data-partner-id />
-				<ul class="sg-wo-suggest" data-partner-suggest hidden></ul>
-			</label>
-		</div>
+		<section class="sg-wo-block" aria-labelledby="sg-wo-client-title">
+			<h2 class="sg-wo-block-title" id="sg-wo-client-title">Cliente</h2>
+			<div class="sg-wo-grid">
+				<label>
+					<span>Fecha *</span>
+					<input class="sg-focus-ring" type="date" name="date" value={today} required />
+				</label>
+				<label>
+					<span>Propietario</span>
+					<input class="sg-focus-ring" type="text" name="owner_name" autocomplete="name" />
+				</label>
+				<label>
+					<span>Celular</span>
+					<input class="sg-focus-ring" type="tel" name="owner_phone" autocomplete="tel" />
+				</label>
+				<label class="sg-wo-span">
+					<span>Buscar cliente Servigas</span>
+					<input
+						class="sg-focus-ring"
+						type="search"
+						autocomplete="off"
+						placeholder="Buscar cliente…"
+						data-partner-query
+					/>
+					<input type="hidden" name="partnerId" value="" data-partner-id />
+					<ul class="sg-wo-suggest" data-partner-suggest hidden></ul>
+				</label>
+			</div>
+		</section>
 
-		<fieldset class="sg-wo-fieldset">
-			<legend>Artefacto</legend>
+		<section class="sg-wo-block" aria-labelledby="sg-wo-appliance-title">
+			<h2 class="sg-wo-block-title" id="sg-wo-appliance-title">Artefacto</h2>
 			<div class="sg-wo-grid">
 				<label>
 					<span>Nº de serie *</span>
@@ -73,7 +78,7 @@ const today = new Date().toISOString().slice(0, 10);
 					<span>Modelo</span>
 					<input class="sg-focus-ring" type="text" name="model" autocomplete="off" data-model />
 				</label>
-				<label>
+				<label class="sg-wo-span-2">
 					<span>Descripción</span>
 					<input
 						class="sg-focus-ring"
@@ -92,40 +97,48 @@ const today = new Date().toISOString().slice(0, 10);
 						<option value="ge">GE</option>
 					</select>
 				</label>
-				<label>
+				<label class="sg-wo-span">
 					<span>Foto de chapa (opcional)</span>
-					<input class="sg-focus-ring" type="file" accept="image/jpeg,image/png,application/pdf" data-photo />
+					<input
+						class="sg-focus-ring sg-wo-file"
+						type="file"
+						accept="image/jpeg,image/png,application/pdf"
+						data-photo
+					/>
 				</label>
 			</div>
 			<p class="sg-wo-serial-hint" data-serial-hint hidden></p>
-		</fieldset>
+		</section>
 
-		<div class="sg-wo-grid sg-wo-grid--text">
-			<label class="sg-wo-span">
-				<span>Problema</span>
-				<textarea class="sg-focus-ring" name="problem" rows="2"></textarea>
-			</label>
-			<label class="sg-wo-span">
-				<span>Observación</span>
-				<textarea class="sg-focus-ring" name="observation" rows="2"></textarea>
-			</label>
-			<label class="sg-wo-span">
-				<span>Trabajos realizados</span>
-				<textarea class="sg-focus-ring" name="work_done" rows="2"></textarea>
-			</label>
-			<label class="sg-wo-span">
-				<span>Materiales</span>
-				<textarea class="sg-focus-ring" name="materials" rows="2"></textarea>
-			</label>
-			<label>
-				<span>Importe</span>
-				<input class="sg-focus-ring" type="number" name="amount" min="0" step="0.01" />
-			</label>
-		</div>
+		<section class="sg-wo-block" aria-labelledby="sg-wo-notes-title">
+			<h2 class="sg-wo-block-title" id="sg-wo-notes-title">Detalle del trabajo</h2>
+			<div class="sg-wo-grid sg-wo-grid--text">
+				<label class="sg-wo-span">
+					<span>Problema</span>
+					<textarea class="sg-focus-ring" name="problem" rows="3"></textarea>
+				</label>
+				<label class="sg-wo-span">
+					<span>Observación</span>
+					<textarea class="sg-focus-ring" name="observation" rows="3"></textarea>
+				</label>
+				<label class="sg-wo-span">
+					<span>Trabajos realizados</span>
+					<textarea class="sg-focus-ring" name="work_done" rows="3"></textarea>
+				</label>
+				<label class="sg-wo-span-2">
+					<span>Materiales</span>
+					<textarea class="sg-focus-ring" name="materials" rows="3"></textarea>
+				</label>
+				<label>
+					<span>Importe</span>
+					<input class="sg-focus-ring" type="number" name="amount" min="0" step="0.01" />
+				</label>
+			</div>
+		</section>
 
 		<div class="sg-wo-actions">
-			<button class="sg-focus-ring" type="submit">Guardar OT</button>
-			<a class="sg-focus-ring" href={listPath}>Cancelar</a>
+			<button class="sg-focus-ring sg-wo-submit" type="submit">Guardar OT</button>
+			<a class="sg-focus-ring sg-wo-cancel" href={listPath}>Cancelar</a>
 			<span class="sg-wo-status" data-wo-status hidden></span>
 		</div>
 	</form>
@@ -307,65 +320,152 @@ const today = new Date().toISOString().slice(0, 10);
 
 <style>
 	.sg-wo-create {
-		padding: 1.25rem 1.5rem 1.5rem;
+		padding: 1.35rem 1.4rem 1.5rem;
 		max-width: 52rem;
+		color: var(--sg-text-on-dark);
+		color-scheme: dark;
 	}
-	.sg-wo-create > strong {
+	.sg-wo-brand {
+		margin-bottom: 1.15rem;
+		padding-bottom: 1rem;
+		border-bottom: 1px solid var(--sg-glass-border);
+	}
+	.sg-wo-brand strong {
 		display: block;
-		font-size: 1.1rem;
-		margin-bottom: 0.25rem;
+		font-size: 1.15rem;
+		font-weight: 700;
+		letter-spacing: -0.01em;
+		color: var(--sg-text-on-dark);
 	}
-	.sg-wo-create > p {
-		margin: 0 0 1.25rem;
-		opacity: 0.8;
+	.sg-wo-brand p {
+		margin: 0.25rem 0 0;
+		color: var(--sg-text-muted-dark);
+		font-size: 0.88rem;
+		line-height: 1.4;
+	}
+	.sg-wo-block {
+		margin: 0;
+		padding: 0;
+		border: 0;
+	}
+	.sg-wo-block + .sg-wo-block {
+		margin-top: 1.35rem;
+		padding-top: 1.2rem;
+		border-top: 1px solid color-mix(in srgb, var(--sg-glass-border) 80%, transparent);
+	}
+	.sg-wo-block-title {
+		margin: 0 0 0.85rem;
+		font-size: 0.78rem;
+		font-weight: 700;
+		letter-spacing: 0.06em;
+		text-transform: uppercase;
+		color: color-mix(in srgb, var(--sg-flame-yellow) 72%, white);
 	}
 	.sg-wo-grid {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-		gap: 0.85rem 1rem;
-	}
-	.sg-wo-grid--text {
-		margin-top: 1rem;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: 0.9rem 1rem;
 	}
 	.sg-wo-span {
 		grid-column: 1 / -1;
 	}
+	.sg-wo-span-2 {
+		grid-column: span 2;
+	}
 	.sg-wo-form label {
 		display: flex;
 		flex-direction: column;
-		gap: 0.35rem;
-		font-size: 0.9rem;
+		gap: 0.4rem;
+		font-size: 0.86rem;
 		position: relative;
+		min-width: 0;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-wo-form label > span {
+		font-weight: 650;
+		color: var(--sg-text-on-dark);
 	}
 	.sg-wo-form input,
 	.sg-wo-form select,
 	.sg-wo-form textarea {
-		border: 1px solid color-mix(in srgb, var(--sg-ink) 18%, transparent);
-		border-radius: 8px;
-		padding: 0.55rem 0.7rem;
-		background: color-mix(in srgb, white 70%, transparent);
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		background: rgba(0, 0, 0, 0.32);
+		color: var(--sg-text-on-dark);
+		font: inherit;
+		caret-color: var(--sg-flame-yellow);
 	}
-	.sg-wo-fieldset {
-		margin: 1.1rem 0 0;
-		padding: 0.85rem 1rem 1rem;
-		border: 1px solid color-mix(in srgb, var(--sg-ink) 12%, transparent);
-		border-radius: 10px;
+	.sg-wo-form input::placeholder,
+	.sg-wo-form textarea::placeholder {
+		color: color-mix(in srgb, var(--sg-text-on-dark) 38%, transparent);
 	}
-	.sg-wo-fieldset legend {
-		padding: 0 0.35rem;
-		font-weight: 600;
+	.sg-wo-form select {
+		appearance: none;
+		background-image: linear-gradient(45deg, transparent 50%, var(--sg-text-muted-dark) 50%),
+			linear-gradient(135deg, var(--sg-text-muted-dark) 50%, transparent 50%);
+		background-position:
+			calc(100% - 1.05rem) calc(50% - 0.15rem),
+			calc(100% - 0.7rem) calc(50% - 0.15rem);
+		background-size: 0.35rem 0.35rem;
+		background-repeat: no-repeat;
+		padding-right: 1.8rem;
+	}
+	.sg-wo-form select option {
+		background: var(--sg-bg-charcoal, #2b2b2b);
+		color: var(--sg-text-on-dark);
+	}
+	.sg-wo-form input:focus-visible,
+	.sg-wo-form select:focus-visible,
+	.sg-wo-form textarea:focus-visible {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 55%, var(--sg-glass-border));
+		background: rgba(0, 0, 0, 0.42);
+	}
+	.sg-wo-form textarea {
+		min-height: 4.5rem;
+		resize: vertical;
+		line-height: 1.45;
+	}
+	.sg-wo-file {
+		padding: 0.45rem 0.55rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-wo-file::file-selector-button {
+		margin-right: 0.75rem;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 999px;
+		padding: 0.4rem 0.85rem;
+		background: var(--sg-glass-fill-strong);
+		color: var(--sg-text-on-dark);
+		font: inherit;
+		font-size: 0.8rem;
+		font-weight: 650;
+		cursor: pointer;
 	}
 	.sg-wo-serial-hint {
-		margin: 0.75rem 0 0;
-		font-size: 0.9rem;
+		margin: 0.85rem 0 0;
+		padding: 0.65rem 0.8rem;
+		border-radius: 0.7rem;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		font-size: 0.86rem;
+		line-height: 1.4;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-wo-serial-hint a {
+		color: var(--sg-flame-yellow);
+		font-weight: 650;
 	}
 	.sg-wo-suggest {
 		list-style: none;
-		margin: 0.25rem 0 0;
-		padding: 0;
-		border-radius: 8px;
-		background: white;
-		box-shadow: 0 8px 24px color-mix(in srgb, black 12%, transparent);
+		margin: 0.35rem 0 0;
+		padding: 0.25rem;
+		border-radius: 0.75rem;
+		border: 1px solid var(--sg-glass-border);
+		background: color-mix(in srgb, var(--sg-bg-deep, #1a1a1a) 92%, white);
+		box-shadow: var(--sg-shadow-lg, 0 24px 80px rgba(0, 0, 0, 0.3));
 		position: absolute;
 		inset-inline: 0;
 		top: 100%;
@@ -378,29 +478,59 @@ const today = new Date().toISOString().slice(0, 10);
 		width: 100%;
 		text-align: left;
 		border: 0;
+		border-radius: 0.55rem;
 		background: transparent;
-		padding: 0.55rem 0.75rem;
+		padding: 0.55rem 0.7rem;
+		color: var(--sg-text-on-dark);
+		font: inherit;
 		cursor: pointer;
 	}
 	.sg-wo-suggest button:hover {
-		background: color-mix(in srgb, var(--sg-ember-amber) 18%, transparent);
+		background: color-mix(in srgb, var(--sg-flame-orange) 22%, transparent);
 	}
 	.sg-wo-actions {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		gap: 0.75rem;
-		margin-top: 1.25rem;
+		margin-top: 1.4rem;
+		padding-top: 1.15rem;
+		border-top: 1px solid var(--sg-glass-border);
 	}
-	.sg-wo-actions button[type='submit'] {
-		background: var(--sg-ember-amber);
+	.sg-wo-submit {
 		border: 0;
 		border-radius: 999px;
-		padding: 0.65rem 1.25rem;
-		font-weight: 600;
+		padding: 0.7rem 1.35rem;
+		background: var(--sg-flame-gradient, var(--sg-ember-amber));
+		color: #1a1a1a;
+		font-weight: 700;
 		cursor: pointer;
 	}
+	.sg-wo-cancel {
+		display: inline-flex;
+		align-items: center;
+		min-height: 2.5rem;
+		padding: 0.55rem 1rem;
+		border-radius: 999px;
+		border: 1px solid var(--sg-glass-border);
+		background: var(--sg-glass-fill);
+		color: var(--sg-text-on-dark);
+		font-weight: 650;
+		text-decoration: none;
+	}
+	.sg-wo-status {
+		font-size: 0.86rem;
+		color: var(--sg-text-muted-dark);
+	}
 	.sg-wo-status.is-error {
-		color: var(--sg-ember-scarlet, #c62828);
+		color: #ffb4a2;
+	}
+	@media (max-width: 720px) {
+		.sg-wo-grid {
+			grid-template-columns: 1fr;
+		}
+		.sg-wo-span-2 {
+			grid-column: 1 / -1;
+		}
 	}
 </style>

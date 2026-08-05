@@ -142,8 +142,8 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       if (!canHardDelete(slug)) {
         throw new BffError("not_found", 404, "Eliminación no permitida");
       }
-      await getBackend().deleteRecord(odooSessionId, slug, id);
-      return json({ ok: true });
+      const result = await getBackend().deleteRecord(odooSessionId, slug, id);
+      return json({ ok: true, ...result });
     }
 
     if (action === "confirm") {

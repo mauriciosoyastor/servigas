@@ -2,9 +2,22 @@
 import RecordArchiveControl from '../../../../components/RecordArchiveControl.astro';
 import RecordConfirmControl from '../../../../components/RecordConfirmControl.astro';
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import RecordWorkOrderCashControl from '../../../../components/RecordWorkOrderCashControl.astro';
+import RecordWorkOrderShareControl from '../../../../components/RecordWorkOrderShareControl.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
+import { getBackend } from '../../../../lib/bff/get-backend.ts';
+import { requireOdooSession } from '../../../../lib/bff/http.ts';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import { isConfirmableState } from '../../../../lib/shell/record-actions.ts';
+import {
+	missingWorkshopContactHint,
+	workshopOrderPdfPath,
+	type WorkshopOrderShareMeta,
+} from '../../../../lib/shell/workshop-order-share.ts';
+import {
+	canRegisterWorkOrderCash,
+	workOrderCashRemaining,
+} from '../../../../lib/shell/workshop-order-cash.ts';
 
 const listKey = 'workshop/orders';
 const id = Number(Astro.params.id);
@@ -28,7 +41,39 @@ function fieldValue(key: string): string {
 
 const state = fieldValue('state');
 const showClose = isConfirmableState(listKey, state);
-const applianceRaw = fieldValue('appliance_id');
+const applianceId = Number(fieldValue('appliance_ref_id')) || 0;
+const amountNum = Number(String(fieldValue('amount')).replace(',', '.')) || 0;
+const collectedNum =
+	Number(String(fieldValue('amount_collected')).replace(',', '.')) || 0;
+const remaining = workOrderCashRemaining(amountNum, collectedNum);
+const fullyCollected = !canRegisterWorkOrderCash(
+	amountNum,
+	collectedNum,
+	remaining == null ? 1 : Math.max(remaining, 0.01)
+);
+const defaultCashAmount =
+	remaining != null && remaining > 0 ? remaining : '';
+
+const pdfPath = workshopOrderPdfPath(listKey, id);
+const fallbackShare: WorkshopOrderShareMeta = {
+	orderName: detail?.title || `OT-${id}`,
+	displayName: fieldValue('owner_name') || fieldValue('partner_id') || 'cliente',
+	email: null,
+	phone: null,
+	whatsappUrl: null,
+	pdfPath,
+	missingContactHint: missingWorkshopContactHint({ phone: null, email: null }),
+};
+let share: WorkshopOrderShareMeta | null = pdfPath ? fallbackShare : null;
+if (detail && !error && share) {
+	try {
+		const { odooSessionId } = requireOdooSession(Astro.cookies);
+		share = await getBackend().getWorkshopOrderShareMeta(odooSessionId, listKey, id);
+	} catch (cause) {
+		console.warn('[workshop/orders] share meta fallback', cause);
+		share = fallbackShare;
+	}
+}
 ---
 
 <ShellLayout title={`${detail?.title || 'OT'} | Servigas`} active="workshop" userName={userName}>
@@ -39,14 +84,58 @@ const applianceRaw = fieldValue('appliance_id');
 		fallbackTitle="Orden de trabajo"
 		fallbackListPath="/lists/workshop/orders"
 		recordId={id}
+		listKey={listKey}
+		editApiPath="/api/records/workshop/orders"
+		editFields={
+			detail && !error
+				? [
+						{ key: 'owner_name', label: 'Propietario', value: fieldValue('owner_name') },
+						{ key: 'owner_phone', label: 'Celular', value: fieldValue('owner_phone') },
+						{ key: 'problem', label: 'Problema', value: fieldValue('problem') },
+						{ key: 'observation', label: 'Observación', value: fieldValue('observation') },
+						{ key: 'work_done', label: 'Trabajos', value: fieldValue('work_done') },
+						{ key: 'materials', label: 'Materiales', value: fieldValue('materials') },
+						{ key: 'amount', label: 'Importe', value: fieldValue('amount') },
+					]
+				: []
+		}
 	>
 		{detail && !error ? (
-			<div class="sg-ficha-secondary-actions" slot="secondary">
-				{applianceRaw ? (
+			<div class="sg-ficha-secondary-actions" data-wo-share-panel slot="secondary">
+				<div class="sg-wo-detail-brand">
+					<img
+						class="sg-wo-detail-mark"
+						src="/servigas-mark.png?v=2"
+						alt=""
+						width="40"
+						height="40"
+						decoding="async"
+					/>
+				</div>
+				{share ? (
+					<RecordWorkOrderShareControl listKey={listKey} recordId={id} share={share} />
+				) : null}
+				<RecordWorkOrderCashControl
+					listKey={listKey}
+					recordId={id}
+					defaultAmount={defaultCashAmount}
+					orderName={detail.title || `OT-${id}`}
+					amountCollected={collectedNum}
+					remaining={remaining}
+					fullyCollected={fullyCollected}
+				/>
+				{applianceId > 0 ? (
+					<a
+						class="sg-ficha-action sg-focus-ring"
+						href={`/lists/workshop/appliances/${applianceId}`}
+					>
+						Ver artefacto
+					</a>
+				) : (
 					<a class="sg-ficha-action sg-focus-ring" href="/lists/workshop/appliances">
 						Ver artefactos
 					</a>
-				) : null}
+				)}
 				{showClose ? (
 					<RecordConfirmControl
 						listKey={listKey}
@@ -68,3 +157,17 @@ const applianceRaw = fieldValue('appliance_id');
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>
+
+<style>
+	.sg-wo-detail-brand {
+		display: flex;
+		align-items: center;
+		margin-bottom: 0.75rem;
+	}
+	.sg-wo-detail-mark {
+		display: block;
+		width: 2.5rem;
+		height: auto;
+		object-fit: contain;
+	}
+</style>

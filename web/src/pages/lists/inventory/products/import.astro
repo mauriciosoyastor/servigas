@@ -44,9 +44,9 @@ const reasonLabels = Object.fromEntries(
 			<p>Stock · Productos</p>
 			<h1>Cargar lista de precios/Productos</h1>
 			<p class="sg-import-lead">
-				Subí un CSV para crear productos nuevos y actualizar precio de venta y costo.
+				Subí un Excel (.xlsx / .xls) o CSV para crear productos nuevos y actualizar precio de venta y costo.
 				Podés incluir columnas <code>categoria</code> (tipo) y <code>proveedor</code>.
-				PDF e imágenes no están soportados: convertí a CSV primero.
+				PDF e imágenes no están soportados: convertí a Excel o CSV primero.
 			</p>
 		</header>
 
@@ -55,8 +55,12 @@ const reasonLabels = Object.fromEntries(
 			<div class="sg-import-actions">
 				<button type="button" class="sg-focus-ring" data-download-template>Descargar plantilla</button>
 				<label class="sg-import-file sg-focus-ring">
-					<span>Elegir CSV</span>
-					<input type="file" accept=".csv,text/csv" data-file-input />
+					<span>Elegir Excel o CSV</span>
+					<input
+						type="file"
+						accept=".csv,.xlsx,.xls,text/csv,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+						data-file-input
+					/>
 				</label>
 			</div>
 			<p class="sg-import-status" data-status hidden></p>
@@ -154,8 +158,22 @@ const reasonLabels = Object.fromEntries(
 			applyBtn.disabled = n === 0;
 		}
 
+		function isExcelFile(file) {
+			const name = String(file?.name || '').toLowerCase();
+			return name.endsWith('.xlsx') || name.endsWith('.xls');
+		}
+
 		async function readFileAsText(file) {
 			return await file.text();
+		}
+
+		async function readFileAsDataUrl(file) {
+			return await new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = () => resolve(String(reader.result || ''));
+				reader.onerror = () => reject(new Error('No se pudo leer el archivo'));
+				reader.readAsDataURL(file);
+			});
 		}
 
 		function renderPreview(preview) {
@@ -177,7 +195,7 @@ const reasonLabels = Object.fromEntries(
 			if (errorBanner instanceof HTMLElement) {
 				if (counts.error > 0) {
 					errorBanner.hidden = false;
-					errorBanner.textContent = `${counts.error} filas con error no se van a importar. Corregí el CSV o confirmá solo las filas OK.`;
+					errorBanner.textContent = `${counts.error} filas con error no se van a importar. Corregí el archivo o confirmá solo las filas OK.`;
 				} else {
 					errorBanner.hidden = true;
 					errorBanner.textContent = '';
@@ -248,7 +266,9 @@ const reasonLabels = Object.fromEntries(
 			const file = fileInput.files[0];
 			setStatus('Analizando archivo…');
 			try {
-				const content = await readFileAsText(file);
+				const content = isExcelFile(file)
+					? await readFileAsDataUrl(file)
+					: await readFileAsText(file);
 				const response = await fetch('/api/inventory/price-list-import', {
 					method: 'POST',
 					credentials: 'same-origin',

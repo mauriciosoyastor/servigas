@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import * as XLSX from "xlsx";
 
 import {
   TEMPLATE_CSV,
@@ -13,11 +14,20 @@ import {
   suggestMapping,
 } from "../src/lib/shell/price-list-import.ts";
 
+function workbookToBase64(rows, bookType = "xlsx") {
+  const sheet = XLSX.utils.aoa_to_sheet(rows);
+  const book = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(book, sheet, "Productos");
+  return XLSX.write(book, { type: "base64", bookType });
+}
+
 describe("price-list-import reject", () => {
   it("rejects pdf and images", () => {
     assert.equal(isRejectedFilename("lista.pdf"), true);
     assert.equal(isRejectedFilename("foto.PNG"), true);
     assert.equal(isRejectedFilename("lista.csv"), false);
+    assert.equal(isRejectedFilename("lista.xlsx"), false);
+    assert.equal(isRejectedFilename("lista.xls"), false);
   });
 });
 
@@ -76,6 +86,54 @@ describe("price-list-import parse", () => {
   it("rejects pdf", () => {
     const parsed = parseTabularText("lista.pdf", "%PDF-1.4");
     assert.ok(parsed.error);
+  });
+
+  it("parses xlsx base64 from first sheet", () => {
+    const b64 = workbookToBase64([
+      ["barcode", "default_code", "name", "list_price", "standard_price", "categoria"],
+      ["779", "SKU1", "Producto Uno", "100.5", "40", "Filtros"],
+      ["", "", "", "", "", ""],
+    ]);
+    const parsed = parseTabularText("lista.xlsx", b64);
+    assert.equal(parsed.error, null);
+    assert.equal(parsed.rows.length, 1);
+    assert.equal(parsed.rows[0].name, "Producto Uno");
+    assert.equal(parsed.rows[0].list_price, "100.5");
+    assert.equal(parsed.rows[0].categoria, "Filtros");
+  });
+
+  it("parses xlsx from data-URL", () => {
+    const b64 = workbookToBase64([
+      ["name", "precio"],
+      ["Gas 10kg", "1500"],
+    ]);
+    const parsed = parseTabularText(
+      "precios.XLSX",
+      `data:application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;base64,${b64}`
+    );
+    assert.equal(parsed.error, null);
+    assert.equal(parsed.rows[0].name, "Gas 10kg");
+    assert.equal(parsed.rows[0].precio, "1500");
+  });
+
+  it("parses xls bookType the same way", () => {
+    const b64 = workbookToBase64(
+      [
+        ["name", "list_price"],
+        ["Filtro", "220"],
+      ],
+      "xls"
+    );
+    const parsed = parseTabularText("lista.xls", b64);
+    assert.equal(parsed.error, null);
+    assert.equal(parsed.rows[0].name, "Filtro");
+    assert.equal(parsed.rows[0].list_price, "220");
+  });
+
+  it("errors on invalid excel payload", () => {
+    const parsed = parseTabularText("lista.xlsx", "no-es-base64-excel!!!");
+    assert.ok(parsed.error);
+    assert.match(parsed.error, /Excel/i);
   });
 });
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <record id="email_template_sg_work_order" model="mail.template">
+    <field name="name">Servigas: Orden de trabajo</field>
+    <field name="model_id" ref="model_sg_work_order"/>
+    <field name="subject">Orden de trabajo {{ object.name }}</field>
+    <field name="use_default_to" eval="True"/>
+    <field name="body_html" type="html">
+      <div>
+        <p>Hola <t t-out="object.partner_id.name or object.owner_name or 'cliente'">cliente</t>,</p>
+        <p>Adjuntamos la orden de trabajo <strong t-out="object.name">OT</strong>.</p>
+        <p>Saludos,<br/>Servigas</p>
+      </div>
+    </field>
+    <field name="report_template_ids" eval="[(4, ref('report_sg_work_order'))]"/>
+    <field name="auto_delete" eval="True"/>
+  </record>
+</odoo>

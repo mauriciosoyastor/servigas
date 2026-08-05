@@ -15,6 +15,7 @@ import type {
   PriceListImportApplyResult,
   PriceListImportPreview,
   ProductPurgeByCategoryResult,
+  DeleteRecordResult,
   VendorBillPdfPreview,
   RecordDetailPayload,
   RecordListPayload,
@@ -77,7 +78,7 @@ export interface BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number
-  ): Promise<void>;
+  ): Promise<DeleteRecordResult>;
   listRecordNotes(
     odooSessionId: string,
     listKey: string,
@@ -196,7 +197,15 @@ export interface BackendClient {
       amount: number;
       motiveCode: string;
       note?: string;
+      medium?: "cash" | "transfer" | "card" | "other";
+      workOrderId?: number;
     }
+  ): Promise<CashMoveResult>;
+  collectWorkOrderCash(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    input: { amount: number; paymentMethod: string }
   ): Promise<CashMoveResult>;
   closeCashSession(
     odooSessionId: string,
@@ -254,6 +263,23 @@ export interface BackendClient {
     orderName: string;
     markedSent: boolean;
   }>;
+  fetchWorkshopOrderPdf(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ body: ArrayBuffer; contentType: string; filename: string }>;
+  getWorkshopOrderShareMeta(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<
+    import("../shell/workshop-order-share.ts").WorkshopOrderShareMeta
+  >;
+  sendWorkshopOrderEmail(
+    odooSessionId: string,
+    listKey: string,
+    id: number
+  ): Promise<{ ok: true; email: string; orderName: string }>;
   sendPurchaseOrderEmail(
     odooSessionId: string,
     listKey: string,

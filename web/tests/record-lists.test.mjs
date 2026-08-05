@@ -2,10 +2,13 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   buildSearchDomain,
+  foldAccents,
   getRecordListDef,
+  matchesAccentInsensitiveSearch,
   parsePositiveIntParam,
   resolveRecordListKey,
   resolveRecordListPath,
+  usesAccentInsensitiveListSearch,
 } from "../src/lib/shell/record-lists.ts";
 
 describe("record-lists allowlist", () => {
@@ -44,7 +47,7 @@ describe("record-lists allowlist", () => {
     );
     assert.equal(
       getRecordListDef("sales/pos-orders")?.title,
-      "Ventas de caja"
+      "Ventas del mostrador"
     );
     assert.equal(
       getRecordListDef("inventory/quants")?.title,
@@ -433,7 +436,40 @@ describe("record-lists allowlist", () => {
       )
     );
   });
+});
 
+describe("accent-insensitive search helpers", () => {
+  it("folds accents for Spanish text", () => {
+    assert.equal(foldAccents("Práctica Filtros"), "practica filtros");
+    assert.equal(foldAccents("ÁÉÍÓÚ ü ñ"), "aeiou u n");
+  });
+
+  it("matches category queries without accents", () => {
+    assert.equal(
+      matchesAccentInsensitiveSearch(
+        ["Práctica Filtros", "All / Práctica Filtros"],
+        "Practica filtros"
+      ),
+      true
+    );
+    assert.equal(
+      matchesAccentInsensitiveSearch(["Práctica Cocina"], "calefaccion"),
+      false
+    );
+    assert.equal(
+      matchesAccentInsensitiveSearch(["Práctica Calefacción"], "calefaccion"),
+      true
+    );
+  });
+
+  it("flags inventory product/category lists for accent-insensitive search", () => {
+    assert.equal(usesAccentInsensitiveListSearch("inventory/categories"), true);
+    assert.equal(usesAccentInsensitiveListSearch("inventory/products"), true);
+    assert.equal(usesAccentInsensitiveListSearch("sales/customers"), false);
+  });
+});
+
+describe("record-lists allowlist", () => {
   it("routes empty-domain sale.report cards by label", () => {
     const action = {
       type: "ir.actions.act_window",
@@ -625,6 +661,8 @@ describe("record-lists allowlist", () => {
     assert.equal(orders?.model, "sg.work.order");
     assert.equal(orders?.hubBack, "/hubs/workshop");
     assert.equal(orders?.detailPath, "/lists/workshop/orders/:id");
+    assert.ok(orders?.fields.includes("amount_collected"));
+    assert.ok(orders?.columns?.some((c) => c.key === "amount_collected"));
     assert.equal(appliances?.model, "sg.appliance");
     assert.equal(appliances?.detailPath, "/lists/workshop/appliances/:id");
     assert.equal(
@@ -637,6 +675,18 @@ describe("record-lists allowlist", () => {
         { label: "Nueva orden" }
       ),
       "/lists/workshop/orders/new"
+    );
+    assert.equal(
+      resolveRecordListPath({
+        type: "ir.actions.act_window",
+        res_model: "sg.work.order",
+        domain: [["state", "=", "draft"]],
+      }),
+      "/lists/workshop/orders-draft"
+    );
+    assert.equal(
+      getRecordListDef("workshop/orders-draft")?.domain?.[0]?.[2],
+      "draft"
     );
     assert.equal(
       resolveRecordListPath({

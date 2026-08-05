@@ -7,6 +7,7 @@ export const AREA_LABELS = {
   inventory: "Stock",
   sales: "Ventas",
   purchase: "Compras",
+  customers: "Clientes",
   accounting: "Cobros",
   workshop: "Taller",
   pos: "Mostrador",

@@ -1,5 +1,6 @@
 ---
 import ShellLayout from '../layouts/ShellLayout.astro';
+import ProductImageUploadHost from '../components/ProductImageUploadHost.astro';
 import { BffError } from '../lib/bff/errors.ts';
 import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
@@ -47,7 +48,7 @@ try {
 			</div>
 			<div class="sg-pos-heading-actions">
 				<a class="sg-pos-link sg-focus-ring" href="/caja">Caja</a>
-				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas de caja</a>
+				<a class="sg-pos-link sg-focus-ring" href="/lists/sales/ventas-caja">Ventas del mostrador</a>
 				<a class="sg-pos-link sg-focus-ring" href="/">Inicio</a>
 			</div>
 		</header>
@@ -84,44 +85,72 @@ try {
 					<p class="sg-pos-meta">{catalog?.total ?? 0} productos</p>
 					<div class="sg-pos-scroll sg-pos-catalog-scroll" tabindex="0" aria-label="Lista de productos">
 						<div class="sg-pos-grid" data-pos-grid>
-							{(catalog?.products || []).map((product) => (
-								<button
-									class="sg-pos-product sg-focus-ring"
-									type="button"
-									data-pos-add
-									data-id={product.id}
-									data-name={product.name}
-									data-price={product.list_price}
-									data-tax-rate={product.tax_rate}
-									data-price-includes-tax={product.price_includes_tax ? '1' : '0'}
-									data-image={product.image_url || ''}
-									data-qty={product.qty_available}
-								>
-									{product.image_url ? (
-										<img src={product.image_url} alt="" loading="lazy" />
-									) : (
-										<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
-									)}
-									<span class="sg-pos-product-name">{product.name}</span>
-									<span class="sg-pos-product-code">{product.default_code || product.barcode || '—'}</span>
-									<span
-										class:list={[
-											'sg-pos-product-stock',
-											product.qty_available <= 0 && 'is-zero',
-										]}
-									>
-										Stock {product.qty_available.toLocaleString('es-AR')}
-									</span>
-									<span class="sg-pos-product-price">
-										{product.list_price.toLocaleString('es-AR', {
-											style: 'currency',
-											currency: 'ARS',
-											minimumFractionDigits: 2,
-											maximumFractionDigits: 2,
-										})}
-									</span>
-								</button>
-							))}
+							{(catalog?.products || []).map((product) => {
+								const tmplId = Number(product.product_tmpl_id) || 0;
+								return (
+									<div class="sg-pos-product-wrap">
+										<button
+											class="sg-pos-product sg-focus-ring"
+											type="button"
+											data-pos-add
+											data-id={product.id}
+											data-name={product.name}
+											data-price={product.list_price}
+											data-tax-rate={product.tax_rate}
+											data-price-includes-tax={product.price_includes_tax ? '1' : '0'}
+											data-image={product.image_url || ''}
+											data-qty={product.qty_available}
+										>
+											<span
+												class="sg-pos-product-media"
+												data-product-thumb={tmplId > 0 ? String(tmplId) : undefined}
+											>
+												{product.image_url ? (
+													<img src={product.image_url} alt="" loading="lazy" />
+												) : (
+													<span class="sg-pos-product-empty" aria-hidden="true">Sin foto</span>
+												)}
+											</span>
+											<span class="sg-pos-product-name">{product.name}</span>
+											<span class="sg-pos-product-code">{product.default_code || product.barcode || '—'}</span>
+											<span
+												class:list={[
+													'sg-pos-product-stock',
+													product.qty_available <= 0 && 'is-zero',
+												]}
+											>
+												Stock {product.qty_available.toLocaleString('es-AR')}
+											</span>
+											<span class="sg-pos-product-price">
+												{product.list_price.toLocaleString('es-AR', {
+													style: 'currency',
+													currency: 'ARS',
+													minimumFractionDigits: 2,
+													maximumFractionDigits: 2,
+												})}
+											</span>
+										</button>
+										{tmplId > 0 ? (
+											<button
+												type="button"
+												class="sg-pos-product-photo sg-focus-ring"
+												data-product-image-trigger
+												data-record-id={String(tmplId)}
+												data-api-path="/api/records/inventory/products"
+												data-image-target={`[data-product-thumb="${tmplId}"]`}
+												aria-label={product.image_url ? 'Cambiar foto' : 'Agregar foto'}
+											>
+												<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+													<path
+														fill="currentColor"
+														d="M9 3h6l1.5 2H20a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h3.5L9 3zm3 5a5 5 0 1 0 .001 10.001A5 5 0 0 0 12 8zm0 2.2a2.8 2.8 0 1 1 0 5.6 2.8 2.8 0 0 1 0-5.6z"
+													/>
+												</svg>
+											</button>
+										) : null}
+									</div>
+								);
+							})}
 						</div>
 						{(catalog?.products || []).length === 0 ? (
 							<p class="sg-pos-empty">No hay productos para mostrar.</p>
@@ -283,6 +312,8 @@ try {
 	</main>
 </ShellLayout>
 
+{cashOpen && !error ? <ProductImageUploadHost /> : null}
+
 <script>
 	import {
 		addToCart,
@@ -305,6 +336,10 @@ try {
 		selectLine,
 		setNumpadMode,
 	} from '../lib/pos/numpad.ts';
+	import {
+		isEditableKeyboardTarget,
+		mapKeyboardToNumpad,
+	} from '../lib/pos/numpad-keyboard.ts';
 
 	const root = document.querySelector('[data-pos-caja]');
 	if (root) {
@@ -749,6 +784,31 @@ try {
 			applyNumpad();
 		});
 
+		document.addEventListener('keydown', (event) => {
+			if (isEditableKeyboardTarget(event.target)) return;
+			const action = mapKeyboardToNumpad({
+				key: event.key,
+				code: event.code,
+			});
+			if (!action) return;
+			event.preventDefault();
+			if (action.type === 'digit') {
+				pad = pressDigit(pad, action.digit);
+				syncNumpadChrome();
+			} else if (action.type === 'backspace') {
+				pad = pressBackspace(pad);
+				syncNumpadChrome();
+			} else if (action.type === 'clear') {
+				pad = { ...pad, buffer: '' };
+				syncNumpadChrome();
+			} else if (action.type === 'mode') {
+				pad = setNumpadMode(pad, action.mode);
+				syncNumpadChrome();
+			} else if (action.type === 'apply') {
+				applyNumpad();
+			}
+		});
+
 		checkoutBtn?.addEventListener('click', async () => {
 			if (!statusEl || !checkoutBtn) return;
 			hideReceipt();
@@ -969,9 +1029,14 @@ try {
 		grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
 		gap: 0.65rem;
 	}
+	.sg-pos-product-wrap {
+		position: relative;
+		min-width: 0;
+	}
 	.sg-pos-product {
 		display: grid;
 		gap: 0.35rem;
+		width: 100%;
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 1rem;
 		padding: 0.65rem;
@@ -980,10 +1045,19 @@ try {
 		text-align: left;
 		cursor: pointer;
 	}
-	.sg-pos-product img,
+	.sg-pos-product-media {
+		display: block;
+		width: 100%;
+		aspect-ratio: 1;
+		border-radius: 0.75rem;
+		overflow: hidden;
+		background: rgba(255, 255, 255, 0.06);
+	}
+	.sg-pos-product-media img,
 	.sg-pos-product-empty {
 		display: grid;
 		width: 100%;
+		height: 100%;
 		aspect-ratio: 1;
 		place-items: center;
 		border-radius: 0.75rem;
@@ -993,6 +1067,27 @@ try {
 	.sg-pos-product-empty {
 		color: var(--sg-text-muted-dark);
 		font-size: 0.7rem;
+	}
+	.sg-pos-product-photo {
+		position: absolute;
+		top: 0.85rem;
+		right: 0.85rem;
+		z-index: 2;
+		display: grid;
+		place-items: center;
+		width: 1.85rem;
+		height: 1.85rem;
+		padding: 0;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 999px;
+		background: color-mix(in srgb, var(--sg-bg-charcoal) 88%, white);
+		color: var(--sg-text-on-dark);
+		cursor: pointer;
+		box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+	}
+	.sg-pos-product-photo:hover,
+	.sg-pos-product-photo:focus-visible {
+		color: var(--sg-flame-yellow);
 	}
 	.sg-pos-product-name {
 		font-size: 0.78rem;

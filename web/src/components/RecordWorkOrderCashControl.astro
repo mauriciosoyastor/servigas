@@ -1,0 +1,287 @@
+---
+import { PAYMENT_METHOD_OPTIONS } from '../lib/shell/payment-registers.ts';
+
+interface Props {
+	listKey: string;
+	recordId: number;
+	defaultAmount?: number | string;
+	orderName?: string;
+	/** Ya cobrado en caja. */
+	amountCollected?: number;
+	/** Saldo pendiente; null = OT sin importe (un solo cobro libre). */
+	remaining?: number | null;
+	fullyCollected?: boolean;
+}
+
+const {
+	listKey,
+	recordId,
+	defaultAmount = '',
+	orderName = 'OT',
+	amountCollected = 0,
+	remaining = null,
+	fullyCollected = false,
+} = Astro.props;
+
+const amountHint =
+	defaultAmount === '' || defaultAmount == null || Number(defaultAmount) <= 0
+		? ''
+		: String(defaultAmount);
+
+const collectedLabel = Number(amountCollected) > 0
+	? Number(amountCollected).toLocaleString('es-AR', {
+			style: 'currency',
+			currency: 'ARS',
+			minimumFractionDigits: 2,
+		})
+	: '';
+---
+
+<section
+	class:list={['sg-wo-cash', fullyCollected && 'is-collected']}
+	data-wo-cash
+	data-list-key={listKey}
+	data-id={recordId}
+	data-order-name={orderName}
+	data-fully-collected={fullyCollected ? '1' : '0'}
+>
+	<p class="sg-wo-cash-title">Registrar cobro en caja</p>
+	{collectedLabel ? (
+		<p class="sg-wo-cash-progress">
+			Ya cobrado: <strong>{collectedLabel}</strong>
+			{remaining != null ? (
+				<>
+					{' '}
+					· Pendiente:{' '}
+					<strong>
+						{remaining.toLocaleString('es-AR', {
+							style: 'currency',
+							currency: 'ARS',
+							minimumFractionDigits: 2,
+						})}
+					</strong>
+				</>
+			) : null}
+		</p>
+	) : null}
+	{fullyCollected ? (
+		<p class="sg-wo-cash-done">Cobro completo registrado en caja.</p>
+	) : (
+		<>
+			<label class="sg-wo-cash-amount">
+				<span>Monto</span>
+				<input
+					class="sg-focus-ring"
+					type="number"
+					min="0"
+					step="0.01"
+					inputmode="decimal"
+					data-wo-cash-amount
+					value={amountHint}
+					placeholder="Importe cobrado"
+					required
+				/>
+			</label>
+			<fieldset class="sg-wo-cash-methods">
+				<legend>Medio</legend>
+				{PAYMENT_METHOD_OPTIONS.map((option) => (
+					<label>
+						<input
+							type="radio"
+							name={`sg-wo-cash-method-${recordId}`}
+							value={option.value}
+							data-wo-cash-method
+							checked={option.value === 'cash'}
+						/>
+						<span>{option.label}</span>
+					</label>
+				))}
+			</fieldset>
+			<button
+				class="sg-focus-ring"
+				type="button"
+				data-wo-cash-btn
+				data-api="/api/workshop-orders/collect-cash"
+			>
+				Registrar cobro
+			</button>
+			<p class="sg-wo-cash-hint">
+				Requiere caja abierta. El cobro aparece en el feed de Caja; solo el efectivo
+				suma al esperado. No se puede cobrar de más que el pendiente.
+			</p>
+		</>
+	)}
+	<p class="sg-wo-cash-status" data-wo-cash-status hidden></p>
+</section>
+
+<script>
+	document.querySelectorAll<HTMLElement>('[data-wo-cash]').forEach((root) => {
+		if (root.dataset.fullyCollected === '1') return;
+		const btn = root.querySelector('[data-wo-cash-btn]');
+		const amountInput = root.querySelector('[data-wo-cash-amount]');
+		const status = root.querySelector('[data-wo-cash-status]');
+		if (
+			!(
+				btn instanceof HTMLButtonElement &&
+				amountInput instanceof HTMLInputElement &&
+				status instanceof HTMLElement
+			)
+		) {
+			return;
+		}
+
+		btn.addEventListener('click', async () => {
+			const methodInput = root.querySelector<HTMLInputElement>(
+				'[data-wo-cash-method]:checked'
+			);
+			const paymentMethod = methodInput?.value || '';
+			if (!paymentMethod) {
+				status.hidden = false;
+				status.dataset.state = 'error';
+				status.textContent = 'Elegí un medio de pago.';
+				return;
+			}
+			const amount = Number(amountInput.value.trim());
+			if (!Number.isFinite(amount) || amount <= 0) {
+				status.hidden = false;
+				status.dataset.state = 'error';
+				status.textContent = 'Ingresá un monto válido mayor a 0.';
+				return;
+			}
+			const methodLabel =
+				methodInput?.parentElement?.querySelector('span')?.textContent ||
+				paymentMethod;
+			const orderLabel = root.dataset.orderName || 'OT';
+			if (
+				!window.confirm(
+					`¿Registrar cobro de ${orderLabel} por ${amount} (${methodLabel}) en la caja abierta?`
+				)
+			) {
+				return;
+			}
+			status.hidden = false;
+			status.dataset.state = 'pending';
+			status.textContent = 'Registrando cobro…';
+			btn.disabled = true;
+			try {
+				const response = await fetch(btn.dataset.api || '', {
+					method: 'POST',
+					credentials: 'same-origin',
+					headers: { 'content-type': 'application/json' },
+					body: JSON.stringify({
+						listKey: root.dataset.listKey,
+						id: Number(root.dataset.id),
+						amount,
+						paymentMethod,
+					}),
+				});
+				const payload = await response.json().catch(() => ({}));
+				if (!response.ok) {
+					throw new Error(
+						payload?.error?.message || 'No se pudo registrar el cobro'
+					);
+				}
+				status.dataset.state = 'ok';
+				status.textContent = 'Cobro registrado en caja.';
+				window.setTimeout(() => window.location.reload(), 450);
+			} catch (error) {
+				status.dataset.state = 'error';
+				status.textContent =
+					error instanceof Error
+						? error.message
+						: 'No se pudo registrar el cobro';
+				btn.disabled = false;
+			}
+		});
+	});
+</script>
+
+<style>
+	.sg-wo-cash {
+		display: grid;
+		gap: 0.65rem;
+		margin-top: 0.85rem;
+		padding-top: 0.85rem;
+		border-top: 1px solid var(--sg-glass-border, rgba(255, 255, 255, 0.12));
+		max-width: 22rem;
+	}
+	.sg-wo-cash-title {
+		margin: 0;
+		font-size: 0.82rem;
+		font-weight: 650;
+		color: var(--sg-text-on-dark, #f4f7fb);
+	}
+	.sg-wo-cash-progress,
+	.sg-wo-cash-done {
+		margin: 0;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-cash-done {
+		color: #9be7a8;
+		font-weight: 600;
+	}
+	.sg-wo-cash-amount {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-cash-amount input {
+		min-height: 2.5rem;
+		border-radius: 0.65rem;
+		border: 1px solid var(--sg-glass-border, rgba(255, 255, 255, 0.14));
+		background: rgba(0, 0, 0, 0.22);
+		color: var(--sg-text-on-dark, #f4f7fb);
+		padding: 0.45rem 0.7rem;
+	}
+	.sg-wo-cash-methods {
+		margin: 0;
+		padding: 0;
+		border: 0;
+		display: grid;
+		gap: 0.35rem;
+	}
+	.sg-wo-cash-methods legend {
+		padding: 0;
+		margin-bottom: 0.25rem;
+		font-size: 0.78rem;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-cash-methods label {
+		display: flex;
+		align-items: center;
+		gap: 0.45rem;
+		font-size: 0.84rem;
+		color: var(--sg-text-on-dark, #f4f7fb);
+	}
+	.sg-wo-cash button[data-wo-cash-btn] {
+		min-height: 2.6rem;
+		border: 0;
+		border-radius: 0.75rem;
+		font-weight: 650;
+		color: #1a1208;
+		background: var(--sg-flame-gradient, #f57c00);
+		cursor: pointer;
+	}
+	.sg-wo-cash-hint {
+		margin: 0;
+		font-size: 0.75rem;
+		line-height: 1.35;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-cash-status {
+		margin: 0;
+		font-size: 0.8rem;
+	}
+	.sg-wo-cash-status[data-state='pending'] {
+		color: var(--sg-text-muted-dark, #c5d0dc);
+	}
+	.sg-wo-cash-status[data-state='ok'] {
+		color: #9be7a8;
+	}
+	.sg-wo-cash-status[data-state='error'] {
+		color: #ffb4a8;
+	}
+</style>

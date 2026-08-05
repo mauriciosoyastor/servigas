@@ -73,6 +73,7 @@ export type RecordListKey =
   | "accounting/invoice-analysis"
   | "accounting/moves"
   | "workshop/orders"
+  | "workshop/orders-draft"
   | "workshop/appliances"
   | "integrations/all";
 
@@ -96,7 +97,14 @@ export type RecordListDef = {
   limit: number;
   order: string;
   hubBack: string;
-  railApp: "inventory" | "sales" | "purchase" | "accounting" | "workshop" | "home";
+  railApp:
+    | "inventory"
+    | "sales"
+    | "purchase"
+    | "customers"
+    | "accounting"
+    | "workshop"
+    | "home";
   imageField?: string;
   detailPath?: string;
   searchFields?: string[];
@@ -581,8 +589,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/to-invoice": {
     key: "sales/to-invoice",
     path: "/lists/sales/to-invoice",
-    title: "Por facturar",
-    hint: "Pedidos con factura pendiente",
+    title: "Ventas por facturar",
+    hint: "Ventas confirmadas pendientes de factura",
     model: "sale.order",
     domain: [["invoice_status", "=", "to invoice"]],
     fields: [
@@ -604,8 +612,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/upselling": {
     key: "sales/upselling",
     path: "/lists/sales/upselling",
-    title: "Pedidos con más por facturar",
-    hint: "Pedidos con más por facturar",
+    title: "Ventas con saldo por facturar",
+    hint: "Facturación parcial: queda saldo por facturar",
     model: "sale.order",
     domain: [["invoice_status", "=", "upselling"]],
     fields: ["name", "partner_id", "date_order", "amount_total", "state"],
@@ -620,8 +628,8 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "sales/ventas-caja": {
     key: "sales/ventas-caja",
     path: "/lists/sales/ventas-caja",
-    title: "Ventas de caja",
-    hint: "Ventas registradas en caja — facturá desde la ficha",
+    title: "Ventas del mostrador",
+    hint: "Historial de caja — facturá desde la ficha",
     model: "pos.order",
     domain: [],
     fields: [
@@ -661,7 +669,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
-    railApp: "sales",
+    railApp: "customers",
     searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
@@ -691,7 +699,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     limit: 50,
     order: "name asc",
     hubBack: "/hubs/sales",
-    railApp: "sales",
+    railApp: "customers",
     searchFields: ["name", "email", "phone", "vat"],
     detailPath: "/lists/sales/customers/:id",
   },
@@ -1710,6 +1718,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "work_done",
       "materials",
       "amount",
+      "amount_collected",
       "state",
       "appliance_id",
       "brand",
@@ -1721,6 +1730,48 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       { key: "serial_number", label: "Serie" },
       { key: "owner_name", label: "Propietario" },
       { key: "amount", label: "Importe" },
+      { key: "amount_collected", label: "Cobrado" },
+      { key: "state", label: "Estado" },
+    ],
+    limit: 50,
+    order: "date desc, id desc",
+    hubBack: "/hubs/workshop",
+    railApp: "workshop",
+    searchFields: ["name", "serial_number", "owner_name", "owner_phone"],
+    detailPath: "/lists/workshop/orders/:id",
+  },
+  "workshop/orders-draft": {
+    key: "workshop/orders-draft",
+    path: "/lists/workshop/orders-draft",
+    title: "OT borrador",
+    hint: "Órdenes de trabajo abiertas (borrador)",
+    model: "sg.work.order",
+    domain: [["state", "=", "draft"]],
+    fields: [
+      "name",
+      "date",
+      "serial_number",
+      "owner_name",
+      "owner_phone",
+      "partner_id",
+      "problem",
+      "observation",
+      "work_done",
+      "materials",
+      "amount",
+      "amount_collected",
+      "state",
+      "appliance_id",
+      "brand",
+      "model",
+    ],
+    columns: [
+      { key: "date", label: "Fecha" },
+      { key: "name", label: "OT" },
+      { key: "serial_number", label: "Serie" },
+      { key: "owner_name", label: "Propietario" },
+      { key: "amount", label: "Importe" },
+      { key: "amount_collected", label: "Cobrado" },
       { key: "state", label: "Estado" },
     ],
     limit: 50,
@@ -1964,6 +2015,18 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "sale.order",
+    patterns: [
+      /upsell/i,
+      /venta pendiente/i,
+      /m[aá]s por facturar/i,
+      /saldo por facturar/i,
+      /resto por facturar/i,
+      /facturaci[oó]n parcial/i,
+    ],
+    path: "/lists/sales/upselling",
+  },
+  {
+    model: "sale.order",
     patterns: [/por facturar/i, /a facturar/i],
     path: "/lists/sales/to-invoice",
   },
@@ -1971,11 +2034,6 @@ const LABEL_RULES: LabelRule[] = [
     model: "sale.order",
     patterns: [/historial.*cotizaci/i, /cotizaci.*historial/i],
     path: "/lists/sales/quotations-history",
-  },
-  {
-    model: "sale.order",
-    patterns: [/upsell/i, /venta pendiente/i, /m[aá]s por facturar/i],
-    path: "/lists/sales/upselling",
   },
   {
     model: "sale.order",
@@ -1989,7 +2047,7 @@ const LABEL_RULES: LabelRule[] = [
   },
   {
     model: "pos.order",
-    patterns: [/pos/i, /mostrador/i],
+    patterns: [/pos/i, /mostrador/i, /ventas de caja/i],
     path: "/lists/sales/ventas-caja",
   },
   {
@@ -2221,6 +2279,11 @@ const LABEL_RULES: LabelRule[] = [
     model: "sg.work.order",
     patterns: [/nueva orden/i],
     path: "/lists/workshop/orders/new",
+  },
+  {
+    model: "sg.work.order",
+    patterns: [/borrador/i],
+    path: "/lists/workshop/orders-draft",
   },
   {
     model: "sg.work.order",
@@ -2548,6 +2611,11 @@ const ROUTE_RULES: RouteRule[] = [
   },
   {
     model: "sg.work.order",
+    path: "/lists/workshop/orders-draft",
+    match: (d) => domainHas(d, "state") && domainHas(d, "draft"),
+  },
+  {
+    model: "sg.work.order",
     path: "/lists/workshop/orders",
   },
   {
@@ -2630,4 +2698,61 @@ export function buildSearchDomain(
   }
   const ors = Array.from({ length: clauses.length - 1 }, () => "|");
   return [...base, ...ors, ...clauses];
+}
+
+/** Lowercase + strip diacritics so "practica" matches "Práctica". */
+export function foldAccents(value: string): string {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .toLowerCase();
+}
+
+/**
+ * Every whitespace-separated token of `q` must appear in the joined haystack
+ * fields (accent-insensitive). Empty `q` matches everything.
+ */
+export function matchesAccentInsensitiveSearch(
+  fields: Array<string | null | undefined | false>,
+  q: string
+): boolean {
+  const needle = foldAccents(q).trim();
+  if (!needle) return true;
+  const tokens = needle.split(/\s+/).filter(Boolean);
+  const haystack = foldAccents(
+    fields
+      .map((field) => (field === false || field == null ? "" : String(field)))
+      .join(" ")
+  );
+  return tokens.every((token) => haystack.includes(token));
+}
+
+/** Lists where typed search should ignore Spanish accents (practica → Práctica). */
+const ACCENT_INSENSITIVE_LIST_KEYS = new Set([
+  "inventory/categories",
+  "inventory/products",
+  "inventory/variants",
+  "inventory/no-stock",
+  "inventory/stockables",
+  "inventory/no-price",
+]);
+
+export function usesAccentInsensitiveListSearch(listKey: string): boolean {
+  return ACCENT_INSENSITIVE_LIST_KEYS.has(listKey);
+}
+
+export function accentSearchHaystackFields(
+  listKey: string,
+  row: Record<string, unknown>,
+  searchFields: string[] = []
+): Array<string | null | undefined | false> {
+  if (listKey === "inventory/categories") {
+    return [row.name as string, row.complete_name as string];
+  }
+  return searchFields.map((field) => {
+    const value = row[field];
+    if (value === false || value == null) return "";
+    if (Array.isArray(value)) return String(value[1] ?? value[0] ?? "");
+    return String(value);
+  });
 }

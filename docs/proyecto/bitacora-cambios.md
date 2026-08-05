@@ -31,6 +31,15 @@
 
 ---
 
+### 2026-08-03 — Taller: PDF / WhatsApp / mail de OT + logo
+
+- PDF QWeb `servigas_core.report_sg_work_order` con logo Servigas
+- Panel en ficha OT: Ver/Descargar PDF, WhatsApp, mail Odoo (template)
+- Logo Servigas en formulario de alta y ficha digital
+- Spec: `docs/superpowers/specs/2026-08-03-workshop-work-order-share-design.md`
+
+---
+
 ### 2026-08-03 — Catálogo por proveedor + purge
 
 **Área:** inventario | web | BFF | datos  
@@ -49,6 +58,8 @@
 - UI ficha categoría: eliminar productos con confirmación por nombre
 **Verificación:** `npm test` (462 pass); wipe dry-run → 0 activos
 **Automatización:** script de purge reutilizable; plantilla CSV extendida
+
+---
 
 ### 2026-08-03 — Taller: OT digitales + historial por serie
 

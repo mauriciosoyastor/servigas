@@ -117,6 +117,11 @@
 	margin-bottom: 1rem;
 }
 
+.sg-list-panel + .sg-list-toolbar,
+.sg-record-table-wrap + .sg-list-toolbar {
+	margin-top: 1rem;
+}
+
 .sg-list-search {
 	flex: 1 1 14rem;
 }
@@ -307,15 +312,35 @@
 	gap: 0.35rem;
 }
 
-.sg-detail-field-edit input {
+.sg-detail-field-edit input,
+.sg-detail-field-edit select {
 	width: 100%;
 	border: 1px solid var(--sg-glass-border);
 	border-radius: 0.75rem;
 	padding: 0.65rem 0.8rem;
 	color: var(--sg-text-on-dark);
-	background: rgba(0, 0, 0, 0.22);
+	background: rgba(0, 0, 0, 0.35);
 	font: inherit;
 	box-sizing: border-box;
+	color-scheme: dark;
+}
+
+.sg-detail-field-edit select {
+	appearance: none;
+	background-image: linear-gradient(45deg, transparent 50%, var(--sg-flame-yellow) 50%),
+		linear-gradient(135deg, var(--sg-flame-yellow) 50%, transparent 50%);
+	background-position:
+		calc(100% - 1.15rem) calc(50% - 0.15rem),
+		calc(100% - 0.75rem) calc(50% - 0.15rem);
+	background-size: 0.4rem 0.4rem, 0.4rem 0.4rem;
+	background-repeat: no-repeat;
+	padding-right: 2rem;
+	cursor: pointer;
+}
+
+.sg-detail-field-edit select option {
+	background: var(--sg-bg-charcoal);
+	color: var(--sg-text-on-dark);
 }
 
 .sg-detail-edit-actions {
@@ -337,8 +362,51 @@
 	cursor: pointer;
 }
 
+.sg-detail-edit-actions button[type='submit'] {
+	border-color: color-mix(in srgb, var(--sg-flame-orange), white 18%);
+	background: var(--sg-flame-gradient);
+	color: var(--sg-bg-deep);
+	font-weight: 700;
+	box-shadow: var(--sg-shadow-flame);
+}
+
 .sg-detail-edit-cancel {
 	background: transparent !important;
+	border-color: var(--sg-glass-border) !important;
+	color: var(--sg-text-muted-dark) !important;
+	box-shadow: none !important;
+}
+
+.sg-detail-card-extra {
+	display: grid;
+	gap: 1.15rem;
+	padding-top: 0.35rem;
+	border-top: 1px solid var(--sg-glass-border);
+}
+
+.sg-category-products-link {
+	display: inline-flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.75rem;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0.75rem 1rem;
+	border-radius: var(--sg-radius-pill);
+	border: 1px solid color-mix(in srgb, var(--sg-flame-orange) 40%, transparent);
+	background: color-mix(in srgb, var(--sg-flame-orange) 16%, transparent);
+	color: var(--sg-text-on-dark);
+	font-size: 0.9rem;
+	font-weight: 650;
+	text-decoration: none;
+}
+
+.sg-category-products-link:hover {
+	background: color-mix(in srgb, var(--sg-flame-orange) 26%, transparent);
+}
+
+.sg-category-products-link span[aria-hidden='true'] {
+	color: var(--sg-flame-yellow);
 }
 
 .sg-detail-edit-status {
