@@ -31,6 +31,8 @@ type WriteConfig = {
   createFields: string[];
   createDefaults: Record<string, string | number | boolean>;
   numericCreateFields?: string[];
+  /** Float/int fields coerced on update */
+  numericUpdateFields?: string[];
   /** Many2one ids: empty omitted on create; empty → false on update */
   relationIdFields?: string[];
   canArchive: boolean;
@@ -73,6 +75,24 @@ const WRITES: Record<string, WriteConfig> = {
     createFields: ["name", "parent_id"],
     createDefaults: {},
     relationIdFields: ["parent_id"],
+    canArchive: false,
+  },
+  /** Update-only: create goes through create_from_shell. */
+  "workshop/orders": {
+    fields: [
+      "owner_name",
+      "owner_phone",
+      "problem",
+      "observation",
+      "work_done",
+      "materials",
+      "amount",
+      "partner_id",
+    ],
+    createFields: [],
+    createDefaults: {},
+    relationIdFields: ["partner_id"],
+    numericUpdateFields: ["amount"],
     canArchive: false,
   },
 };
@@ -128,11 +148,18 @@ export function filterWritableValues(
   if (!def) return null;
 
   const relationIds = new Set(cfg?.relationIdFields || []);
+  const numeric = new Set(cfg?.numericUpdateFields || []);
   const out: Record<string, string | number | boolean> = {};
   for (const field of def.fields) {
     if (!(field in values)) continue;
     if (field === "image_1920") {
       out.image_1920 = normalizeProductImage1920(values.image_1920);
+      continue;
+    }
+    if (numeric.has(field)) {
+      const n = Number(values[field]);
+      if (!Number.isFinite(n)) continue;
+      out[field] = n;
       continue;
     }
     if (relationIds.has(field)) {

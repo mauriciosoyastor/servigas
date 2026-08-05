@@ -1,5 +1,6 @@
-from odoo import api, fields, models
-from odoo.tools import file_open
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError
+from odoo.tools import file_open, float_compare, float_round
 
 from . import sg_work_order_report_assets as report_assets
 
@@ -22,7 +23,13 @@ class SgWorkOrder(models.Model):
     observation = fields.Text(string="Observación")
     work_done = fields.Text(string="Trabajos realizados")
     materials = fields.Text(string="Materiales")
-    amount = fields.Float(string="Importe")
+    amount = fields.Float(string="Importe", digits=(16, 2))
+    amount_collected = fields.Float(
+        string="Cobrado en caja",
+        digits=(16, 2),
+        default=0.0,
+        help="Suma de cobros registrados en caja vinculados a esta OT.",
+    )
     state = fields.Selection(
         [("draft", "Borrador"), ("done", "Cerrada")],
         default="draft",
@@ -57,6 +64,81 @@ class SgWorkOrder(models.Model):
     def action_draft(self):
         self.write({"state": "draft"})
         return True
+
+    def _cash_remaining(self):
+        """Saldo pendiente; None si amount<=0 (cobro libre una sola vez)."""
+        self.ensure_one()
+        total = float(self.amount or 0.0)
+        collected = max(0.0, float(self.amount_collected or 0.0))
+        if total <= 0:
+            return None
+        return float_round(max(0.0, total - collected), precision_digits=2)
+
+    def _recompute_amount_collected(self):
+        Move = self.env["sg.cash.movement"]
+        for wo in self:
+            moves = Move.search(
+                [("work_order_id", "=", wo.id), ("kind", "=", "in")]
+            )
+            total = sum(moves.mapped("amount"))
+            wo.amount_collected = float_round(total, precision_digits=2)
+
+    def action_collect_cash(self, amount, medium="cash", note=False):
+        """
+        Registra cobro en la caja abierta y actualiza amount_collected
+        en la misma transacción (usado por el BFF Astro).
+        """
+        self.ensure_one()
+        pay = float(amount or 0.0)
+        if pay <= 0:
+            raise UserError(_("El monto debe ser mayor a cero."))
+        medium_key = (
+            medium if medium in ("cash", "transfer", "card", "other") else "cash"
+        )
+
+        remaining = self._cash_remaining()
+        if remaining is None:
+            if float_compare(self.amount_collected or 0.0, 0.0, precision_digits=2) > 0:
+                raise UserError(
+                    _("Esta OT ya tiene el cobro registrado en caja.")
+                )
+        elif float_compare(pay, remaining + 0.001, precision_digits=2) > 0:
+            if float_compare(remaining, 0.0, precision_digits=2) <= 0:
+                raise UserError(
+                    _("Esta OT ya tiene el cobro registrado en caja.")
+                )
+            raise UserError(
+                _("El cobro supera el saldo pendiente (%s).")
+                % ("%.2f" % remaining)
+            )
+
+        Session = self.env["sg.cash.session"]
+        session = Session.search([("state", "=", "open")], limit=1)
+        if not session:
+            raise UserError(
+                _("No hay una caja abierta. Abrí la caja antes de cobrar.")
+            )
+
+        note_txt = (note or "").strip() if note else ""
+        reason = _("Cobro orden de trabajo")
+        if self.name:
+            reason = f"{reason} · {self.name}"
+        if note_txt:
+            reason = f"{reason} · {note_txt}"
+        reason = reason[:120]
+
+        move = self.env["sg.cash.movement"].create(
+            {
+                "session_id": session.id,
+                "kind": "in",
+                "amount": pay,
+                "reason": reason,
+                "medium": medium_key,
+                "work_order_id": self.id,
+            }
+        )
+        self._recompute_amount_collected()
+        return move.id
 
     @api.model
     def create_from_shell(self, vals):

@@ -20,6 +20,7 @@ import type {
   PriceListImportApplyResult,
   PriceListImportPreview,
   ProductPurgeByCategoryResult,
+  DeleteRecordResult,
   VendorBillPdfPreview,
   RecordDetailLines,
   RecordDetailPayload,
@@ -36,6 +37,12 @@ import {
   type CashFeedItem,
 } from "../caja/cash-feed.ts";
 import { buildCashMovementReason } from "../caja/cash-motives.ts";
+import {
+  canCollectWorkOrderCash,
+  normalizeWorkOrderCashMedium,
+  workOrderCashFeedHref,
+  workOrderCashFeedLabel,
+} from "../shell/workshop-order-cash.ts";
 import {
   buildCashAlerts,
   canOwnerWithdraw,
@@ -57,9 +64,7 @@ import {
 } from "../shell/price-list-import.ts";
 import {
   confirmCategoryName,
-  hardPurgeIds,
   hybridPurgeIds,
-  summarizeHardPurgeResult,
   summarizePurgeResult,
 } from "../shell/product-purge.ts";
 import { extractPdfText, isPdfMagic } from "../shell/pdf-text.ts";
@@ -73,11 +78,14 @@ import {
   MAX_BILL_ATTACHMENT_BYTES,
 } from "../shell/bill-attachment.ts";
 import {
+  accentSearchHaystackFields,
   buildDetailPath,
   buildSearchDomain,
   getRecordListDef,
   isAllowedMedia,
+  matchesAccentInsensitiveSearch,
   mediaPath,
+  usesAccentInsensitiveListSearch,
   type RecordListQuery,
 } from "../shell/record-lists.ts";
 import {
@@ -635,9 +643,18 @@ export class OdooAdapter implements BackendClient {
 
     const page = Math.max(1, Number(query.page) || 1);
     const q = (query.q || "").trim();
-    const domain = buildSearchDomain(def, q, new Date(), {
-      categId: query.categId,
-    });
+    const accentInsensitiveSearch =
+      Boolean(q) && usesAccentInsensitiveListSearch(def.key);
+    // Load base domain (no text ilike) and filter accent-insensitively so
+    // "practica" matches "Práctica …" on categories and product lists.
+    const domain = buildSearchDomain(
+      def,
+      accentInsensitiveSearch ? "" : q,
+      new Date(),
+      {
+        categId: query.categId,
+      }
+    );
     const offset = (page - 1) * def.limit;
 
     const displayFields = [...def.fields];
@@ -652,17 +669,38 @@ export class OdooAdapter implements BackendClient {
       return true;
     });
     let rawRows: Record<string, unknown>[];
+    const readLimit = accentInsensitiveSearch ? 2000 : def.limit;
+    const readOffset = accentInsensitiveSearch ? 0 : offset;
 
-    try {
-      rawRows = await this.#searchRead(
+    const readOnce = async (
+      readDomain: unknown[],
+      limit: number,
+      readOff: number
+    ) =>
+      this.#searchRead(
         odooSessionId,
         def.model,
-        domain,
+        readDomain,
         fields,
-        def.limit,
-        offset,
+        limit,
+        readOff,
         def.order
       );
+
+    try {
+      if (accentInsensitiveSearch) {
+        rawRows = [];
+        let scanOffset = 0;
+        const scanCap = 20_000;
+        while (scanOffset < scanCap) {
+          const batch = await readOnce(domain, readLimit, scanOffset);
+          rawRows.push(...batch);
+          if (batch.length < readLimit) break;
+          scanOffset += readLimit;
+        }
+      } else {
+        rawRows = await readOnce(domain, readLimit, readOffset);
+      }
     } catch (cause) {
       if (!(cause instanceof BffError) || cause.code === "unauthorized") {
         throw cause;
@@ -686,15 +724,31 @@ export class OdooAdapter implements BackendClient {
           ["state", "=", "posted"],
         ];
       }
-      rawRows = await this.#searchRead(
-        odooSessionId,
-        def.model,
-        retryDomain,
-        fields,
-        def.limit,
-        offset,
-        def.order
+      if (accentInsensitiveSearch) {
+        rawRows = [];
+        let scanOffset = 0;
+        const scanCap = 20_000;
+        while (scanOffset < scanCap) {
+          const batch = await readOnce(retryDomain, readLimit, scanOffset);
+          rawRows.push(...batch);
+          if (batch.length < readLimit) break;
+          scanOffset += readLimit;
+        }
+      } else {
+        rawRows = await readOnce(retryDomain, readLimit, readOffset);
+      }
+    }
+
+    let filteredTotal: number | null = null;
+    if (accentInsensitiveSearch) {
+      const matched = rawRows.filter((row) =>
+        matchesAccentInsensitiveSearch(
+          accentSearchHaystackFields(def.key, row, def.searchFields || []),
+          q
+        )
       );
+      filteredTotal = matched.length;
+      rawRows = matched.slice(offset, offset + def.limit);
     }
 
     if (
@@ -724,12 +778,12 @@ export class OdooAdapter implements BackendClient {
       await this.#enrichCategoryProductCounts(odooSessionId, rawRows);
     }
 
-    const total = await this.#callKw<number>(
-      odooSessionId,
-      def.model,
-      "search_count",
-      [domain]
-    );
+    const total =
+      filteredTotal != null
+        ? filteredTotal
+        : await this.#callKw<number>(odooSessionId, def.model, "search_count", [
+            domain,
+          ]);
 
     const columns = def.columns.filter(
       (column) =>
@@ -877,6 +931,7 @@ export class OdooAdapter implements BackendClient {
       work_done: "Trabajos",
       materials: "Materiales",
       amount: "Importe",
+      amount_collected: "Cobrado en caja",
       appliance_id: "Artefacto",
       work_order_count: "Órdenes",
       date: "Fecha",
@@ -922,6 +977,16 @@ export class OdooAdapter implements BackendClient {
           key: "partner_ref_id",
           label: "Ref. contacto",
           value: partnerRef,
+        });
+      }
+    }
+    if (def.model === "sg.work.order") {
+      const applianceRef = this.#partnerIdFromM2o(row.appliance_id);
+      if (applianceRef > 0) {
+        detailFields.push({
+          key: "appliance_ref_id",
+          label: "Ref. artefacto",
+          value: applianceRef,
         });
       }
     }
@@ -1297,7 +1362,7 @@ export class OdooAdapter implements BackendClient {
       odooSessionId,
       "product.category",
       [["id", "=", categoryId]],
-      ["id", "name", "complete_name"],
+      ["id", "name", "complete_name", "parent_id"],
       1,
       0,
       "id"
@@ -1332,26 +1397,110 @@ export class OdooAdapter implements BackendClient {
       if (batch.length < pageSize) break;
       offset += pageSize;
     }
-    const result = await hardPurgeIds(productIds, async (id) => {
-      await this.#callKw(odooSessionId, "product.template", "unlink", [[id]]);
-    });
+    // Archive products (never hard-unlink) so they remain recoverable.
+    const result = { deleted: 0, archived: 0, errors: [] as Array<{ id: number; message: string }> };
+    for (const id of productIds) {
+      try {
+        await this.#callKw(odooSessionId, "product.template", "write", [
+          [id],
+          { active: false },
+        ]);
+        result.archived += 1;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "archive_failed";
+        result.errors.push({ id, message });
+      }
+    }
     if (result.errors.length > 0) {
       return {
         ...result,
         productCount: productIds.length,
-        summary: summarizeHardPurgeResult(result),
+        summary: summarizePurgeResult(result),
         categoryDeleted: false,
       };
     }
+
+    const parentRaw = category.parent_id;
+    const parentId = Array.isArray(parentRaw)
+      ? Number(parentRaw[0]) || 0
+      : Number(parentRaw) || 0;
+    const fallbackId = await this.#fallbackCategoryId(
+      odooSessionId,
+      categoryId,
+      parentId
+    );
+
+    // Reassign remaining templates (incl. archived) so category can unlink.
+    const remainingIds: number[] = [];
+    offset = 0;
+    while (true) {
+      const batch = await this.#callKw<number[]>(
+        odooSessionId,
+        "product.template",
+        "search",
+        [[["categ_id", "=", categoryId]]],
+        {
+          limit: pageSize,
+          offset,
+          order: "id",
+          context: { active_test: false },
+        }
+      );
+      if (!Array.isArray(batch) || !batch.length) break;
+      for (const raw of batch) {
+        const id = Number(raw);
+        if (id > 0) remainingIds.push(id);
+      }
+      if (batch.length < pageSize) break;
+      offset += pageSize;
+    }
+    if (remainingIds.length > 0) {
+      await this.#callKw(odooSessionId, "product.template", "write", [
+        remainingIds,
+        { categ_id: fallbackId },
+      ]);
+    }
+
     await this.#callKw(odooSessionId, "product.category", "unlink", [
       [categoryId],
     ]);
     return {
       ...result,
       productCount: productIds.length,
-      summary: `${summarizeHardPurgeResult(result)}; categoría eliminada`,
+      summary: `${summarizePurgeResult(result)}; categoría eliminada`,
       categoryDeleted: true,
     };
+  }
+
+  async #fallbackCategoryId(
+    odooSessionId: string,
+    categoryId: number,
+    parentId: number
+  ): Promise<number> {
+    if (parentId > 0 && parentId !== categoryId) return parentId;
+    const allId = await this.#resolveXmlId(
+      odooSessionId,
+      "product.product_category_all"
+    );
+    if (allId > 0 && allId !== categoryId) return allId;
+    const roots = await this.#searchRead(
+      odooSessionId,
+      "product.category",
+      [["parent_id", "=", false]],
+      ["id", "name"],
+      10,
+      0,
+      "id"
+    );
+    for (const row of roots) {
+      const id = Number(row.id) || 0;
+      if (id > 0 && id !== categoryId) return id;
+    }
+    throw new BffError(
+      "validation_error",
+      400,
+      "No hay una categoría de destino para reasignar los productos archivados."
+    );
   }
 
   async #ensureCategoryId(
@@ -2179,7 +2328,7 @@ export class OdooAdapter implements BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number
-  ): Promise<void> {
+  ): Promise<DeleteRecordResult> {
     if (!canHardDelete(listKey)) {
       throw new BffError("not_found", 404, "Eliminación no permitida");
     }
@@ -2191,7 +2340,33 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Eliminación no permitida");
     }
 
+    // Inventory products: hybrid (unlink → archive). Workshop OT: hard unlink.
+    if (listKey === "inventory/products") {
+      const result = await hybridPurgeIds([id], {
+        unlink: async (productId) => {
+          await this.#callKw(odooSessionId, list.model, "unlink", [
+            [productId],
+          ]);
+        },
+        archive: async (productId) => {
+          await this.#callKw(odooSessionId, list.model, "write", [
+            [productId],
+            { active: false },
+          ]);
+        },
+      });
+      if (result.errors.length > 0) {
+        throw new BffError(
+          "odoo_unavailable",
+          503,
+          result.errors[0]?.message || "No se pudo eliminar el producto"
+        );
+      }
+      return { outcome: result.archived > 0 ? "archived" : "deleted" };
+    }
+
     await this.#callKw(odooSessionId, list.model, "unlink", [[id]]);
+    return { outcome: "deleted" };
   }
 
   async listRecordNotes(
@@ -3239,6 +3414,8 @@ export class OdooAdapter implements BackendClient {
       amount: number;
       motiveCode: string;
       note?: string;
+      medium?: "cash" | "transfer" | "card" | "other";
+      workOrderId?: number;
     }
   ): Promise<CashMoveResult> {
     const session = await this.requireOpenCashSession(odooSessionId);
@@ -3272,19 +3449,30 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
+    const medium =
+      input.medium === "transfer" ||
+      input.medium === "card" ||
+      input.medium === "other"
+        ? input.medium
+        : "cash";
+    const workOrderId = Number(input.workOrderId);
+    const vals: Record<string, unknown> = {
+      session_id: session.id,
+      kind,
+      amount,
+      reason,
+      medium,
+    };
+    if (Number.isFinite(workOrderId) && workOrderId > 0) {
+      vals.work_order_id = workOrderId;
+    }
+
     try {
       const id = await this.#callKw<number>(
         odooSessionId,
         "sg.cash.movement",
         "create",
-        [
-          {
-            session_id: session.id,
-            kind,
-            amount,
-            reason,
-          },
-        ]
+        [vals]
       );
       const fresh = await this.getOpenCashSession(odooSessionId);
       return {
@@ -3297,6 +3485,80 @@ export class OdooAdapter implements BackendClient {
         "action_failed",
         503,
         "No se pudo registrar el movimiento"
+      );
+    }
+  }
+
+    async collectWorkOrderCash(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    input: { amount: number; paymentMethod: string }
+  ): Promise<CashMoveResult> {
+    if (!canCollectWorkOrderCash(listKey)) {
+      throw new BffError("not_found", 404, "Cobro no permitido");
+    }
+    const workOrderId = Number(id);
+    if (!Number.isFinite(workOrderId) || workOrderId <= 0) {
+      throw new BffError("validation_error", 400, "OT inválida");
+    }
+    const medium = normalizeWorkOrderCashMedium(input.paymentMethod);
+    if (!medium) {
+      throw new BffError("validation_error", 400, "Elegí un medio de pago");
+    }
+    const amount = Number(input.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "El monto debe ser mayor a cero"
+      );
+    }
+
+    // Pre-check open session so the error is clear before Odoo.
+    await this.requireOpenCashSession(odooSessionId);
+
+    try {
+      const moveId = await this.#callKw<number>(
+        odooSessionId,
+        "sg.work.order",
+        "action_collect_cash",
+        [[workOrderId], amount, medium, false]
+      );
+      const session = await this.getOpenCashSession(odooSessionId);
+      if (!session) {
+        throw new BffError(
+          "action_failed",
+          503,
+          "No se pudo leer la caja abierta tras el cobro"
+        );
+      }
+      return { id: Number(moveId), session };
+    } catch (cause) {
+      if (cause instanceof BffError) {
+        const msg = cause.message || "";
+        if (
+          /saldo pendiente|ya tiene el cobro|monto debe ser mayor/i.test(msg)
+        ) {
+          throw new BffError(
+            "validation_error",
+            409,
+            msg.replace(/^Odoo devolvió un error JSON-RPC:\s*/i, "")
+          );
+        }
+        if (/caja abierta/i.test(msg)) {
+          throw new BffError(
+            "validation_error",
+            400,
+            "No hay una caja abierta. Abrí la caja antes de cobrar."
+          );
+        }
+        throw cause;
+      }
+      throw new BffError(
+        "action_failed",
+        503,
+        "No se pudo registrar el cobro de la OT"
       );
     }
   }
@@ -3483,22 +3745,44 @@ export class OdooAdapter implements BackendClient {
       odooSessionId,
       "sg.cash.movement",
       [["session_id", "=", session.id]],
-      ["kind", "amount", "reason", "create_date"],
+      ["kind", "amount", "reason", "create_date", "medium", "work_order_id"],
       200,
       0,
       "create_date desc, id desc"
     );
     for (const row of manuals) {
       const kind = row.kind === "out" ? "manual_out" : "manual_in";
+      const mediumRaw = String(row.medium || "cash").toLowerCase();
+      const medium =
+        mediumRaw === "transfer" ||
+        mediumRaw === "card" ||
+        mediumRaw === "other"
+          ? mediumRaw
+          : "cash";
+      const wo = Array.isArray(row.work_order_id) ? row.work_order_id : null;
+      const workOrderId = wo ? Number(wo[0]) || 0 : Number(row.work_order_id) || 0;
+      const woName = wo && wo[1] != null ? String(wo[1]) : "";
+      const href = workOrderCashFeedHref(workOrderId);
+      const reasonText = String(
+        row.reason || (kind === "manual_out" ? "Egreso" : "Ingreso")
+      );
+      let label = reasonText;
+      if (href) {
+        const fromReason =
+          reasonText.includes(" · ")
+            ? reasonText.split(" · ").slice(1).join(" · ")
+            : "";
+        label = workOrderCashFeedLabel(woName || fromReason || "OT");
+      }
       items.push({
         id: `manual-${row.id}`,
         at: this.#odooDateToIso(row.create_date),
         kind,
-        medium: "cash",
+        medium,
         amount: Math.abs(Number(row.amount) || 0),
-        label: String(row.reason || (kind === "manual_out" ? "Egreso" : "Ingreso")),
-        reference: null,
-        href: null,
+        label,
+        reference: woName || null,
+        href,
       });
     }
 
@@ -3710,6 +3994,7 @@ export class OdooAdapter implements BackendClient {
       "list_price",
       "qty_available",
       "taxes_id",
+      "product_tmpl_id",
     ];
 
     let rows: Record<string, unknown>[];
@@ -3772,6 +4057,7 @@ export class OdooAdapter implements BackendClient {
         };
         return {
           id,
+          product_tmpl_id: this.#partnerIdFromM2o(row.product_tmpl_id),
           name: String(row.display_name || row.name || ""),
           default_code:
             row.default_code === false || row.default_code == null

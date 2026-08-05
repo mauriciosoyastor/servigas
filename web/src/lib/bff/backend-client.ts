@@ -15,6 +15,7 @@ import type {
   PriceListImportApplyResult,
   PriceListImportPreview,
   ProductPurgeByCategoryResult,
+  DeleteRecordResult,
   VendorBillPdfPreview,
   RecordDetailPayload,
   RecordListPayload,
@@ -77,7 +78,7 @@ export interface BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number
-  ): Promise<void>;
+  ): Promise<DeleteRecordResult>;
   listRecordNotes(
     odooSessionId: string,
     listKey: string,
@@ -196,7 +197,15 @@ export interface BackendClient {
       amount: number;
       motiveCode: string;
       note?: string;
+      medium?: "cash" | "transfer" | "card" | "other";
+      workOrderId?: number;
     }
+  ): Promise<CashMoveResult>;
+  collectWorkOrderCash(
+    odooSessionId: string,
+    listKey: string,
+    id: number,
+    input: { amount: number; paymentMethod: string }
   ): Promise<CashMoveResult>;
   closeCashSession(
     odooSessionId: string,

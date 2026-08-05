@@ -10,6 +10,7 @@ export const CASH_MOTIVES_IN: CashMotive[] = [
   { code: "refuerzo", label: "Refuerzo de caja" },
   { code: "aporte_dueno", label: "Aporte del dueño" },
   { code: "reintegro_proveedor", label: "Reintegro / devolución proveedor" },
+  { code: "cobro_ot", label: "Cobro orden de trabajo" },
   { code: "otro_ingreso", label: "Otro ingreso", requiresNote: true },
 ];
 

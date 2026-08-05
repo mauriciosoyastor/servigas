@@ -118,6 +118,7 @@ export type RecordNote = {
 
 export type PosCatalogProduct = {
   id: number;
+  product_tmpl_id: number;
   name: string;
   default_code: string | null;
   barcode: string | null;
@@ -229,6 +230,10 @@ export type ProductPurgeByCategoryResult = {
   errors: Array<{ id: number; message: string }>;
   productCount: number;
   summary: string;
+};
+
+export type DeleteRecordResult = {
+  outcome: "deleted" | "archived";
 };
 
 export type VendorBillPdfPreviewLine = {

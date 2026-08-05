@@ -46,7 +46,7 @@ const {
 const canEdit = Boolean(editFields.length && editApiPath && recordId);
 const editKeySet = new Set(editFields.map((field) => field.key));
 const editByKey = Object.fromEntries(editFields.map((field) => [field.key, field]));
-const HIDDEN_DETAIL_KEYS = new Set(['partner_ref_id']);
+const HIDDEN_DETAIL_KEYS = new Set(['partner_ref_id', 'appliance_ref_id']);
 const visibleFields = (detail?.fields ?? []).filter(
 	(field) => !HIDDEN_DETAIL_KEYS.has(field.key)
 );
@@ -333,6 +333,14 @@ function displayValue(
 							</ul>
 						</section>
 					) : null}
+
+					{
+						Astro.slots.has('card-extra') ? (
+							<div class="sg-detail-card-extra">
+								<slot name="card-extra" />
+							</div>
+						) : null
+					}
 				</section>
 			</div>
 

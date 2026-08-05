@@ -1,5 +1,5 @@
 ---
-/** Host for hard-delete buttons on product list rows (data-row-delete). */
+/** Host for hybrid delete buttons on product list rows (unlink → archive). */
 ---
 
 <script>
@@ -12,7 +12,7 @@
 			if (!Number.isFinite(id) || id <= 0 || !api) return;
 			if (
 				!window.confirm(
-					`¿Eliminar permanentemente «${name}»? No se puede deshacer.`
+					`¿Eliminar «${name}»? Se intenta borrar; si tiene historial en Odoo, se archiva.`
 				)
 			) {
 				return;
@@ -31,6 +31,8 @@
 						payload?.error?.message || 'No se pudo eliminar el producto'
 					);
 				}
+				// outcome: 'deleted' | 'archived' — row disappears in both cases
+				void payload?.outcome;
 				const row = btn.closest('tr');
 				if (row) row.remove();
 			} catch (error) {

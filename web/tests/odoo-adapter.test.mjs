@@ -347,11 +347,33 @@ describe("OdooAdapter.getRecordList", () => {
     assert.equal(searchRead.params.kwargs.offset, 50);
   });
 
-  it("applies search query to domain", async () => {
+  it("applies accent-insensitive product search without Odoo ilike domain", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = JSON.parse(String(init.body));
       if (body.params.method === "search_read") {
-        return Response.json({ result: [] });
+        assert.deepEqual(body.params.args[0], [["active", "=", true]]);
+        return Response.json({
+          result: [
+            {
+              id: 10,
+              name: "Práctica Cocina Hornalla",
+              default_code: "PRACT-COC-01",
+              barcode: false,
+              list_price: 100,
+              qty_available: 1,
+              active: true,
+            },
+            {
+              id: 11,
+              name: "Tuerca",
+              default_code: "T-1",
+              barcode: false,
+              list_price: 10,
+              qty_available: 1,
+              active: true,
+            },
+          ],
+        });
       }
       return Response.json({ result: 0 });
     });
@@ -361,11 +383,12 @@ describe("OdooAdapter.getRecordList", () => {
       fetchImpl,
     });
 
-    await adapter.getRecordList("sess", "inventory/products", { q: "gas" });
-    const searchRead = JSON.parse(String(fetchImpl.mock.calls[0].arguments[1].body));
-    assert.ok(
-      JSON.stringify(searchRead.params.args[0]).includes("ilike")
-    );
+    const payload = await adapter.getRecordList("sess", "inventory/products", {
+      q: "practica",
+    });
+    assert.equal(payload.total, 1);
+    assert.equal(payload.rows.length, 1);
+    assert.equal(payload.rows[0].default_code, "PRACT-COC-01");
   });
 
   it("rejects unknown list keys", async () => {
@@ -412,6 +435,51 @@ describe("OdooAdapter.getRecordList", () => {
     assert.equal(payload.rows[0].product_count, 12);
     assert.equal(payload.rows[1].product_count, 0);
     assert.ok(payload.columns.some((c) => c.key === "product_count"));
+  });
+
+  it("finds categories ignoring accents in the search box", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(String(init.body));
+      if (body.params.method === "search_read") {
+        assert.deepEqual(body.params.args[0], []);
+        return Response.json({
+          result: [
+            {
+              id: 3,
+              name: "Práctica Filtros",
+              complete_name: "Práctica Filtros",
+              parent_id: false,
+            },
+            {
+              id: 4,
+              name: "Práctica Cocina",
+              complete_name: "Práctica Cocina",
+              parent_id: false,
+            },
+          ],
+        });
+      }
+      if (body.params.method === "search_count") {
+        return Response.json({ result: 99 });
+      }
+      return Response.json({ result: null });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const payload = await adapter.getRecordList("sess", "inventory/categories", {
+      q: "Practica filtros",
+    });
+    assert.equal(payload.total, 1);
+    assert.equal(payload.rows.length, 1);
+    assert.equal(payload.rows[0].id, 3);
+    assert.equal(payload.rows[0].complete_name, "Práctica Filtros");
+    const methods = fetchImpl.mock.calls.map(
+      (call) => JSON.parse(String(call.arguments[1].body)).params.method
+    );
+    assert.ok(!methods.includes("search_count"));
   });
 });
 
@@ -757,6 +825,7 @@ describe("OdooAdapter.getPosCatalog", () => {
               list_price: 1500,
               qty_available: 12,
               taxes_id: [3],
+              product_tmpl_id: [7, "Calefactor"],
             },
           ],
         });
@@ -789,6 +858,7 @@ describe("OdooAdapter.getPosCatalog", () => {
     assert.equal(catalog.config?.name, "Mostrador Servigas");
     assert.equal(catalog.products.length, 1);
     assert.equal(catalog.products[0].image_url, "/api/media/product.product/42/image_128");
+    assert.equal(catalog.products[0].product_tmpl_id, 7);
     assert.equal(catalog.products[0].barcode, "7791234567890");
     assert.equal(catalog.products[0].qty_available, 12);
     assert.equal(catalog.products[0].tax_rate, 21);
@@ -820,6 +890,7 @@ describe("OdooAdapter.getPosCatalog", () => {
       "list_price",
       "qty_available",
       "taxes_id",
+      "product_tmpl_id",
     ]);
   });
 });
@@ -1578,6 +1649,74 @@ describe("OdooAdapter cash session", () => {
           leaveFloat: 990,
         }),
       (error) => /justific/i.test(error?.message || "")
+    );
+  });
+
+  it("collects work-order cash via atomic action_collect_cash", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.work.order" && method === "action_collect_cash") {
+          assert.deepEqual(body.params.args, [[12], 400, "cash", false]);
+          return Response.json({ result: 501 });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.collectWorkOrderCash(
+      "sess",
+      "workshop/orders",
+      12,
+      { amount: 400, paymentMethod: "cash" }
+    );
+    assert.equal(result.id, 501);
+    assert.equal(result.session?.id, OPEN_CASH_SESSION_ROW.id);
+  });
+
+  it("rejects work-order cash when Odoo reports fully collected", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.work.order" && method === "action_collect_cash") {
+          return Response.json({
+            error: {
+              data: {
+                message: "Esta OT ya tiene el cobro registrado en caja",
+              },
+            },
+          });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.collectWorkOrderCash("sess", "workshop/orders", 12, {
+          amount: 10,
+          paymentMethod: "cash",
+        }),
+      (error) =>
+        error?.code === "validation_error" &&
+        /ya tiene el cobro/i.test(error?.message || "")
     );
   });
 });
@@ -2604,6 +2743,92 @@ describe("OdooAdapter.purgeProductsByCategory", () => {
   });
 });
 
+describe("OdooAdapter.deleteRecord", () => {
+  it("hard-unlinks workshop orders", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      calls.push({
+        model: body.params?.model,
+        method: body.params?.method,
+        args: body.params?.args,
+      });
+      return Response.json({ result: true });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.deleteRecord("sess", "workshop/orders", 44);
+    assert.equal(result.outcome, "deleted");
+    assert.ok(
+      calls.some(
+        (c) => c.model === "sg.work.order" && c.method === "unlink"
+      )
+    );
+  });
+
+  it("deletes inventory product when unlink succeeds", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "unlink") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.deleteRecord(
+      "sess",
+      "inventory/products",
+      15
+    );
+    assert.equal(result.outcome, "deleted");
+  });
+
+  it("archives inventory product when unlink fails", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      const method = body.params?.method;
+      const model = body.params?.model;
+      calls.push({ model, method, args: body.params?.args });
+      if (method === "unlink") {
+        return Response.json({
+          error: { data: { message: "constraint" } },
+        });
+      }
+      if (method === "write") {
+        return Response.json({ result: true });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    const result = await adapter.deleteRecord(
+      "sess",
+      "inventory/products",
+      15
+    );
+    assert.equal(result.outcome, "archived");
+    assert.ok(
+      calls.some(
+        (c) =>
+          c.model === "product.template" &&
+          c.method === "write" &&
+          c.args?.[1]?.active === false
+      )
+    );
+  });
+});
+
 describe("OdooAdapter.deleteCategoryHard", () => {
   it("rejects wrong confirm name", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
@@ -2628,20 +2853,36 @@ describe("OdooAdapter.deleteCategoryHard", () => {
     );
   });
 
-  it("hard-unlinks products then category when all succeed", async () => {
+  it("archives products then unlinks category", async () => {
     const calls = [];
+    let productSearchPasses = 0;
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = JSON.parse(init.body);
       const method = body.params?.method;
       const model = body.params?.model;
-      calls.push({ model, method, args: body.params?.args });
+      calls.push({
+        model,
+        method,
+        args: body.params?.args,
+        kwargs: body.params?.kwargs,
+      });
       if (method === "search_read" && model === "product.category") {
-        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+        return Response.json({
+          result: [{ id: 3, name: "Filtros", parent_id: [1, "All"] }],
+        });
       }
       if (method === "search" && model === "product.template") {
+        productSearchPasses += 1;
+        // First: active products to archive. Second: remaining (incl. archived) to reassign.
+        if (productSearchPasses === 1) {
+          return Response.json({ result: [10, 11] });
+        }
         return Response.json({ result: [10, 11] });
       }
-      if (method === "unlink") {
+      if (method === "write" && model === "product.template") {
+        return Response.json({ result: true });
+      }
+      if (method === "unlink" && model === "product.category") {
         return Response.json({ result: true });
       }
       return Response.json({ result: [] });
@@ -2655,18 +2896,40 @@ describe("OdooAdapter.deleteCategoryHard", () => {
       categoryId: 3,
       confirmName: "Filtros",
     });
-    assert.equal(result.deleted, 2);
-    assert.equal(result.archived, 0);
+    assert.equal(result.deleted, 0);
+    assert.equal(result.archived, 2);
     assert.equal(result.errors.length, 0);
     assert.equal(result.categoryDeleted, true);
+    assert.match(result.summary, /2 archivados/);
+    assert.ok(
+      calls.some(
+        (c) =>
+          c.model === "product.template" &&
+          c.method === "write" &&
+          c.args?.[1]?.active === false
+      )
+    );
+    assert.ok(
+      calls.some(
+        (c) =>
+          c.model === "product.template" &&
+          c.method === "write" &&
+          c.args?.[1]?.categ_id === 1
+      )
+    );
     assert.ok(
       calls.some(
         (c) => c.model === "product.category" && c.method === "unlink"
       )
     );
+    assert.ok(
+      !calls.some(
+        (c) => c.model === "product.template" && c.method === "unlink"
+      )
+    );
   });
 
-  it("does not unlink category when a product unlink fails", async () => {
+  it("does not unlink category when a product archive fails", async () => {
     const calls = [];
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = JSON.parse(init.body);
@@ -2674,16 +2937,18 @@ describe("OdooAdapter.deleteCategoryHard", () => {
       const model = body.params?.model;
       calls.push({ model, method, args: body.params?.args });
       if (method === "search_read" && model === "product.category") {
-        return Response.json({ result: [{ id: 3, name: "Filtros" }] });
+        return Response.json({
+          result: [{ id: 3, name: "Filtros", parent_id: false }],
+        });
       }
       if (method === "search" && model === "product.template") {
         return Response.json({ result: [10, 11] });
       }
-      if (method === "unlink" && model === "product.template") {
+      if (method === "write" && model === "product.template") {
         const id = body.params?.args?.[0]?.[0];
         if (id === 11) {
           return Response.json({
-            error: { data: { message: "constraint" } },
+            error: { data: { message: "cannot archive" } },
           });
         }
         return Response.json({ result: true });
@@ -2701,6 +2966,7 @@ describe("OdooAdapter.deleteCategoryHard", () => {
     });
     assert.equal(result.categoryDeleted, false);
     assert.ok(result.errors.length >= 1);
+    assert.equal(result.archived, 1);
     assert.ok(
       !calls.some(
         (c) => c.model === "product.category" && c.method === "unlink"

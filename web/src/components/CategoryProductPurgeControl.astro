@@ -3,13 +3,15 @@ interface Props {
 	categoryId: number;
 	categoryName: string;
 	apiPath: string;
+	/** When true, renders as a section inside the ficha card (no second glass). */
+	embedded?: boolean;
 }
 
-const { categoryId, categoryName, apiPath } = Astro.props;
+const { categoryId, categoryName, apiPath, embedded = false } = Astro.props;
 ---
 
 <section
-	class="sg-category-purge sg-glass"
+	class:list={['sg-category-purge', embedded ? 'is-embedded' : 'sg-glass']}
 	data-category-purge
 	data-category-id={categoryId}
 	data-category-name={categoryName}
@@ -32,18 +34,23 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		/>
 	</label>
 	<div class="sg-category-purge-actions">
-		<button class="sg-focus-ring" type="button" data-purge-btn disabled>
+		<button class="sg-focus-ring sg-category-purge-btn" type="button" data-purge-btn disabled>
 			Eliminar productos
 		</button>
-		<button class="sg-focus-ring sg-category-delete-btn" type="button" data-delete-category-btn disabled>
+		<button
+			class="sg-focus-ring sg-category-delete-btn"
+			type="button"
+			data-delete-category-btn
+			disabled
+		>
 			Eliminar categoría completa
 		</button>
 		<span class="sg-category-purge-status" data-purge-status hidden></span>
 	</div>
 	<p class="sg-category-purge-lead">
-		<strong>Eliminar categoría completa</strong> borra definitivamente todos los productos
-		de esta categoría y luego la categoría. Si algún producto no se puede borrar, la categoría
-		se conserva.
+		<strong>Eliminar categoría completa</strong> archiva todos los productos de esta
+		categoría (no los borra del historial), los reasigna y luego elimina la categoría.
+		Si algún producto no se puede archivar, la categoría se conserva.
 	</p>
 </section>
 
@@ -146,7 +153,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 			if (!(deleteCatBtn instanceof HTMLButtonElement) || deleteCatBtn.disabled) return;
 			if (
 				!window.confirm(
-					`¿Eliminar permanentemente la categoría «${expectedName}» y todos sus productos? No se puede deshacer.`
+					`¿Archivar los productos de «${expectedName}» y eliminar la categoría? Los productos quedan archivados.`
 				)
 			) {
 				return;
@@ -180,7 +187,7 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 				}
 				setStatus(
 					payload.summary ||
-						'No se pudo borrar algún producto; la categoría se conservó.',
+						'No se pudo archivar algún producto; la categoría se conservó.',
 					'error'
 				);
 				await loadPreview();
@@ -198,14 +205,25 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 
 <style>
 	.sg-category-purge {
-		max-width: 48rem;
-		margin: 1.25rem auto 0;
-		padding: 1.25rem 1.35rem;
 		display: grid;
 		gap: 0.85rem;
 	}
+	.sg-category-purge:not(.is-embedded) {
+		max-width: 48rem;
+		margin: 1.25rem auto 0;
+		padding: 1.25rem 1.35rem;
+	}
+	.sg-category-purge.is-embedded {
+		margin: 0;
+		padding: 0;
+		background: transparent;
+		border: 0;
+		box-shadow: none;
+		backdrop-filter: none;
+	}
 	.sg-category-purge strong {
-		font-size: 1.05rem;
+		font-size: 1.02rem;
+		color: var(--sg-text-on-dark);
 	}
 	.sg-category-purge-lead,
 	.sg-category-purge-count {
@@ -218,12 +236,19 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		display: grid;
 		gap: 0.4rem;
 		font-size: 0.88rem;
+		color: var(--sg-text-muted-dark);
 	}
 	.sg-category-purge-confirm input {
 		padding: 0.55rem 0.7rem;
 		border-radius: 0.55rem;
-		border: 1px solid color-mix(in srgb, var(--sg-ink) 14%, transparent);
-		background: color-mix(in srgb, white 70%, transparent);
+		border: 1px solid var(--sg-glass-border);
+		background: rgba(0, 0, 0, 0.35);
+		color: var(--sg-text-on-dark);
+		color-scheme: dark;
+		font: inherit;
+	}
+	.sg-category-purge-confirm input::placeholder {
+		color: color-mix(in srgb, var(--sg-text-on-dark) 45%, transparent);
 	}
 	.sg-category-purge-actions {
 		display: flex;
@@ -231,28 +256,42 @@ const { categoryId, categoryName, apiPath } = Astro.props;
 		align-items: center;
 		gap: 0.75rem;
 	}
-	.sg-category-purge-actions button {
-		padding: 0.55rem 0.9rem;
-		border-radius: 0.6rem;
-		border: 1px solid color-mix(in srgb, #b42318 35%, transparent);
-		background: color-mix(in srgb, #b42318 12%, white);
-		color: #7a1b14;
-		font-weight: 600;
+	.sg-category-purge-btn,
+	.sg-category-delete-btn {
+		padding: 0.55rem 0.95rem;
+		border-radius: var(--sg-radius-pill);
+		font-weight: 650;
 		cursor: pointer;
+		font: inherit;
 	}
-	.sg-category-purge-actions button:disabled {
-		opacity: 0.45;
-		cursor: not-allowed;
+	.sg-category-purge-btn {
+		border: 1px solid color-mix(in srgb, var(--sg-ember-scarlet) 55%, transparent);
+		background: color-mix(in srgb, var(--sg-ember-wine) 28%, transparent);
+		color: #ffc2b8;
+	}
+	.sg-category-purge-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--sg-ember-wine) 42%, transparent);
 	}
 	.sg-category-delete-btn {
-		border-color: color-mix(in srgb, #7a1b14 55%, transparent) !important;
-		background: color-mix(in srgb, #b42318 22%, white) !important;
+		border: 1px solid color-mix(in srgb, var(--sg-ember-scarlet) 70%, white 8%);
+		background: color-mix(in srgb, var(--sg-ember-wine) 55%, transparent);
+		color: #ffe0db;
+	}
+	.sg-category-delete-btn:hover:not(:disabled) {
+		background: color-mix(in srgb, var(--sg-ember-wine) 72%, transparent);
+	}
+	.sg-category-purge-actions button:disabled {
+		opacity: 0.42;
+		cursor: not-allowed;
+	}
+	.sg-category-purge-status {
+		font-size: 0.85rem;
 	}
 	.sg-category-purge-status[data-state='ok'] {
-		color: #0f6b3a;
+		color: #9be7b0;
 	}
 	.sg-category-purge-status[data-state='error'] {
-		color: #b42318;
+		color: #ffb4a2;
 	}
 	.sg-category-purge-status[data-state='pending'] {
 		color: var(--sg-text-muted-dark);

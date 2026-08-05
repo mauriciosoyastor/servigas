@@ -104,45 +104,27 @@ if (detail && !error) {
 					]
 				: []
 		}
-	/>
-	{!error && detail ? (
-		<section class="sg-category-products-link sg-glass">
-			<a
-				class="sg-focus-ring"
-				href={`/lists/inventory/products?categ_id=${id}`}
-			>
-				{productCount === 1
-					? 'Ver productos (1)'
-					: `Ver productos (${productCount.toLocaleString('es-AR')})`}
-			</a>
-		</section>
-	) : null}
-	{!error && detail ? (
-		<CategoryProductPurgeControl
-			categoryId={id}
-			categoryName={categoryName}
-			apiPath="/api/inventory/products/purge-by-category"
-		/>
-	) : null}
+	>
+		{
+			!error && detail ? (
+		<div class="sg-category-card-extra" slot="card-extra">
+					<a
+						class="sg-category-products-link sg-focus-ring"
+						href={`/lists/inventory/products?categ_id=${id}`}
+					>
+						{productCount === 1
+							? 'Ver productos (1)'
+							: `Ver productos (${productCount.toLocaleString('es-AR')})`}
+						<span aria-hidden="true">→</span>
+					</a>
+					<CategoryProductPurgeControl
+						categoryId={id}
+						categoryName={categoryName}
+						apiPath="/api/inventory/products/purge-by-category"
+						embedded
+					/>
+				</div>
+			) : null
+		}
+	</RecordDetailBody>
 </ShellLayout>
-
-<style>
-	.sg-category-products-link {
-		margin: 1rem auto 0;
-		max-width: 78rem;
-		padding: 1rem 1.15rem;
-		border-radius: var(--sg-radius-card);
-	}
-	.sg-category-products-link a {
-		display: inline-flex;
-		align-items: center;
-		font-size: 0.9rem;
-		font-weight: 650;
-		color: var(--sg-text-on-dark);
-		text-decoration: none;
-	}
-	.sg-category-products-link a:hover {
-		text-decoration: underline;
-		text-underline-offset: 0.15em;
-	}
-</style>

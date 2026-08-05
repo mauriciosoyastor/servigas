@@ -2,6 +2,8 @@
  * Pure parse/match/classify for Servigas price-list import (Astro BFF).
  */
 
+import * as XLSX from "xlsx";
+
 export type PriceListMapping = {
   barcode?: string;
   default_code?: string;
@@ -384,6 +386,142 @@ function splitCsvLine(line: string): string[] {
   return out;
 }
 
+function isExcelFilename(filename: string | null | undefined): boolean {
+  const name = (filename || "").trim().toLowerCase();
+  return name.endsWith(".xlsx") || name.endsWith(".xls");
+}
+
+function stripBase64Payload(content: string): string {
+  const trimmed = content.trim();
+  const dataUrl = /^data:[^;]+;base64,(.+)$/is.exec(trimmed);
+  return (dataUrl ? dataUrl[1] : trimmed).replace(/\s+/g, "");
+}
+
+function cellToString(value: unknown): string {
+  if (value == null) return "";
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value);
+  }
+  if (value instanceof Date) {
+    return value.toISOString();
+  }
+  return String(value);
+}
+
+function looksLikeExcelBuffer(buffer: Buffer): boolean {
+  if (buffer.length < 4) return false;
+  // ZIP container (.xlsx) or OLE Compound File (.xls)
+  if (buffer[0] === 0x50 && buffer[1] === 0x4b) return true;
+  return (
+    buffer[0] === 0xd0 &&
+    buffer[1] === 0xcf &&
+    buffer[2] === 0x11 &&
+    buffer[3] === 0xe0
+  );
+}
+
+function parseExcelContent(content: string): {
+  headers: string[];
+  rows: Record<string, string>[];
+  error: string | null;
+} {
+  const b64 = stripBase64Payload(content);
+  if (!b64) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel está vacío.",
+    };
+  }
+
+  let buffer: Buffer;
+  try {
+    buffer = Buffer.from(b64, "base64");
+  } catch {
+    return {
+      headers: [],
+      rows: [],
+      error: "No se pudo leer el Excel. Subí un .xlsx o .xls válido.",
+    };
+  }
+  if (!buffer.length) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel está vacío.",
+    };
+  }
+  if (!looksLikeExcelBuffer(buffer)) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel no es válido.",
+    };
+  }
+
+  let workbook: XLSX.WorkBook;
+  try {
+    workbook = XLSX.read(buffer, { type: "buffer", cellDates: false });
+  } catch {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel no es válido.",
+    };
+  }
+
+  const sheetName = workbook.SheetNames[0];
+  if (!sheetName) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El Excel no tiene hojas.",
+    };
+  }
+
+  const sheet = workbook.Sheets[sheetName];
+  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+  });
+
+  if (!matrix.length) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel está vacío.",
+    };
+  }
+
+  const headerRow = Array.isArray(matrix[0]) ? matrix[0] : [];
+  const headers = headerRow.map((cell) => cellToString(cell).trim());
+  if (!headers.some(Boolean)) {
+    return {
+      headers: [],
+      rows: [],
+      error: "El archivo Excel no tiene encabezados.",
+    };
+  }
+
+  const rows: Record<string, string>[] = [];
+  for (const line of matrix.slice(1)) {
+    const cells = Array.isArray(line) ? line : [];
+    const row: Record<string, string> = {};
+    let any = false;
+    headers.forEach((header, i) => {
+      if (!header) return;
+      const value = cellToString(cells[i] ?? "").trim();
+      row[header] = value;
+      if (value) any = true;
+    });
+    if (any) rows.push(row);
+  }
+
+  return { headers, rows, error: null };
+}
+
 export function parseTabularText(
   filename: string | null | undefined,
   text: string
@@ -400,14 +538,8 @@ export function parseTabularText(
         "PDF e imágenes no se importan en esta versión. Convertí la lista a Excel o CSV.",
     };
   }
-  const name = (filename || "").trim().toLowerCase();
-  if (name.endsWith(".xlsx") || name.endsWith(".xls")) {
-    return {
-      headers: [],
-      rows: [],
-      error:
-        "Desde el shell web usá CSV por ahora. En Excel: Guardar como → CSV UTF-8.",
-    };
+  if (isExcelFilename(filename)) {
+    return parseExcelContent(text);
   }
   return parseCsvText(text);
 }

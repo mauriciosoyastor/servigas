@@ -216,6 +216,12 @@ const shiftLabel =
 										<td>
 											{item.label}
 											{item.reference ? ` · ${item.reference}` : ''}
+											{item.href ? (
+												<>
+													{' '}
+													<a class="sg-focus-ring" href={item.href}>Ver</a>
+												</>
+											) : null}
 										</td>
 										<td class:list={[item.kind.includes('out') && 'is-out']}>
 											{item.kind.includes('out') ? '−' : '+'}

@@ -8,6 +8,7 @@ const QUICK_NAV_TAGS = {
     sales: "servigas_sales_hub",
     purchase: "servigas_purchase_hub",
     accounting: "servigas_accounting_hub",
+    workshop: "servigas_workshop_hub",
     pos: "__pos__",
 };
 

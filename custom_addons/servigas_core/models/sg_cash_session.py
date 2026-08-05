@@ -156,6 +156,23 @@ class SgCashMovement(models.Model):
     )
     amount = fields.Float(required=True, digits=(16, 2))
     reason = fields.Char(required=True)
+    medium = fields.Selection(
+        [
+            ("cash", "Efectivo"),
+            ("transfer", "Transferencia"),
+            ("card", "Tarjeta"),
+            ("other", "Otro"),
+        ],
+        required=True,
+        default="cash",
+        index=True,
+    )
+    work_order_id = fields.Many2one(
+        "sg.work.order",
+        string="Orden de trabajo",
+        ondelete="set null",
+        index=True,
+    )
     user_id = fields.Many2one(
         "res.users",
         required=True,

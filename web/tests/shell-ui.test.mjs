@@ -172,6 +172,7 @@ describe("shell UI contracts", () => {
     const motives = await source("lib/caja/cash-motives.ts");
     assert.match(motives, /devolucion_cliente/);
     assert.match(motives, /refuerzo/);
+    assert.match(motives, /cobro_ot/);
     assert.match(page, /\/api\/caja\/open/);
     assert.match(page, /\/api\/caja\/move/);
     assert.match(page, /\/api\/caja\/close/);
@@ -180,6 +181,8 @@ describe("shell UI contracts", () => {
     assert.match(detail, /getCashSessionDetail/);
     assert.match(detail, /data-caja-print/);
     assert.match(detail, /window\.print/);
+    assert.match(detail, /item\.href/);
+    assert.match(detail, />Ver</);
   });
 
   it("renders allowlisted lists from the BFF with search toolbar", async () => {
@@ -192,6 +195,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /rowDeleteApiPath|ProductRowDeleteHost|data-row-delete/);
     assert.match(page, /<RecordTable/);
     assert.match(page, /<ListToolbar/);
+    const toolbarMatches = page.match(/<ListToolbar/g) || [];
+    assert.equal(toolbarMatches.length, 2, "toolbar at top and bottom of list");
     const toolbar = await source("components/ListToolbar.astro");
     assert.match(toolbar, /showJump/);
     assert.match(toolbar, /\+10/);
@@ -250,6 +255,10 @@ describe("shell UI contracts", () => {
     assert.match(page, /Nueva venta/);
     assert.match(page, /nombre, código o barras/);
     assert.match(page, /sg-pos-product-stock|qty_available/);
+    assert.match(page, /data-product-image-trigger/);
+    assert.match(page, /ProductImageUploadHost/);
+    assert.match(page, /\/api\/records\/inventory\/products/);
+    assert.match(page, /product_tmpl_id|data-record-id/);
     assert.match(page, /data-pos-customer|partnerId/);
     assert.match(page, /sales\/customers/);
     assert.match(page, /compact/);
@@ -670,6 +679,8 @@ describe("shell UI contracts", () => {
     assert.match(productNew, /inventory\/products/);
     assert.match(productImport, /Cargar lista de precios\/Productos/);
     assert.match(productImport, /\/api\/inventory\/price-list-import/);
+    assert.match(productImport, /\.xlsx|\.xls/);
+    assert.match(productImport, /readAsDataURL|isExcelFile/);
     assert.match(productImport, /data-import-error-banner/);
     assert.match(productImport, /labelImportStatus|statusLabels/);
     assert.match(productImport, /Confirmar e importar/);
@@ -689,9 +700,23 @@ describe("shell UI contracts", () => {
     assert.match(categoryDetail, /\/lists\/inventory\/products\?categ_id=/);
     assert.match(categoryDetail, /Ver productos/);
     assert.match(categoryDetail, /countProductsInCategory/);
+    assert.match(categoryDetail, /slot=["']card-extra["']/);
+    assert.match(categoryDetail, /embedded/);
     const purgeCtrl = await source("components/CategoryProductPurgeControl.astro");
     assert.match(purgeCtrl, /delete-category/);
     assert.match(purgeCtrl, /Eliminar categoría completa/);
+    assert.match(purgeCtrl, /archiv/i);
+    assert.match(purgeCtrl, /is-embedded/);
+    const rowDelete = await source("components/ProductRowDeleteHost.astro");
+    assert.match(rowDelete, /archiv/i);
+    assert.match(rowDelete, /outcome/);
+    const detailBody = await source("components/RecordDetailBody.astro");
+    assert.match(detailBody, /card-extra/);
+    assert.match(detailBody, /sg-detail-card-extra/);
+    const listCss = await source("styles/list.css");
+    assert.match(listCss, /\.sg-detail-field-edit select/);
+    assert.match(listCss, /color-scheme:\s*dark/);
+    assert.match(listCss, /button\[type=['"]submit['"]\]/);
     assert.match(categoryNew, /inventory\/categories/);
     assert.match(categoryNew, /RecordCreateForm/);
     assert.match(categoryNew, /parent_id/);
@@ -744,7 +769,8 @@ describe("shell UI contracts", () => {
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /workshop\/appliances/);
     assert.doesNotMatch(form, /servigas-logo\.png/);
-    assert.match(orderDetail, /servigas-logo\.png/);
+    assert.match(orderDetail, /servigas-mark\.png/);
+    assert.doesNotMatch(orderDetail, /Servigas · Taller/);
     assert.match(orderDetail, /Cerrar orden/);
     assert.match(orderDetail, /RecordConfirmControl/);
     assert.match(orderDetail, /Eliminar orden/);
@@ -753,11 +779,24 @@ describe("shell UI contracts", () => {
     assert.match(orderDetail, /sg-ficha-action/);
     assert.match(orderDetail, /RecordWorkOrderShareControl/);
     assert.match(orderDetail, /Enviar al cliente|data-wo-share/);
+    assert.match(orderDetail, /RecordWorkOrderCashControl/);
     const shareCtrl = await source("components/RecordWorkOrderShareControl.astro");
     assert.match(shareCtrl, /data-wo-share/);
     assert.match(shareCtrl, /\/api\/workshop-orders\/send-email/);
     assert.match(shareCtrl, /WhatsApp/);
     assert.match(shareCtrl, /Descargar PDF/);
+    const cashCtrl = await source("components/RecordWorkOrderCashControl.astro");
+    assert.match(cashCtrl, /data-wo-cash/);
+    assert.match(cashCtrl, /Registrar cobro/);
+    assert.match(cashCtrl, /\/api\/workshop-orders\/collect-cash/);
+    assert.match(cashCtrl, /PAYMENT_METHOD_OPTIONS/);
+    assert.match(cashCtrl, /fullyCollected|is-collected|Ya cobrado/);
+    assert.match(orderDetail, /editApiPath|owner_name|Editar/);
+    assert.match(orderDetail, /appliance_ref_id|Ver artefacto/);
+    assert.match(orderDetail, /\/lists\/workshop\/appliances\/\$\{/);
+    assert.match(orderDetail, /amount_collected|workOrderCashRemaining/);
+    const listPage = await source("pages/lists/[...slug].astro");
+    assert.match(listPage, /workshop\/orders['"][\s\S]*Nueva OT|Nueva OT/);
     const archiveCtrl = await source("components/RecordArchiveControl.astro");
     assert.match(archiveCtrl, /sg-glass-rim|backdrop-filter/);
     assert.match(archiveCtrl, /is-delete/);

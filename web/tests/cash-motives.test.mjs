@@ -12,7 +12,13 @@ describe("cash motives", () => {
   it("lists the approved v1 motives for in and out", () => {
     assert.deepEqual(
       CASH_MOTIVES_IN.map((m) => m.code),
-      ["refuerzo", "aporte_dueno", "reintegro_proveedor", "otro_ingreso"]
+      [
+        "refuerzo",
+        "aporte_dueno",
+        "reintegro_proveedor",
+        "cobro_ot",
+        "otro_ingreso",
+      ]
     );
     assert.deepEqual(
       CASH_MOTIVES_OUT.map((m) => m.code),
@@ -30,10 +36,14 @@ describe("cash motives", () => {
 
   it("resolves motives by kind and rejects cross-kind codes", () => {
     assert.equal(resolveCashMotive("in", "refuerzo")?.label, "Refuerzo de caja");
+    assert.equal(
+      resolveCashMotive("in", "cobro_ot")?.label,
+      "Cobro orden de trabajo"
+    );
     assert.equal(resolveCashMotive("out", "retiro_banco")?.label, "Retiro al banco");
     assert.equal(resolveCashMotive("in", "retiro_banco"), null);
     assert.equal(resolveCashMotive("out", "refuerzo"), null);
-    assert.equal(motivesForKind("in").length, 4);
+    assert.equal(motivesForKind("in").length, 5);
     assert.equal(motivesForKind("out").length, 7);
   });
 
