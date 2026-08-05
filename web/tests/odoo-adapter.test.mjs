@@ -1721,6 +1721,54 @@ describe("OdooAdapter cash session", () => {
   });
 });
 
+describe("OdooAdapter.createRecord workshop/orders", () => {
+  it("creates OT via create_from_shell and returns detail path", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      assert.equal(body.params.model, "sg.work.order");
+      assert.equal(body.params.method, "create_from_shell");
+      assert.equal(body.params.args[0].serial_number, "SER-99");
+      assert.equal(body.params.args[0].owner_name, "Ana");
+      assert.equal(body.params.args[0].amount, 1500);
+      return Response.json({ result: 77 });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "workshop/orders", {
+      serial_number: "ser-99",
+      owner_name: "Ana",
+      amount: 1500,
+      problem: "No enciende",
+    });
+    assert.equal(result.id, 77);
+    assert.equal(result.detailPath, "/lists/workshop/orders/77");
+    assert.equal(fetchImpl.mock.calls.length, 1);
+  });
+
+  it("rejects OT create without serial before calling Odoo", async () => {
+    const fetchImpl = mock.fn(async () => Response.json({ result: 1 }));
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "workshop/orders", {
+          owner_name: "Sin serie",
+        }),
+      (err) =>
+        err?.code === "validation_error" &&
+        /serie/i.test(String(err?.message || ""))
+    );
+    assert.equal(fetchImpl.mock.calls.length, 0);
+  });
+});
+
 describe("OdooAdapter.updateRecord", () => {
   it("writes allowlisted partner fields", async () => {
     const fetchImpl = mock.fn(async () => Response.json({ result: true }));

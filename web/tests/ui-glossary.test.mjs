@@ -2,6 +2,7 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   AREA_LABELS,
+  WORKSHOP_COPY,
   canonicalizeAreaLabel,
 } from "../src/lib/shell/ui-glossary.ts";
 import { HUB_LABELS } from "../src/lib/shell/hub-nav.ts";
@@ -97,6 +98,20 @@ describe("ui glossary (canonical labels)", () => {
     assert.equal(
       getRecordListDef("accounting/payable-overdue")?.hint,
       "Por pagar: facturas de proveedor con vencimiento pasado"
+    );
+  });
+
+  it("keeps workshop copy short on CTAs and long on list titles", () => {
+    assert.equal(WORKSHOP_COPY.orderShort, "OT");
+    assert.equal(WORKSHOP_COPY.newOrder, "Nueva OT");
+    assert.equal(WORKSHOP_COPY.ordersList, "Órdenes de trabajo");
+    assert.equal(
+      getRecordListDef("workshop/orders")?.title,
+      WORKSHOP_COPY.ordersList
+    );
+    assert.match(
+      getRecordListDef("workshop/orders")?.hint || "",
+      /OT/
     );
   });
 });

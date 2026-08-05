@@ -3,6 +3,7 @@
  */
 
 import { agingDateParts, agingDueClauses } from "./aging.ts";
+import { WORKSHOP_COPY } from "./ui-glossary.ts";
 
 export type OdooAction = Record<string, unknown> | false | null | undefined;
 
@@ -1702,7 +1703,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
   "workshop/orders": {
     key: "workshop/orders",
     path: "/lists/workshop/orders",
-    title: "Órdenes de trabajo",
+    title: WORKSHOP_COPY.ordersList,
     hint: "OT del taller — buscá por serie, propietario o nº",
     model: "sg.work.order",
     domain: [],
@@ -1744,7 +1745,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     key: "workshop/orders-draft",
     path: "/lists/workshop/orders-draft",
     title: "OT borrador",
-    hint: "Órdenes de trabajo abiertas (borrador)",
+    hint: `${WORKSHOP_COPY.ordersList} abiertas (borrador)`,
     model: "sg.work.order",
     domain: [["state", "=", "draft"]],
     fields: [

@@ -46,8 +46,12 @@ class SgWorkOrder(models.Model):
     def get_report_brand_mark_src(self):
         """Data-URI del símbolo Servigas para el PDF (no depende de HTTP static)."""
         self.ensure_one()
-        with file_open(report_assets.MARK_PRINT_RELATIVE, "rb") as handle:
-            return report_assets.png_data_uri(handle.read())
+        try:
+            with file_open(report_assets.MARK_PRINT_RELATIVE, "rb") as handle:
+                raw = handle.read()
+        except (FileNotFoundError, OSError, ValueError):
+            return ""
+        return report_assets.mark_data_uri_or_empty(raw)
 
     @api.model_create_multi
     def create(self, vals_list):

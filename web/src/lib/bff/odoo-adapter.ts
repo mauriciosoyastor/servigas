@@ -933,7 +933,7 @@ export class OdooAdapter implements BackendClient {
       amount: "Importe",
       amount_collected: "Cobrado en caja",
       appliance_id: "Artefacto",
-      work_order_count: "Órdenes",
+      work_order_count: "OT",
       date: "Fecha",
       state: "Estado",
       partner_id: "Cliente",

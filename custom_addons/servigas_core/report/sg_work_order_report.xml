@@ -7,7 +7,8 @@
           <!-- charset hint for wkhtmltopdf on Windows -->
           <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
           <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px; border-bottom:2px solid #c45c26; padding-bottom:12px;">
-            <img t-att-src="o.get_report_brand_mark_src()"
+            <img t-if="o.get_report_brand_mark_src()"
+                 t-att-src="o.get_report_brand_mark_src()"
                  style="height:56px; width:auto;" alt="Servigas"/>
             <div>
               <div style="font-size:20px; font-weight:700;">Orden de trabajo</div>
