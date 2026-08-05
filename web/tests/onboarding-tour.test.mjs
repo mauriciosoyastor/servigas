@@ -31,15 +31,23 @@ function memoryStorage(initial = {}) {
 }
 
 describe("onboarding-tour", () => {
-  it("defines the home → rail Mostrador → pos path", () => {
+  it("defines home → Mostrador → Hub Taller → Nueva OT", () => {
     assert.equal(TOUR_STEPS[0].id, "home-ops");
-    assert.equal(TOUR_STEPS.at(-1).id, "pos-cobrar");
-    assert.equal(TOUR_STEPS.length, 5);
-    assert.ok(!TOUR_STEPS.some((s) => s.path.startsWith("/hubs")));
+    assert.equal(TOUR_STEPS.at(-1).id, "workshop-new");
+    assert.equal(TOUR_STEPS.length, 7);
     assert.ok(TOUR_STEPS.some((s) => s.path === "/pos"));
+    assert.ok(TOUR_STEPS.some((s) => s.path === "/hubs/workshop"));
+    assert.ok(TOUR_STEPS.some((s) => s.path === "/lists/workshop/orders/new"));
     const rail = TOUR_STEPS.find((s) => s.id === "home-rail");
     assert.equal(rail?.target, "rail-pos");
     assert.equal(rail?.navigateTo, "/pos");
+    const cobrar = TOUR_STEPS.find((s) => s.id === "pos-cobrar");
+    assert.equal(cobrar?.navigateTo, "/hubs/workshop");
+    const hub = TOUR_STEPS.find((s) => s.id === "workshop-hub");
+    assert.equal(hub?.target, "hub-card");
+    assert.equal(hub?.navigateTo, "/lists/workshop/orders/new");
+    const neu = TOUR_STEPS.find((s) => s.id === "workshop-new");
+    assert.equal(neu?.target, "workshop-create");
   });
 
   it("matches paths for home and pos", () => {
@@ -96,12 +104,25 @@ describe("onboarding-tour", () => {
     assert.equal(result.nextStepId, "pos-ticket");
   });
 
-  it("advances within pos and finishes on last step", () => {
+  it("advances within pos then navigates to Taller hub", () => {
     const ticket = TOUR_STEPS.find((s) => s.id === "pos-ticket");
     const next = advanceTour(ticket, "/pos", (t) => t === "pos-checkout");
     assert.equal(next.kind, "step");
     assert.equal(next.step.id, "pos-cobrar");
-    const done = advanceTour(next.step, "/pos", () => true);
+    const toHub = advanceTour(next.step, "/pos", () => true);
+    assert.equal(toHub.kind, "navigate");
+    assert.equal(toHub.href, "/hubs/workshop");
+    assert.equal(toHub.nextStepId, "workshop-hub");
+  });
+
+  it("advances hub Taller → Nueva OT and finishes", () => {
+    const hub = TOUR_STEPS.find((s) => s.id === "workshop-hub");
+    const toNew = advanceTour(hub, "/hubs/workshop", () => true);
+    assert.equal(toNew.kind, "navigate");
+    assert.equal(toNew.href, "/lists/workshop/orders/new");
+    assert.equal(toNew.nextStepId, "workshop-new");
+    const neu = TOUR_STEPS.find((s) => s.id === "workshop-new");
+    const done = advanceTour(neu, "/lists/workshop/orders/new", () => true);
     assert.equal(done.kind, "done");
   });
 
@@ -115,8 +136,9 @@ describe("onboarding-tour", () => {
   });
 
   it("builds progress label in Spanish", () => {
-    assert.equal(tourProgressLabel("home-ops"), "Paso 1 de 5");
-    assert.equal(tourProgressLabel("pos-cobrar"), "Paso 5 de 5");
+    assert.equal(tourProgressLabel("home-ops"), "Paso 1 de 7");
+    assert.equal(tourProgressLabel("pos-cobrar"), "Paso 5 de 7");
+    assert.equal(tourProgressLabel("workshop-new"), "Paso 7 de 7");
   });
 
   it("keeps tip inside viewport when hole is near the bottom (pos-cobrar)", () => {
