@@ -764,6 +764,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /WorkOrderCreateForm/);
     assert.match(page, /Nueva orden de trabajo/);
     assert.match(form, /data-wo-create/);
+    assert.match(form, /data-tour=["']workshop-create["']/);
     assert.match(form, /serial_number/);
     assert.match(form, /Ya atendido/);
     assert.match(form, /\/api\/lists\//);

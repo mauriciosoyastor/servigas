@@ -15,6 +15,14 @@ export const AREA_LABELS = {
   caja: "Caja",
 } as const;
 
+/** Copy canónica Taller: corta en CTAs/columnas, larga en frases. */
+export const WORKSHOP_COPY = {
+  orderShort: "OT",
+  orderLong: "orden de trabajo",
+  ordersList: "Órdenes de trabajo",
+  newOrder: "Nueva OT",
+} as const;
+
 /** Legacy Odoo / module names still seen in DB tiles before override. */
 export const LEGACY_AREA_ALIASES: Record<string, string> = {
   Inventario: AREA_LABELS.inventory,

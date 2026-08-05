@@ -11,7 +11,9 @@ export type TourStepId =
   | "home-tile"
   | "home-rail"
   | "pos-ticket"
-  | "pos-cobrar";
+  | "pos-cobrar"
+  | "workshop-hub"
+  | "workshop-new";
 
 export type TourStep = {
   id: TourStepId;
@@ -38,14 +40,14 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/",
     target: "home-tile",
     title: "Tus áreas",
-    body: "Abajo están las áreas del negocio (Stock, Ventas, Clientes, Compras, Cobros). Lo del día a día está en los atajos de arriba.",
+    body: "Abajo están las áreas del negocio (Stock, Ventas, Clientes, Compras, Cobros, Taller). Lo del día a día está en los atajos de arriba.",
   },
   {
     id: "home-rail",
     path: "/",
     target: "rail-pos",
     title: "Menú lateral",
-    body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras, Clientes y Cobros. Tocá Siguiente para ir al Mostrador.",
+    body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras, Clientes, Cobros y Taller. Tocá Siguiente para ir al Mostrador.",
     navigateTo: "/pos",
   },
   {
@@ -60,7 +62,23 @@ export const TOUR_STEPS: TourStep[] = [
     path: "/pos",
     target: "pos-checkout",
     title: "Cobrar",
-    body: "Con esto registrás la venta. Listo: ya conocés el recorrido.",
+    body: "Con esto registrás la venta. Ahora te mostramos el Taller.",
+    navigateTo: "/hubs/workshop",
+  },
+  {
+    id: "workshop-hub",
+    path: "/hubs/workshop",
+    target: "hub-card",
+    title: "Hub Taller",
+    body: "Desde acá entrás a órdenes, borradores y artefactos. Tocá Siguiente para ver cómo se carga una OT nueva.",
+    navigateTo: "/lists/workshop/orders/new",
+  },
+  {
+    id: "workshop-new",
+    path: "/lists/workshop/orders/new",
+    target: "workshop-create",
+    title: "Nueva OT",
+    body: "Completás la orden como en el papel: cliente, serie del artefacto y trabajo. La serie arma el historial. Listo: ya conocés el recorrido.",
   },
 ];
 

@@ -111,7 +111,7 @@
             <field name="section">summary</field>
             <field name="show_in_summary" eval="True"/>
             <field name="sequence">50</field>
-            <field name="label">Ventas de hoy</field>
+            <field name="label">Ventas de mostrador hoy</field>
             <field name="hint">Pedidos de mostrador del día</field>
             <field name="icon">fa-desktop</field>
             <field name="enter_label">Ver ventas de caja →</field>

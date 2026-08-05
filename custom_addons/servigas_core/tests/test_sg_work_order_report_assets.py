@@ -36,6 +36,16 @@ class PngDataUriTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             assets.png_data_uri(b"%PDF-1.4")
 
+    def test_mark_data_uri_or_empty_returns_blank_on_missing(self):
+        self.assertEqual(assets.mark_data_uri_or_empty(None), "")
+        self.assertEqual(assets.mark_data_uri_or_empty(b""), "")
+        self.assertEqual(assets.mark_data_uri_or_empty(b"not-png"), "")
+
+    def test_mark_data_uri_or_empty_keeps_valid_png(self):
+        raw = (STATIC_IMG / "servigas_mark_print.png").read_bytes()
+        uri = assets.mark_data_uri_or_empty(raw)
+        self.assertTrue(uri.startswith("data:image/png;base64,"))
+
 
 if __name__ == "__main__":
     unittest.main()
