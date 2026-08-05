@@ -27,9 +27,12 @@ Atajo (doble clic / acceso directo):
 
 ```powershell
 cd Desktop\proyectos\servigas-workshop\infra\docker
+python .\build-servigas-ico.py
+.\Start-Servigas.ps1 -CreateDesktopShortcut
 .\Start-Servigas.ps1
-# opcional: .\Start-Servigas.ps1 -CreateDesktopShortcut
 ```
+
+El acceso **Servigas** del escritorio usa el ícono de la llama (`servigas.ico`).
 
 O a mano:
 
