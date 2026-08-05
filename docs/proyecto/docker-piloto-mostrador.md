@@ -123,6 +123,7 @@ Copiá desde `.env.example`. Importantes:
 - PDF depende de `wkhtmltopdf` en la imagen oficial `odoo:19.0` (suele venir; si falla PDF, revisar logs Odoo).
 - Los addons se montan **read-only** desde `custom_addons/`; para código nuevo: pull + rebuild web + `-u` módulos.
 - Este Postgres Docker es **aparte** del Postgres de Windows; no mezcla `servigas_dev` nativo.
+- Para copiar productos/datos de `servigas_dev` al piloto: ver [`copiar-servigas-dev-a-docker.md`](./copiar-servigas-dev-a-docker.md).
 
 ## Troubleshooting
 
