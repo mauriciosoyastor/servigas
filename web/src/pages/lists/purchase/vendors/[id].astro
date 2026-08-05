@@ -48,6 +48,17 @@ function fieldValue(key: string): string {
 		}
 	>
 		{detail && !error ? (
+			<div class="sg-vendor-card-extra" slot="card-extra">
+				<a
+					class="sg-vendor-products-link sg-focus-ring"
+					href={`/lists/inventory/products?partner_id=${id}`}
+				>
+					Ver productos de este proveedor
+					<span aria-hidden="true">→</span>
+				</a>
+			</div>
+		) : null}
+		{detail && !error ? (
 			<RecordNotes slot="notes" listKey="purchase/vendors" recordId={id} />
 		) : null}
 		{detail && !error ? (
@@ -62,3 +73,23 @@ function fieldValue(key: string): string {
 		) : null}
 	</RecordDetailBody>
 </ShellLayout>
+
+<style>
+	.sg-vendor-card-extra {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-top: 0.75rem;
+	}
+	.sg-vendor-products-link {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-weight: 600;
+		text-decoration: none;
+		color: inherit;
+	}
+	.sg-vendor-products-link:hover {
+		text-decoration: underline;
+	}
+</style>

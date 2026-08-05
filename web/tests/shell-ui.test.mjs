@@ -72,6 +72,8 @@ describe("shell UI contracts", () => {
     assert.match(tour, /Omitir tutorial/);
     assert.match(tour, /No volver a mostrar/);
     assert.match(tour, /onboarding-tour/);
+    const tourCss = await source("styles/onboarding.css");
+    assert.match(tourCss, /\.sg-onboarding-hole\s*\{[^}]*pointer-events:\s*none/s);
   });
 
   it("posts login credentials to the BFF before navigating home", async () => {
@@ -147,6 +149,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /getCashHub\(/);
     assert.match(page, /data-caja-root/);
     assert.match(page, /data-caja-open/);
+    assert.match(page, /data-tour=["']caja-tour["']/);
     assert.match(page, /data-caja-move/);
     assert.match(page, /data-caja-close/);
     assert.match(page, /data-caja-motive/);
@@ -174,6 +177,7 @@ describe("shell UI contracts", () => {
     assert.match(motives, /refuerzo/);
     assert.match(motives, /cobro_ot/);
     assert.match(page, /\/api\/caja\/open/);
+    assert.match(page, /setTourStep|pos-ticket/);
     assert.match(page, /\/api\/caja\/move/);
     assert.match(page, /\/api\/caja\/close/);
     assert.match(page, /Efectivo esperado/);
@@ -191,6 +195,8 @@ describe("shell UI contracts", () => {
     assert.match(page, /getRecordList\(odooSessionId,\s*listKey/);
     assert.match(page, /parsePositiveIntParam|categ_id/);
     assert.match(page, /categId/);
+    assert.match(page, /partner_id/);
+    assert.match(page, /partnerId/);
     assert.match(page, /Quitar filtro/);
     assert.match(page, /rowDeleteApiPath|ProductRowDeleteHost|data-row-delete/);
     assert.match(page, /<RecordTable/);
@@ -203,11 +209,20 @@ describe("shell UI contracts", () => {
     assert.match(toolbar, /−10/);
     assert.match(toolbar, /Avanzar 10 páginas/);
     assert.match(toolbar, /categId|categ_id/);
+    assert.match(toolbar, /partnerId|partner_id/);
     assert.match(page, /Sin resultados/);
     assert.match(page, /active=\{def\.railApp\}/);
     const recordTable = await source("components/RecordTable.astro");
     assert.match(recordTable, /data-row-delete/);
     assert.match(recordTable, /Eliminar/);
+  });
+
+  it("links vendor detail to products filtered by partner_id", async () => {
+    const vendorDetail = await source("pages/lists/purchase/vendors/[id].astro");
+    assert.match(
+      vendorDetail,
+      /\/lists\/inventory\/products\?partner_id=/
+    );
   });
 
   it("renders product detail from the BFF", async () => {
@@ -234,6 +249,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /getPosCatalog\(/);
     assert.match(page, /<h1>Mostrador<\/h1>/);
     assert.match(page, /Abrí la caja primero/);
+    assert.match(page, /data-tour=["']pos-caja-closed["']/);
     assert.match(page, /data-pos-caja/);
     assert.match(page, /data-tour=["']pos-ticket["']/);
     assert.match(page, /data-tour=["']pos-checkout["']/);

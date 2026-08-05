@@ -436,6 +436,40 @@ describe("record-lists allowlist", () => {
       )
     );
   });
+
+  it("appends seller_ids.partner_id only for inventory/products when partnerId is valid", () => {
+    const products = getRecordListDef("inventory/products");
+    const categories = getRecordListDef("inventory/categories");
+    assert.ok(products);
+    assert.ok(categories);
+
+    const withPartner = buildSearchDomain(products, "", new Date(), {
+      partnerId: 42,
+    });
+    assert.deepEqual(withPartner, [
+      ["active", "=", true],
+      ["seller_ids.partner_id", "=", 42],
+    ]);
+
+    const invalid = buildSearchDomain(products, "", new Date(), {
+      partnerId: 0,
+    });
+    assert.deepEqual(invalid, [["active", "=", true]]);
+
+    const otherList = buildSearchDomain(categories, "", new Date(), {
+      partnerId: 42,
+    });
+    assert.ok(!JSON.stringify(otherList).includes("seller_ids.partner_id"));
+
+    const withBoth = buildSearchDomain(products, "tuerca", new Date(), {
+      categId: 17,
+      partnerId: 42,
+    });
+    assert.deepEqual(withBoth[0], ["active", "=", true]);
+    assert.deepEqual(withBoth[1], ["categ_id", "=", 17]);
+    assert.deepEqual(withBoth[2], ["seller_ids.partner_id", "=", 42]);
+    assert.ok(withBoth.includes("|"));
+  });
 });
 
 describe("accent-insensitive search helpers", () => {

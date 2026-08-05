@@ -1,0 +1,22 @@
+# Ignore build noise when context is the repo root
+.git
+.github
+.cursor
+.superpowers
+.worktrees
+**/node_modules
+**/__pycache__
+**/.astro
+**/dist
+web/.env
+web/.data
+datos/import/practica
+datos/import/imagenes
+datos/import/imagenes_originales
+datos/import/cache
+**/*.pyc
+**/*.log
+docs
+infra/github
+*.md
+!docs/proyecto/docker-piloto-mostrador.md

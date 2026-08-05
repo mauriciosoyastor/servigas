@@ -653,6 +653,7 @@ export class OdooAdapter implements BackendClient {
       new Date(),
       {
         categId: query.categId,
+        partnerId: query.partnerId,
       }
     );
     const offset = (page - 1) * def.limit;

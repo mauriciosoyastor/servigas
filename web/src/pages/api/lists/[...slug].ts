@@ -26,10 +26,15 @@ export const GET: APIRoute = async ({ cookies, params, url }) => {
       slug === "inventory/products"
         ? parsePositiveIntParam(url.searchParams.get("categ_id"))
         : undefined;
+    const partnerId =
+      slug === "inventory/products"
+        ? parsePositiveIntParam(url.searchParams.get("partner_id"))
+        : undefined;
     const payload = await getBackend().getRecordList(odooSessionId, slug, {
       q,
       page,
       categId,
+      partnerId,
     });
     return json(payload);
   } catch (err) {

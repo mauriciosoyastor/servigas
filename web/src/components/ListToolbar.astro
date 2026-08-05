@@ -6,9 +6,10 @@ interface Props {
 	pageSize: number;
 	total: number;
 	categId?: number;
+	partnerId?: number;
 }
 
-const { action, q, page, pageSize, total, categId } = Astro.props;
+const { action, q, page, pageSize, total, categId, partnerId } = Astro.props;
 const totalPages = Math.max(1, Math.ceil(total / pageSize));
 const prev = page > 1 ? page - 1 : null;
 const next = page < totalPages ? page + 1 : null;
@@ -20,6 +21,7 @@ function hrefFor(p: number) {
 	const params = new URLSearchParams();
 	if (q) params.set('q', q);
 	if (categId) params.set('categ_id', String(categId));
+	if (partnerId) params.set('partner_id', String(partnerId));
 	if (p > 1) params.set('page', String(p));
 	const qs = params.toString();
 	return qs ? `${action}?${qs}` : action;
@@ -28,6 +30,7 @@ function hrefFor(p: number) {
 
 <form class="sg-list-toolbar" method="get" action={action}>
 	{categId ? <input type="hidden" name="categ_id" value={String(categId)} /> : null}
+	{partnerId ? <input type="hidden" name="partner_id" value={String(partnerId)} /> : null}
 	<label class="sg-list-search">
 		<span class="sr-only">Buscar</span>
 		<input

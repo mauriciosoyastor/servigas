@@ -66,11 +66,16 @@ let userName = '';
 let listError = '';
 let payload: RecordListPayload | null = null;
 let categoryFilterName = '';
+let partnerFilterName = '';
 const q = Astro.url.searchParams.get('q') || '';
 const page = Number(Astro.url.searchParams.get('page') || '1') || 1;
 const categId =
 	listKey === 'inventory/products'
 		? parsePositiveIntParam(Astro.url.searchParams.get('categ_id'))
+		: undefined;
+const partnerId =
+	listKey === 'inventory/products'
+		? parsePositiveIntParam(Astro.url.searchParams.get('partner_id'))
 		: undefined;
 
 if (!def) {
@@ -84,6 +89,7 @@ if (!def) {
 				q,
 				page,
 				categId,
+				partnerId,
 			});
 			if (categId) {
 				try {
@@ -95,6 +101,18 @@ if (!def) {
 					categoryFilterName = String(category?.title || '').trim();
 				} catch {
 					categoryFilterName = '';
+				}
+			}
+			if (partnerId) {
+				try {
+					const partner = await getBackend().getRecordDetail(
+						odooSessionId,
+						'purchase/vendors',
+						partnerId
+					);
+					partnerFilterName = String(partner?.title || '').trim();
+				} catch {
+					partnerFilterName = '';
 				}
 			}
 		} catch (cause) {
@@ -157,12 +175,27 @@ if (!def) {
 				</div>
 			</header>
 
-			{categId ? (
+			{categId || partnerId ? (
 				<section class="sg-list-filter-banner sg-glass" aria-live="polite">
 					<p>
-						{categoryFilterName
-							? `Productos de «${categoryFilterName}»`
-							: 'Productos filtrados por categoría'}
+						{(() => {
+							const parts: string[] = [];
+							if (categId) {
+								parts.push(
+									categoryFilterName
+										? `categoría «${categoryFilterName}»`
+										: 'categoría'
+								);
+							}
+							if (partnerId) {
+								parts.push(
+									partnerFilterName
+										? `proveedor «${partnerFilterName}»`
+										: 'proveedor'
+								);
+							}
+							return `Productos filtrados por ${parts.join(' y ')}`;
+						})()}
 					</p>
 					<a class="sg-focus-ring" href="/lists/inventory/products">Quitar filtro</a>
 				</section>
@@ -176,6 +209,7 @@ if (!def) {
 					pageSize={payload.pageSize}
 					total={payload.total}
 					categId={categId}
+					partnerId={partnerId}
 				/>
 			) : null}
 
@@ -219,6 +253,7 @@ if (!def) {
 						pageSize={payload.pageSize}
 						total={payload.total}
 						categId={categId}
+						partnerId={partnerId}
 					/>
 					{listKey === 'inventory/products' ? <ProductImageUploadHost /> : null}
 					{listKey === 'inventory/products' ? <ProductRowDeleteHost /> : null}
@@ -230,9 +265,13 @@ if (!def) {
 					<p>
 						{payload?.q
 							? 'No hay registros que coincidan con la búsqueda.'
-							: categId
-								? 'No hay productos activos en esta categoría.'
-								: 'No encontramos registros para mostrar.'}
+							: partnerId && categId
+								? 'No hay productos activos para este proveedor en esta categoría.'
+								: partnerId
+									? 'No hay productos activos para este proveedor.'
+									: categId
+										? 'No hay productos activos en esta categoría.'
+										: 'No encontramos registros para mostrar.'}
 					</p>
 				</section>
 			)}

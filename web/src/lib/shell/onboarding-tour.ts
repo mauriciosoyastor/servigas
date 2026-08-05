@@ -10,6 +10,8 @@ export type TourStepId =
   | "home-ops"
   | "home-tile"
   | "home-rail"
+  | "pos-caja-gate"
+  | "caja-open"
   | "pos-ticket"
   | "pos-cobrar"
   | "workshop-hub"
@@ -25,6 +27,11 @@ export type TourStep = {
   body: string;
   /** If set, advancing navigates here when leaving this step. */
   navigateTo?: string;
+  /**
+   * `corner` parks the tip top-right so the user can fill forms under the spotlight
+   * (e.g. abrir caja) without the dialog covering inputs.
+   */
+  tipPlacement?: "auto" | "corner";
 };
 
 export const TOUR_STEPS: TourStep[] = [
@@ -49,6 +56,23 @@ export const TOUR_STEPS: TourStep[] = [
     title: "Menú lateral",
     body: "Este menú te lleva al trabajo del día: Mostrador, Caja, Stock, Compras, Clientes, Cobros y Taller. Tocá Siguiente para ir al Mostrador.",
     navigateTo: "/pos",
+  },
+  {
+    id: "pos-caja-gate",
+    path: "/pos",
+    target: "pos-caja-closed",
+    title: "Caja primero",
+    body: "El mostrador necesita la caja abierta. Tocá Siguiente para ir a abrirla.",
+    navigateTo: "/caja",
+  },
+  {
+    id: "caja-open",
+    path: "/caja",
+    target: "caja-tour",
+    title: "Abrir la caja",
+    body: "Completá monto y turno abajo, después «Abrir caja». El tip queda a un costado para no taparte el formulario.",
+    navigateTo: "/pos",
+    tipPlacement: "corner",
   },
   {
     id: "pos-ticket",
@@ -87,6 +111,13 @@ export type TourStorage = {
   setItem(key: string, value: string): void;
   removeItem(key: string): void;
 };
+
+export function canLeaveCajaOpenStep(input: {
+  /** True while `[data-caja-open]` form is in the DOM (caja still closed). */
+  cajaFormPresent: boolean;
+}): boolean {
+  return !input.cajaFormPresent;
+}
 
 export function pathMatchesStep(pathname: string, step: TourStep): boolean {
   const path = pathname.replace(/\/+$/, "") || "/";
@@ -271,4 +302,27 @@ export function clampTourTipPosition(input: TourTipLayoutInput): {
 
   top = Math.min(Math.max(margin, top), maxTop);
   return { top, left };
+}
+
+/** Park tip away from the form: top-right on desktop, bottom on narrow screens. */
+export function dockTourTipCorner(input: {
+  tipWidth: number;
+  tipHeight: number;
+  viewportWidth: number;
+  viewportHeight: number;
+  margin?: number;
+}): { top: number; left: number } {
+  const margin = input.margin ?? 8;
+  const maxTop = Math.max(
+    margin,
+    input.viewportHeight - input.tipHeight - margin
+  );
+  if (input.viewportWidth < 640) {
+    return { top: maxTop, left: margin };
+  }
+  const left = Math.max(
+    margin,
+    input.viewportWidth - input.tipWidth - margin
+  );
+  return { top: Math.min(margin, maxTop), left };
 }

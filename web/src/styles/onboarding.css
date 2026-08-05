@@ -14,7 +14,8 @@
 .sg-onboarding-hole {
 	position: fixed;
 	z-index: 51;
-	pointer-events: auto;
+	/* Visual only — must not steal clicks from the highlighted control (e.g. Abrir caja). */
+	pointer-events: none;
 	border-radius: var(--sg-radius-card, 12px);
 	box-shadow:
 		0 0 0 999vmax rgba(10, 10, 10, 0.88),

@@ -28,7 +28,9 @@
 <script>
 	import {
 		advanceTour,
+		canLeaveCajaOpenStep,
 		clampTourTipPosition,
+		dockTourTipCorner,
 		markTourDone,
 		markTourSkippedSession,
 		resolveInitialStep,
@@ -107,17 +109,25 @@
 
 			const tipW = Math.min(352, window.innerWidth - 32);
 			tip.style.width = `${tipW}px`;
-			const tipH = Math.max(tip.offsetHeight, 160);
-			const pos = clampTourTipPosition({
-				holeTop: top,
-				holeLeft: left,
-				holeWidth: width,
-				holeHeight: height,
-				tipWidth: tipW,
-				tipHeight: tipH,
-				viewportWidth: window.innerWidth,
-				viewportHeight: window.innerHeight,
-			});
+			const tipH = Math.max(tip.offsetHeight, 120);
+			const pos =
+				step.tipPlacement === 'corner'
+					? dockTourTipCorner({
+							tipWidth: tipW,
+							tipHeight: tipH,
+							viewportWidth: window.innerWidth,
+							viewportHeight: window.innerHeight,
+						})
+					: clampTourTipPosition({
+							holeTop: top,
+							holeLeft: left,
+							holeWidth: width,
+							holeHeight: height,
+							tipWidth: tipW,
+							tipHeight: tipH,
+							viewportWidth: window.innerWidth,
+							viewportHeight: window.innerHeight,
+						});
 			tip.style.top = `${pos.top}px`;
 			tip.style.left = `${pos.left}px`;
 		}
@@ -161,6 +171,17 @@
 
 		function goNext() {
 			if (!current) return;
+			if (
+				current.id === 'caja-open' &&
+				!canLeaveCajaOpenStep({
+					cajaFormPresent: Boolean(document.querySelector('[data-caja-open]')),
+				})
+			) {
+				bodyEl!.textContent =
+					'Primero abrí la caja con el botón «Abrir caja» (monto + turno). Después el tutorial sigue solo.';
+				place(current);
+				return;
+			}
 			const result = advanceTour(current, location.pathname, hasTarget);
 			if (result.kind === 'done') {
 				markTourDone(localStorage);
