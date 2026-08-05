@@ -32,7 +32,8 @@ Documentación del host: [`../odoo-workspace/docs/INICIO-PROYECTO.md`](../odoo-w
 
 Postgres + Odoo 19 + Astro BFF en contenedores, pensado para la PC del mostrador:
 
-→ [`docs/proyecto/docker-piloto-mostrador.md`](docs/proyecto/docker-piloto-mostrador.md)  
+→ [`docs/proyecto/docker-piloto-mostrador.md`](docs/proyecto/docker-piloto-mostrador.md)
+→ [`docs/proyecto/copiar-servigas-dev-a-docker.md`](docs/proyecto/copiar-servigas-dev-a-docker.md) (copiar `servigas_dev` al piloto)
 → carpeta `infra/docker/`
 
 ```powershell
