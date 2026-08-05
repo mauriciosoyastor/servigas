@@ -43,6 +43,7 @@ function Wait-Until([scriptblock]$Test, [int]$Seconds, [string]$Label) {
 
 if ($CreateDesktopShortcut) {
   $bat = Join-Path $here "Start-Servigas.bat"
+  $ico = Join-Path $here "servigas.ico"
   $desktop = [Environment]::GetFolderPath("Desktop")
   $lnkPath = Join-Path $desktop "Servigas.lnk"
   $shell = New-Object -ComObject WScript.Shell
@@ -51,13 +52,16 @@ if ($CreateDesktopShortcut) {
   $shortcut.WorkingDirectory = $here
   $shortcut.WindowStyle = 1
   $shortcut.Description = "Abrir Servigas (Docker mostrador)"
-  $iconCandidate = Join-Path (Split-Path (Split-Path $here -Parent) -Parent) "web\public\servigas-mark.png"
-  if (Test-Path $iconCandidate) {
-    # .lnk prefiere .ico; dejamos el default si no hay ico
+  if (Test-Path $ico) {
+    $shortcut.IconLocation = "$ico,0"
+  } else {
+    Write-Host "Aviso: falta servigas.ico. Corre: python .\build-servigas-ico.py"
   }
   $shortcut.Save()
   Write-Host "Acceso directo creado: $lnkPath"
-  Write-Host "Tip: clic derecho → Propiedades → Cambiar icono (si tenés un .ico)."
+  if (Test-Path $ico) {
+    Write-Host "Icono: llama Servigas ($ico)"
+  }
   return
 }
 
@@ -83,7 +87,7 @@ Wait-Until {
 Write-Step "Levantando stack (db + odoo + web)..."
 docker compose --env-file .env up -d
 if ($LASTEXITCODE -ne 0) {
-  throw "docker compose up falló (código $LASTEXITCODE)"
+  throw "docker compose up fallo (codigo $LASTEXITCODE)"
 }
 
 Write-Step "Esperando Astro en $webUrl ..."
