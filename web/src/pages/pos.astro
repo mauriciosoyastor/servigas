@@ -327,6 +327,7 @@ try {
 	import {
 		bufferValue,
 		emptyNumpad,
+		formatNumpadBuffer,
 		pressBackspace,
 		pressDigit,
 		selectLine,
@@ -578,13 +579,19 @@ try {
 
 		const syncNumpadChrome = () => {
 			if (bufferEl) {
-				bufferEl.textContent = pad.buffer || '—';
+				bufferEl.textContent = formatNumpadBuffer(pad);
 			}
 			root.querySelectorAll('[data-np-mode]').forEach((btn) => {
 				const mode = btn.getAttribute('data-np-mode');
 				btn.setAttribute('aria-pressed', mode === pad.mode ? 'true' : 'false');
 				btn.classList.toggle('is-active', mode === pad.mode);
 			});
+			const decimalKey = root.querySelector('[data-np-key="."]');
+			if (decimalKey instanceof HTMLElement) {
+				const disableDot = pad.mode === 'price';
+				decimalKey.toggleAttribute('disabled', disableDot);
+				decimalKey.setAttribute('aria-disabled', disableDot ? 'true' : 'false');
+			}
 			const orderPct = Number(cart.orderDiscount) || 0;
 			if (orderDiscEl) {
 				orderDiscEl.hidden = orderPct <= 0;
@@ -1309,6 +1316,10 @@ try {
 		font-size: 0.72rem;
 		font-weight: 650;
 		cursor: pointer;
+	}
+	.sg-pos-numpad-keys button:disabled {
+		opacity: 0.35;
+		cursor: not-allowed;
 	}
 	.sg-pos-numpad-modes button.is-active {
 		background: color-mix(in srgb, var(--sg-primary), transparent 72%);
