@@ -1,0 +1,22 @@
+# Astro BFF (SSR) para el stack Docker del mostrador.
+FROM node:22-bookworm-slim AS build
+WORKDIR /app
+COPY web/package.json web/package-lock.json ./
+# `npm ci` falla si el lock está desfasado en CI/Windows; fallback a install.
+RUN npm ci || npm install
+COPY web/ ./
+ENV ASTRO_TOOLBAR=0
+RUN npm run build
+
+FROM node:22-bookworm-slim
+WORKDIR /app
+ENV NODE_ENV=production
+ENV HOST=0.0.0.0
+ENV PORT=4321
+ENV ASTRO_TOOLBAR=0
+RUN mkdir -p /app/.data/bff-sessions
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+COPY --from=build /app/package.json ./
+EXPOSE 4321
+CMD ["node", "./dist/server/entry.mjs"]

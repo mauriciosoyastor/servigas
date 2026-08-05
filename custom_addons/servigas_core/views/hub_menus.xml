@@ -1,23 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <data>
-        <record id="menu_inventory_hub" model="ir.ui.menu">
-            <field name="active" eval="False"/>
-        </record>
-
-        <record id="menu_sales_hub" model="ir.ui.menu">
-            <field name="active" eval="False"/>
-        </record>
-
-        <record id="menu_purchase_hub" model="ir.ui.menu">
-            <field name="active" eval="False"/>
-        </record>
-
-        <record id="menu_accounting_hub" model="ir.ui.menu">
-            <field name="active" eval="False"/>
-        </record>
-
-        <!-- Acentos flame/ember distintos por KPI + copy force-update (noupdate cards). -->
+        <!--
+          Menús hub OWL se desactivan en post_init / setup si existen.
+          No forzar <record> aquí: en install fresco los xmlid no existen y
+          crear ir.ui.menu solo con active=False falla (name requerido).
+        -->
         <function model="sg.hub.card" name="setup_all_hub_card_accents"/>
     </data>
 </odoo>

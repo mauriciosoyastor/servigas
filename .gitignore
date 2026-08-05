@@ -5,7 +5,8 @@ __pycache__/
 
 # Odoo local config (never commit secrets)
 odoo.conf
-!docker/odoo.conf
+!infra/docker/odoo.conf
+!infra/docker/.env.example
 *.sql
 *.dump
 
@@ -20,6 +21,7 @@ e2e/playwright/.cache/
 .env
 .env.*
 !.env.example
+!infra/docker/.env.example
 
 # OS / IDE
 .DS_Store

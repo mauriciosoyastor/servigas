@@ -72,6 +72,8 @@ describe("shell UI contracts", () => {
     assert.match(tour, /Omitir tutorial/);
     assert.match(tour, /No volver a mostrar/);
     assert.match(tour, /onboarding-tour/);
+    const tourCss = await source("styles/onboarding.css");
+    assert.match(tourCss, /\.sg-onboarding-hole\s*\{[^}]*pointer-events:\s*none/s);
   });
 
   it("posts login credentials to the BFF before navigating home", async () => {
@@ -147,6 +149,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /getCashHub\(/);
     assert.match(page, /data-caja-root/);
     assert.match(page, /data-caja-open/);
+    assert.match(page, /data-tour=["']caja-tour["']/);
     assert.match(page, /data-caja-move/);
     assert.match(page, /data-caja-close/);
     assert.match(page, /data-caja-motive/);
@@ -174,6 +177,7 @@ describe("shell UI contracts", () => {
     assert.match(motives, /refuerzo/);
     assert.match(motives, /cobro_ot/);
     assert.match(page, /\/api\/caja\/open/);
+    assert.match(page, /setTourStep|pos-ticket/);
     assert.match(page, /\/api\/caja\/move/);
     assert.match(page, /\/api\/caja\/close/);
     assert.match(page, /Efectivo esperado/);
@@ -245,6 +249,7 @@ describe("shell UI contracts", () => {
     assert.match(page, /getPosCatalog\(/);
     assert.match(page, /<h1>Mostrador<\/h1>/);
     assert.match(page, /Abrí la caja primero/);
+    assert.match(page, /data-tour=["']pos-caja-closed["']/);
     assert.match(page, /data-pos-caja/);
     assert.match(page, /data-tour=["']pos-ticket["']/);
     assert.match(page, /data-tour=["']pos-checkout["']/);

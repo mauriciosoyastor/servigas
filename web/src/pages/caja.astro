@@ -115,7 +115,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 			</div>
 			<div class="sg-caja-heading-actions">
 				{isOpen ? (
-					<a class="sg-caja-link sg-focus-ring" href="/pos">Ir al mostrador</a>
+					<a class="sg-caja-link sg-focus-ring" href="/pos" data-tour="caja-tour">Ir al mostrador</a>
 				) : null}
 				<a class="sg-caja-link sg-focus-ring" href="/caja/historial">
 					Historial{hub.history.length ? ` (${hub.history.length})` : ''}
@@ -172,7 +172,9 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						<span>Nota (opcional)</span>
 						<input class="sg-focus-ring" type="text" name="note" maxlength="120" placeholder="Observaciones…" />
 					</label>
-					<button class="sg-caja-primary sg-focus-ring" type="submit">Abrir caja</button>
+					<button class="sg-caja-primary sg-focus-ring" type="submit" data-tour="caja-tour">
+						Abrir caja
+					</button>
 				</form>
 			</section>
 		) : (
@@ -381,6 +383,11 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 </ShellLayout>
 
 <script>
+	import {
+		TOUR_DONE_KEY,
+		setTourStep,
+	} from '../lib/shell/onboarding-tour.ts';
+
 	const root = document.querySelector<HTMLElement>('[data-caja-root]');
 	const flash = document.querySelector<HTMLElement>('[data-caja-flash]');
 
@@ -416,6 +423,12 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 				note: String(data.get('note') || ''),
 				shift: String(data.get('shift') || ''),
 			});
+			// Si el onboarding está activo, saltar al ticket del Mostrador (evita bucle paso 5→4).
+			if (localStorage.getItem(TOUR_DONE_KEY) !== '1') {
+				setTourStep(localStorage, 'pos-ticket');
+				window.location.href = '/pos';
+				return;
+			}
 			window.location.href = '/caja';
 		} catch (err) {
 			showFlash(err instanceof Error ? err.message : 'Error al abrir', true);
