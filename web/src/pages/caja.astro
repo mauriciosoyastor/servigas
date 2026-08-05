@@ -332,7 +332,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 					</form>
 				</section>
 
-				<section class="sg-caja-feed sg-glass" aria-label="Movimientos">
+				<section id="movimientos" class="sg-caja-feed sg-glass" aria-label="Movimientos">
 					<header>
 						<strong>Movimientos</strong>
 						<span>{feed.length}</span>
@@ -341,7 +341,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						{filterLinks.map((item) => (
 							<a
 								class:list={['sg-caja-filter', activeFilter === item.key && 'is-active']}
-								href={`/caja?filter=${item.key}`}
+								href={`/caja?filter=${item.key}#movimientos`}
 							>
 								{item.label}
 							</a>
@@ -738,6 +738,9 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 	.sg-caja-feed header span {
 		color: var(--sg-text-muted-dark);
 		font-size: 0.78rem;
+	}
+	.sg-caja-feed {
+		scroll-margin-top: 1rem;
 	}
 	.sg-caja-filters {
 		display: flex;
