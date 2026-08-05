@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   bufferValue,
   emptyNumpad,
+  formatNumpadBuffer,
   pressBackspace,
   pressDigit,
   selectLine,
@@ -18,6 +19,7 @@ import {
   setCartQty,
   setOrderDiscount,
 } from "../src/lib/pos/cart.ts";
+import { formatArs } from "../src/lib/money/ars.ts";
 
 describe("pos numpad", () => {
   it("starts empty in qty mode", () => {
@@ -41,6 +43,31 @@ describe("pos numpad", () => {
     pad = setNumpadMode(pad, "price");
     assert.equal(pad.mode, "price");
     assert.equal(pad.buffer, "");
+  });
+
+  it("price mode uses cents-from-the-right and ignores decimal", () => {
+    let pad = setNumpadMode(emptyNumpad(), "price");
+    pad = pressDigit(pad, "1");
+    pad = pressDigit(pad, "2");
+    pad = pressDigit(pad, "3");
+    pad = pressDigit(pad, "4");
+    assert.equal(pad.buffer, "1234");
+    assert.equal(bufferValue(pad), 12.34);
+    assert.equal(formatNumpadBuffer(pad), formatArs(12.34));
+    pad = pressDigit(pad, ".");
+    assert.equal(pad.buffer, "1234");
+    assert.equal(bufferValue(pad), 12.34);
+    pad = pressDigit(pad, "5");
+    assert.equal(pad.buffer, "12345");
+    assert.equal(bufferValue(pad), 123.45);
+    pad = pressBackspace(pad);
+    assert.equal(pad.buffer, "1234");
+    assert.equal(bufferValue(pad), 12.34);
+  });
+
+  it("price buffer empty shows dash for display helper", () => {
+    const pad = setNumpadMode(emptyNumpad(), "price");
+    assert.equal(formatNumpadBuffer(pad), "—");
   });
 
   it("selects a line and clears buffer", () => {
