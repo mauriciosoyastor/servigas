@@ -131,7 +131,14 @@ const today = new Date().toISOString().slice(0, 10);
 				</label>
 				<label>
 					<span>Importe</span>
-					<input class="sg-focus-ring" type="number" name="amount" min="0" step="0.01" />
+					<input
+						class="sg-focus-ring"
+						type="text"
+						inputmode="decimal"
+						name="amount"
+						placeholder="$ 0,00"
+						data-money-input
+					/>
 				</label>
 			</div>
 		</section>
@@ -281,7 +288,12 @@ const today = new Date().toISOString().slice(0, 10);
 			observation: String(fd.get('observation') || ''),
 			work_done: String(fd.get('work_done') || ''),
 			materials: String(fd.get('materials') || ''),
-			amount: fd.get('amount') === '' || fd.get('amount') == null ? undefined : Number(fd.get('amount')),
+			amount:
+				fd.get('amount') === '' || fd.get('amount') == null
+					? undefined
+					: window.sgMoney?.readMoneyInput(
+							form.querySelector('[data-money-input][name="amount"]')
+					  ) ?? Number(fd.get('amount')),
 		};
 
 		const file = photoInput?.files?.[0];

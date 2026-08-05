@@ -1,5 +1,6 @@
 ---
 import { PAYMENT_METHOD_OPTIONS } from '../lib/shell/payment-registers.ts';
+import { formatArs } from '../lib/money/ars.ts';
 
 interface Props {
 	listKey: string;
@@ -28,13 +29,7 @@ const amountHint =
 		? ''
 		: String(defaultAmount);
 
-const collectedLabel = Number(amountCollected) > 0
-	? Number(amountCollected).toLocaleString('es-AR', {
-			style: 'currency',
-			currency: 'ARS',
-			minimumFractionDigits: 2,
-		})
-	: '';
+const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountCollected)) : '';
 ---
 
 <section
@@ -54,11 +49,7 @@ const collectedLabel = Number(amountCollected) > 0
 					{' '}
 					· Pendiente:{' '}
 					<strong>
-						{remaining.toLocaleString('es-AR', {
-							style: 'currency',
-							currency: 'ARS',
-							minimumFractionDigits: 2,
-						})}
+						{formatArs(remaining)}
 					</strong>
 				</>
 			) : null}
@@ -72,10 +63,9 @@ const collectedLabel = Number(amountCollected) > 0
 				<span>Monto</span>
 				<input
 					class="sg-focus-ring"
-					type="number"
-					min="0"
-					step="0.01"
+					type="text"
 					inputmode="decimal"
+					data-money-input
 					data-wo-cash-amount
 					value={amountHint}
 					placeholder="Importe cobrado"
@@ -141,7 +131,7 @@ const collectedLabel = Number(amountCollected) > 0
 				status.textContent = 'Elegí un medio de pago.';
 				return;
 			}
-			const amount = Number(amountInput.value.trim());
+			const amount = window.sgMoney?.readMoneyInput(amountInput) ?? Number(amountInput.value.trim());
 			if (!Number.isFinite(amount) || amount <= 0) {
 				status.hidden = false;
 				status.dataset.state = 'error';
@@ -152,9 +142,10 @@ const collectedLabel = Number(amountCollected) > 0
 				methodInput?.parentElement?.querySelector('span')?.textContent ||
 				paymentMethod;
 			const orderLabel = root.dataset.orderName || 'OT';
+			const amountLabel = window.sgMoney?.formatArs(amount) || String(amount);
 			if (
 				!window.confirm(
-					`¿Registrar cobro de ${orderLabel} por ${amount} (${methodLabel}) en la caja abierta?`
+					`¿Registrar cobro de ${orderLabel} por ${amountLabel} (${methodLabel}) en la caja abierta?`
 				)
 			) {
 				return;

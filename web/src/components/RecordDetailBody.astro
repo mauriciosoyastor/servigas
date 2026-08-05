@@ -1,5 +1,6 @@
 ---
 import type { RecordDetailPayload } from '../lib/bff/types.ts';
+import { formatArs, isMoneyFieldKey } from '../lib/money/ars.ts';
 import { invoiceDestLabel } from '../lib/shell/invoice-dest.ts';
 import { labelOdooSelection } from '../lib/shell/odoo-selection-labels.ts';
 
@@ -64,6 +65,10 @@ function displayValue(
 	if (typeof value === 'boolean') return value ? 'Sí' : 'No';
 	if (value === null || value === '') return '—';
 	if (key === 'sg_invoice_dest') return invoiceDestLabel(value);
+	if (isMoneyFieldKey(key) && (typeof value === 'number' || (typeof value === 'string' && value !== ''))) {
+		const n = Number(value);
+		if (Number.isFinite(n)) return formatArs(n);
+	}
 	const labeled = labelOdooSelection(key, value);
 	return String(labeled);
 }
@@ -196,6 +201,12 @@ function displayValue(
 															name={editDef.key}
 															value={editDef.value}
 															autocomplete="off"
+															inputmode={
+																isMoneyFieldKey(editDef.key) ? 'decimal' : undefined
+															}
+															data-money-input={
+																isMoneyFieldKey(editDef.key) ? true : undefined
+															}
 														/>
 													)}
 												</label>
@@ -233,6 +244,12 @@ function displayValue(
 													name={editDef.key}
 													value={editDef.value}
 													autocomplete="off"
+													inputmode={
+														isMoneyFieldKey(editDef.key) ? 'decimal' : undefined
+													}
+													data-money-input={
+														isMoneyFieldKey(editDef.key) ? true : undefined
+													}
 												/>
 											)}
 										</label>
@@ -287,7 +304,10 @@ function displayValue(
 															: '';
 													const text = empty
 														? '—'
-														: String(labelOdooSelection(column.key, raw));
+														: isMoneyFieldKey(column.key) &&
+															  Number.isFinite(Number(raw))
+															? formatArs(Number(raw))
+															: String(labelOdooSelection(column.key, raw));
 													return (
 														<td data-label={column.label}>
 															{column.key === 'product_id' && image ? (
@@ -426,7 +446,10 @@ function displayValue(
 			refreshCuitWarn();
 		}
 
-		openBtn?.addEventListener('click', () => setEditing(true));
+		openBtn?.addEventListener('click', () => {
+			setEditing(true);
+			window.sgMoney?.bindMoneyInputs(ficha || document);
+		});
 		cancelBtn?.addEventListener('click', () => setEditing(false));
 
 		if (form instanceof HTMLFormElement && enableCuitWarn) {
@@ -446,7 +469,16 @@ function displayValue(
 				const values = {};
 				for (const [key, value] of data.entries()) {
 					if (key === 'id') continue;
-					values[key] = String(value);
+					const input = form.querySelector(`[name="${CSS.escape(key)}"]`);
+					if (
+						input instanceof HTMLInputElement &&
+						input.hasAttribute('data-money-input')
+					) {
+						const amount = window.sgMoney?.readMoneyInput(input);
+						values[key] = amount == null ? '' : String(amount);
+					} else {
+						values[key] = String(value);
+					}
 				}
 
 				try {
