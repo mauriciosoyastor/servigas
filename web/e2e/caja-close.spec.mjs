@@ -10,6 +10,7 @@ import {
   dismissOnboarding,
 } from "./helpers/auth.mjs";
 import { ensureCashOpen, getCashHub } from "./helpers/api.mjs";
+import { fillMoneyInput } from "./helpers/money.mjs";
 
 test("caja: click Cerrar caja cierra la sesión", async ({ page }) => {
   await loginViaUi(page);
@@ -26,9 +27,9 @@ test("caja: click Cerrar caja cierra la sesión", async ({ page }) => {
   await expect(closeForm).toBeVisible({ timeout: 15_000 });
 
   // Sin diferencia: contado = esperado; depósito 0; fondo = contado
-  await closeForm.locator("[data-caja-counted]").fill(String(expected));
-  await closeForm.locator("[data-caja-deposit]").fill("0");
-  await closeForm.locator("[data-caja-float]").fill(String(expected));
+  await fillMoneyInput(closeForm.locator("[data-caja-counted]"), expected);
+  await fillMoneyInput(closeForm.locator("[data-caja-deposit]"), 0);
+  await fillMoneyInput(closeForm.locator("[data-caja-float]"), expected);
 
   page.once("dialog", (dialog) => dialog.accept());
 

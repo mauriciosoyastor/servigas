@@ -6,6 +6,7 @@ import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 import type { CashHubPayload } from '../lib/bff/types.ts';
 import { CASH_MOTIVES_IN, CASH_MOTIVES_OUT } from '../lib/caja/cash-motives.ts';
 import { CASH_SHIFTS, filterCashFeed, type CashFeedFilter } from '../lib/caja/cash-ops.ts';
+import { formatArs } from '../lib/money/ars.ts';
 
 let userName = '';
 let hub: CashHubPayload = {
@@ -49,12 +50,7 @@ const outMotives = hub.capabilities.canOwnerWithdraw
 	: CASH_MOTIVES_OUT.filter((m) => m.code !== 'retiro_dueno');
 
 function money(value: number | null | undefined) {
-	return (Number(value) || 0).toLocaleString('es-AR', {
-		style: 'currency',
-		currency: 'ARS',
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
+	return formatArs(Number(value) || 0);
 }
 
 function kindLabel(kind: string) {
@@ -150,12 +146,12 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						<span>Monto inicial</span>
 						<input
 							class="sg-focus-ring"
-							type="number"
+							type="text"
+							inputmode="decimal"
 							name="openingBalance"
-							min="0"
-							step="0.01"
 							required
-							placeholder="0,00"
+							placeholder="$ 0,00"
+							data-money-input
 							value={hub.history[0]?.leaveFloat ?? ''}
 						/>
 					</label>
@@ -233,7 +229,15 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						<strong>Ingreso</strong>
 						<label>
 							<span>Monto</span>
-							<input class="sg-focus-ring" type="number" name="amount" min="0.01" step="0.01" required />
+							<input
+								class="sg-focus-ring"
+								type="text"
+								inputmode="decimal"
+								name="amount"
+								required
+								placeholder="$ 0,00"
+								data-money-input
+							/>
 						</label>
 						<label>
 							<span>Motivo</span>
@@ -256,7 +260,16 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						<strong>Egreso</strong>
 						<label>
 							<span>Monto</span>
-							<input class="sg-focus-ring" type="number" name="amount" min="0.01" step="0.01" required data-caja-out-amount />
+							<input
+								class="sg-focus-ring"
+								type="text"
+								inputmode="decimal"
+								name="amount"
+								required
+								placeholder="$ 0,00"
+								data-money-input
+								data-caja-out-amount
+							/>
 						</label>
 						<label>
 							<span>Motivo</span>
@@ -284,12 +297,12 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 							<span>Efectivo contado</span>
 							<input
 								class="sg-focus-ring"
-								type="number"
+								type="text"
+								inputmode="decimal"
 								name="countedAmount"
-								min="0"
-								step="0.01"
 								required
-								placeholder="0,00"
+								placeholder="$ 0,00"
+								data-money-input
 								data-caja-counted
 							/>
 						</label>
@@ -297,24 +310,26 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 							<span>Transferencia / depósito al banco</span>
 							<input
 								class="sg-focus-ring"
-								type="number"
+								type="text"
+								inputmode="decimal"
 								name="bankDeposit"
-								min="0"
-								step="0.01"
-								value={hub.suggestedBankWithdraw || 0}
+								placeholder="$ 0,00"
+								data-money-input
 								data-caja-deposit
+								value={hub.suggestedBankWithdraw || 0}
 							/>
 						</label>
 						<label>
 							<span>Fondo a dejar</span>
 							<input
 								class="sg-focus-ring"
-								type="number"
+								type="text"
+								inputmode="decimal"
 								name="leaveFloat"
-								min="0"
-								step="0.01"
-								value={session?.openingBalance ?? 0}
+								placeholder="$ 0,00"
+								data-money-input
 								data-caja-float
+								value={session?.openingBalance ?? 0}
 							/>
 						</label>
 						<label data-caja-diff-note-wrap hidden>
@@ -413,13 +428,21 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 		return payload;
 	}
 
+	function moneyValue(input: HTMLInputElement | null | undefined): number {
+		if (!input) return NaN;
+		const fromApi = window.sgMoney?.readMoneyInput(input);
+		if (fromApi != null) return fromApi;
+		return Number(input.value);
+	}
+
 	document.querySelector<HTMLFormElement>('[data-caja-open]')?.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const form = event.currentTarget as HTMLFormElement;
 		const data = new FormData(form);
+		const openingInput = form.querySelector<HTMLInputElement>('[data-money-input][name="openingBalance"]');
 		try {
 			await postJson('/api/caja/open', {
-				openingBalance: Number(data.get('openingBalance')),
+				openingBalance: moneyValue(openingInput),
 				note: String(data.get('note') || ''),
 				shift: String(data.get('shift') || ''),
 			});
@@ -455,10 +478,11 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
 			const data = new FormData(form);
+			const amountInput = form.querySelector<HTMLInputElement>('[data-money-input][name="amount"]');
 			try {
 				await postJson('/api/caja/move', {
 					kind: form.dataset.kind,
-					amount: Number(data.get('amount')),
+					amount: moneyValue(amountInput),
 					motiveCode: String(data.get('motiveCode') || ''),
 					note: String(data.get('note') || ''),
 				});
@@ -479,7 +503,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 
 	function syncCloseDiff() {
 		if (!countedInput || !diffWrap || !diffNote) return;
-		const counted = Number(countedInput.value || 0);
+		const counted = moneyValue(countedInput) || 0;
 		const needsNote = Math.abs(counted - expected) > 0.01;
 		diffWrap.hidden = !needsNote;
 		diffNote.required = needsNote;
@@ -490,17 +514,18 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 	closeForm?.addEventListener('submit', async (event) => {
 		event.preventDefault();
 		const data = new FormData(closeForm);
-		const counted = Number(data.get('countedAmount'));
+		const counted = moneyValue(countedInput);
 		const expectedText =
 			root?.querySelector('[data-caja-expected-label]')?.textContent || '';
-		if (!window.confirm(`¿Cerrar caja?\nContado: ${counted}\nEsperado: ${expectedText}`)) {
+		const countedLabel = window.sgMoney?.formatArs(counted) || String(counted);
+		if (!window.confirm(`¿Cerrar caja?\nContado: ${countedLabel}\nEsperado: ${expectedText}`)) {
 			return;
 		}
 		try {
 			await postJson('/api/caja/close', {
 				countedAmount: counted,
-				bankDeposit: Number(data.get('bankDeposit') || 0),
-				leaveFloat: Number(data.get('leaveFloat') || 0),
+				bankDeposit: moneyValue(depositInput) || 0,
+				leaveFloat: moneyValue(floatInput) || 0,
 				differenceNote: String(data.get('differenceNote') || ''),
 			});
 			window.location.href = '/caja';
@@ -516,7 +541,11 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 		const amountInput = outForm?.querySelector<HTMLInputElement>('[data-caja-out-amount]');
 		const motive = outForm?.querySelector<HTMLSelectElement>('[data-caja-motive]');
 		if (!outForm || !amountInput || !motive) return;
-		amountInput.value = String(amount);
+		if (window.sgMoney?.setMoneyInput) {
+			window.sgMoney.setMoneyInput(amountInput, amount);
+		} else {
+			amountInput.value = String(amount);
+		}
 		motive.value = 'retiro_banco';
 		syncMotiveNote(outForm);
 		amountInput.focus();

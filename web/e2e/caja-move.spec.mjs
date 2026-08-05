@@ -9,6 +9,7 @@ import {
   dismissOnboarding,
 } from "./helpers/auth.mjs";
 import { getCashHub } from "./helpers/api.mjs";
+import { fillMoneyInput } from "./helpers/money.mjs";
 
 test("caja: click Abrir (si cerrada) + Ingreso refuerzo", async ({ page }) => {
   await loginViaUi(page);
@@ -22,7 +23,7 @@ test("caja: click Abrir (si cerrada) + Ingreso refuerzo", async ({ page }) => {
   const moveIn = page.locator('[data-caja-move][data-kind="in"]');
 
   if (await openForm.isVisible().catch(() => false)) {
-    await openForm.locator('input[name="openingBalance"]').fill("1000");
+    await fillMoneyInput(openForm.locator('input[name="openingBalance"]'), 1000);
     await openForm.locator('select[name="shift"]').selectOption("tarde");
     await openForm.locator('input[name="note"]').fill("e2e-caja-open");
 
@@ -44,7 +45,7 @@ test("caja: click Abrir (si cerrada) + Ingreso refuerzo", async ({ page }) => {
   const before = await getCashHub(request);
   const amount = 50;
 
-  await moveIn.locator('input[name="amount"]').fill(String(amount));
+  await fillMoneyInput(moveIn.locator('input[name="amount"]'), amount);
   await moveIn.locator("[data-caja-motive]").selectOption("refuerzo");
 
   const moveResPromise = page.waitForResponse(

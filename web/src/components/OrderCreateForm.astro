@@ -241,7 +241,15 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 				</label>
 				<label>
 					<span>Precio</span>
-					<input class="sg-focus-ring" type="number" min="0" step="any" value="" placeholder="Lista" data-draft-price />
+					<input
+						class="sg-focus-ring"
+						type="text"
+						inputmode="decimal"
+						value=""
+						placeholder="Lista"
+						data-money-input
+						data-draft-price
+					/>
 				</label>
 				<label>
 					<span>% Desc.</span>
@@ -426,7 +434,13 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 			pick.textContent = 'Elegir producto';
 			pick.addEventListener('click', () => {
 				if (draftQty instanceof HTMLInputElement) draftQty.value = String(row.qty);
-				if (draftPrice instanceof HTMLInputElement) draftPrice.value = String(row.price);
+				if (draftPrice instanceof HTMLInputElement) {
+					if (window.sgMoney?.setMoneyInput) {
+						window.sgMoney.setMoneyInput(draftPrice, Number(row.price));
+					} else {
+						draftPrice.value = String(row.price);
+					}
+				}
 				const productPicker = root?.querySelector('[data-picker-kind="product"]');
 				const q = productPicker?.querySelector('[data-picker-query]');
 				if (q instanceof HTMLInputElement) {
@@ -726,7 +740,11 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 					draftListPrice != null &&
 					!draftPrice.value
 				) {
-					draftPrice.value = String(draftListPrice);
+					if (window.sgMoney?.setMoneyInput) {
+						window.sgMoney.setMoneyInput(draftPrice, draftListPrice);
+					} else {
+						draftPrice.value = String(draftListPrice);
+					}
 				}
 			}
 		};
@@ -822,7 +840,10 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 		/** @type {{ productId: number, label: string, qty: number, price?: number, discount?: number }} */
 		const line = { productId, label: draftLabel, qty };
 		if (priceRaw !== '') {
-			const price = Number(priceRaw);
+			const price =
+				(draftPrice instanceof HTMLInputElement &&
+					window.sgMoney?.readMoneyInput(draftPrice)) ??
+				Number(priceRaw);
 			if (!Number.isFinite(price) || price < 0) {
 				if (status instanceof HTMLElement) {
 					status.hidden = false;
@@ -847,7 +868,13 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 			sel.textContent = '';
 		}
 		if (draftQty instanceof HTMLInputElement) draftQty.value = '1';
-		if (draftPrice instanceof HTMLInputElement) draftPrice.value = '';
+		if (draftPrice instanceof HTMLInputElement) {
+			if (window.sgMoney?.setMoneyInput) {
+				window.sgMoney.setMoneyInput(draftPrice, null);
+			} else {
+				draftPrice.value = '';
+			}
+		}
 		if (draftDiscount instanceof HTMLInputElement) draftDiscount.value = '0';
 		if (status instanceof HTMLElement) status.hidden = true;
 	});

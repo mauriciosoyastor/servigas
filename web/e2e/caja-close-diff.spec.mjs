@@ -9,6 +9,7 @@ import {
   dismissOnboarding,
 } from "./helpers/auth.mjs";
 import { ensureCashOpen, getCashHub } from "./helpers/api.mjs";
+import { fillMoneyInput } from "./helpers/money.mjs";
 
 test("caja: click Cerrar con diferencia + nota", async ({ page }) => {
   await loginViaUi(page);
@@ -25,12 +26,10 @@ test("caja: click Cerrar con diferencia + nota", async ({ page }) => {
   const closeForm = page.locator("[data-caja-close]");
   await expect(closeForm).toBeVisible({ timeout: 15_000 });
 
-  await closeForm.locator("[data-caja-counted]").fill(String(counted));
-  await closeForm.locator("[data-caja-deposit]").fill("0");
-  await closeForm.locator("[data-caja-float]").fill(String(counted));
+  await fillMoneyInput(closeForm.locator("[data-caja-counted]"), counted);
+  await fillMoneyInput(closeForm.locator("[data-caja-deposit]"), 0);
+  await fillMoneyInput(closeForm.locator("[data-caja-float]"), counted);
 
-  // Disparar sync de nota requerida
-  await closeForm.locator("[data-caja-counted]").dispatchEvent("input");
   await expect(closeForm.locator("[data-caja-diff-note-wrap]")).toBeVisible();
   await closeForm
     .locator("[data-caja-diff-note]")

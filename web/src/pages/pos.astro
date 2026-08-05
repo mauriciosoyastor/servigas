@@ -5,6 +5,7 @@ import { BffError } from '../lib/bff/errors.ts';
 import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 import type { PosCatalogPayload } from '../lib/bff/types.ts';
+import { formatArs } from '../lib/money/ars.ts';
 
 let userName = '';
 let catalog: PosCatalogPayload | null = null;
@@ -122,12 +123,7 @@ try {
 												Stock {product.qty_available.toLocaleString('es-AR')}
 											</span>
 											<span class="sg-pos-product-price">
-												{product.list_price.toLocaleString('es-AR', {
-													style: 'currency',
-													currency: 'ARS',
-													minimumFractionDigits: 2,
-													maximumFractionDigits: 2,
-												})}
+												{formatArs(product.list_price)}
 											</span>
 										</button>
 										{tmplId > 0 ? (
@@ -365,7 +361,8 @@ try {
 		const orderDiscValueEl = root.querySelector('[data-pos-order-disc-value]');
 
 		const money = (value) =>
-			value.toLocaleString('es-AR', {
+			window.sgMoney?.formatArs(Number(value) || 0) ||
+			Number(value || 0).toLocaleString('es-AR', {
 				style: 'currency',
 				currency: 'ARS',
 				minimumFractionDigits: 2,

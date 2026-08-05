@@ -38,10 +38,9 @@ const residualHint =
 		<span>Monto ({directionLabel})</span>
 		<input
 			class="sg-focus-ring"
-			type="number"
-			min="0"
-			step="0.01"
+			type="text"
 			inputmode="decimal"
+			data-money-input
 			data-pay-amount
 			value={residualHint}
 			placeholder="Saldo completo"
@@ -90,10 +89,10 @@ const residualHint =
 	) {
 		btn.addEventListener('click', async () => {
 			const direction = btn.dataset.direction || 'pago';
-			const methodInput = root?.querySelector<HTMLInputElement>(
+			const methodInput = root?.querySelector(
 				'[data-pay-method]:checked'
 			);
-			const paymentMethod = methodInput?.value || '';
+			const paymentMethod = methodInput instanceof HTMLInputElement ? methodInput.value : '';
 			if (!paymentMethod) {
 				status.hidden = false;
 				status.textContent = 'Elegí un medio de pago.';
@@ -101,9 +100,10 @@ const residualHint =
 				return;
 			}
 			const raw = amountInput.value.trim();
-			const values: Record<string, unknown> = { paymentMethod };
+			const values = { paymentMethod };
+			let amountLabel = 'saldo completo';
 			if (raw !== '') {
-				const amount = Number(raw);
+				const amount = window.sgMoney?.readMoneyInput(amountInput) ?? Number(raw);
 				if (!Number.isFinite(amount) || amount <= 0) {
 					status.hidden = false;
 					status.textContent = 'Ingresá un monto válido mayor a 0.';
@@ -111,6 +111,7 @@ const residualHint =
 					return;
 				}
 				values.amount = amount;
+				amountLabel = window.sgMoney?.formatArs(amount) || String(amount);
 			}
 			const methodLabel =
 				methodInput?.parentElement?.querySelector('span')?.textContent ||
@@ -118,7 +119,7 @@ const residualHint =
 			if (
 				!window.confirm(
 					raw
-						? `¿Registrar ${direction} por ${raw} (${methodLabel})?`
+						? `¿Registrar ${direction} por ${amountLabel} (${methodLabel})?`
 						: `¿Registrar ${direction} por el saldo completo (${methodLabel})?`
 				)
 			) {

@@ -1,5 +1,6 @@
 ---
 import type { RecordListColumn, RecordListRow } from '../lib/bff/types.ts';
+import { formatArs, isMoneyFieldKey } from '../lib/money/ars.ts';
 import { invoiceDestBadge } from '../lib/shell/invoice-dest.ts';
 import { invoicePdfPath } from '../lib/shell/invoice-pdf.ts';
 import { labelOdooSelection } from '../lib/shell/odoo-selection-labels.ts';
@@ -38,6 +39,10 @@ function formatCell(key: string, value: string | number | boolean | null): strin
 	if (key === 'sg_invoice_dest') return invoiceDestBadge(value);
 	if ((key === 'qty_available' || key === 'id' || key === 'product_count') && typeof value === 'number') {
 		return value.toLocaleString('es-AR');
+	}
+	if (isMoneyFieldKey(key) && (typeof value === 'number' || typeof value === 'string')) {
+		const n = Number(value);
+		if (Number.isFinite(n)) return formatArs(n);
 	}
 	return String(labelOdooSelection(key, value));
 }

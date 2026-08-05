@@ -5,6 +5,7 @@ import { getBackend } from '../../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts';
 import type { CashSessionInfo } from '../../lib/bff/types.ts';
 import { CASH_SHIFTS } from '../../lib/caja/cash-ops.ts';
+import { formatArs } from '../../lib/money/ars.ts';
 
 let userName = '';
 let history: CashSessionInfo[] = [];
@@ -28,12 +29,7 @@ try {
 }
 
 function money(value: number | null | undefined) {
-	return (Number(value) || 0).toLocaleString('es-AR', {
-		style: 'currency',
-		currency: 'ARS',
-		minimumFractionDigits: 2,
-		maximumFractionDigits: 2,
-	});
+	return formatArs(Number(value) || 0);
 }
 
 function shiftLabel(shift: string | null | undefined) {

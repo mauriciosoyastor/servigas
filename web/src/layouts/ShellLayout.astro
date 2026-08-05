@@ -35,6 +35,11 @@ const {
 </BaseLayout>
 
 <script>
+	import { bindMoneyInputs, installMoneyGlobals } from '../lib/money/money-input.ts';
+
+	installMoneyGlobals();
+	bindMoneyInputs();
+
 	document.querySelector('[data-logout]')?.addEventListener('click', async () => {
 		await fetch('/api/auth/logout', { method: 'POST' });
 		window.location.assign('/login');
