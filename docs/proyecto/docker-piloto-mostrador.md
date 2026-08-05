@@ -3,6 +3,8 @@
 Stack reproducible: **Postgres + Odoo 19 + Astro BFF** en contenedores.
 Pensado para instalar en la PC del mostrador sin depender del Postgres/Python de Windows.
 
+**Checklist instalación en el local:** [checklist-pc-mostrador-docker.md](./checklist-pc-mostrador-docker.md)
+
 ## Analogía
 
 Es una **mudanza en tres cajas**:
