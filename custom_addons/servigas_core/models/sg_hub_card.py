@@ -359,6 +359,11 @@ class SgHubCard(models.Model):
                 "hint": "Historial mostrador",
                 "enter_label": "Ver ventas de caja →",
             },
+            "servigas_core.hub_card_sales_summary_pos_today": {
+                "label": "Ventas de mostrador hoy",
+                "hint": "Pedidos de mostrador del día",
+                "enter_label": "Ver ventas de caja →",
+            },
             # Odoo 19: sale_order_count is non-stored; search/metric need sale_order_ids.
             "servigas_core.hub_card_sales_customers_with_orders": {
                 "domain": "[('sale_order_ids', '!=', False)]",
