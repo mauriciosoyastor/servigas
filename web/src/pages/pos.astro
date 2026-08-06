@@ -460,6 +460,8 @@ try {
 				customerResults.replaceChildren();
 			}
 			if (customerClear instanceof HTMLElement) customerClear.hidden = false;
+			const customerHost = root?.querySelector('[data-pos-customer]');
+			window.sgClearPartnerInline?.(customerHost);
 		};
 
 		let customerTimer = 0;

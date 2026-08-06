@@ -14,13 +14,14 @@ const { label = "Contacto", namePrefix = "partnerNew" } = Astro.props;
 <div class="sg-partner-inline" data-partner-inline>
 	<p class="sg-partner-inline-hint">O cargá uno nuevo</p>
 	<div class="sg-partner-inline-grid">
-		<label>
+		<label class="sg-partner-inline-name">
 			<span>{label} (nombre) *</span>
 			<input
 				class="sg-focus-ring"
 				type="text"
 				name={`${namePrefix}Name`}
 				autocomplete="name"
+				placeholder={`Nombre del ${label.toLowerCase()}`}
 				data-partner-new-name
 			/>
 		</label>
@@ -31,6 +32,7 @@ const { label = "Contacto", namePrefix = "partnerNew" } = Astro.props;
 				type="tel"
 				name={`${namePrefix}Phone`}
 				autocomplete="tel"
+				placeholder="351 555 1234"
 				data-partner-new-phone
 			/>
 		</label>
@@ -41,6 +43,7 @@ const { label = "Contacto", namePrefix = "partnerNew" } = Astro.props;
 				type="email"
 				name={`${namePrefix}Email`}
 				autocomplete="email"
+				placeholder="correo@ejemplo.com"
 				data-partner-new-email
 			/>
 		</label>
@@ -52,32 +55,184 @@ const { label = "Contacto", namePrefix = "partnerNew" } = Astro.props;
 				name={`${namePrefix}Vat`}
 				inputmode="numeric"
 				autocomplete="off"
+				placeholder="20-12345678-6"
 				data-partner-new-vat
 			/>
 		</label>
 	</div>
+	<p class="sg-partner-inline-mode" data-partner-inline-mode hidden>
+		Se creará un contacto nuevo al guardar.
+	</p>
 </div>
+
+<script>
+	function findPartnerHost(inline) {
+		return (
+			inline.closest('[data-order-picker][data-picker-kind="partner"]') ||
+			inline.closest('[data-pos-customer]') ||
+			inline.closest('[data-pos-invoice]')
+		);
+	}
+
+	function pickerParts(host) {
+		if (!host) return null;
+		return {
+			idInput:
+				host.querySelector('[data-picker-id]') ||
+				host.querySelector('[data-pos-customer-id]') ||
+				host.querySelector('[data-pos-invoice-partner]'),
+			queryInput:
+				host.querySelector('[data-picker-query]') ||
+				host.querySelector('[data-pos-customer-query]') ||
+				host.querySelector('[data-pos-invoice-q]'),
+			selectedEl:
+				host.querySelector('[data-picker-selected]') ||
+				host.querySelector('[data-pos-customer-selected]') ||
+				host.querySelector('[data-pos-invoice-selected]'),
+			warnEl:
+				host.querySelector('[data-partner-fiscal-warn]') ||
+				host.querySelector('[data-pos-customer-warn]'),
+			clearBtn: host.querySelector('[data-pos-customer-clear]'),
+		};
+	}
+
+	function clearInlineFields(inline) {
+		if (!(inline instanceof HTMLElement)) return;
+		for (const input of inline.querySelectorAll('input')) {
+			if (input instanceof HTMLInputElement) input.value = '';
+		}
+		inline.dataset.mode = '';
+		const mode = inline.querySelector('[data-partner-inline-mode]');
+		if (mode instanceof HTMLElement) mode.hidden = true;
+	}
+
+	function clearPicker(host) {
+		const parts = pickerParts(host);
+		if (!parts) return;
+		if (parts.idInput instanceof HTMLInputElement) parts.idInput.value = '';
+		if (parts.queryInput instanceof HTMLInputElement) parts.queryInput.value = '';
+		if (parts.selectedEl instanceof HTMLElement) {
+			parts.selectedEl.hidden = true;
+			parts.selectedEl.textContent = '';
+		}
+		if (parts.warnEl instanceof HTMLElement) {
+			parts.warnEl.hidden = true;
+			parts.warnEl.textContent = '';
+		}
+		if (parts.clearBtn instanceof HTMLButtonElement) {
+			parts.clearBtn.hidden = true;
+		}
+	}
+
+	function setInlineMode(inline, active) {
+		inline.dataset.mode = active ? 'new' : '';
+		const mode = inline.querySelector('[data-partner-inline-mode]');
+		if (mode instanceof HTMLElement) mode.hidden = !active;
+	}
+
+	/** Clear inline partner fields within a picker host (OrderCreateForm, POS, etc.). */
+	function sgClearPartnerInline(scope) {
+		if (!(scope instanceof Element)) return;
+		const inline =
+			scope.matches('[data-partner-inline]')
+				? scope
+				: scope.querySelector('[data-partner-inline]');
+		clearInlineFields(inline);
+	}
+
+	window.sgClearPartnerInline = sgClearPartnerInline;
+
+	function wirePartnerInline(inline) {
+		if (!(inline instanceof HTMLElement)) return;
+		const host = findPartnerHost(inline);
+		const nameInput = inline.querySelector('[data-partner-new-name]');
+		if (!(nameInput instanceof HTMLInputElement)) return;
+
+		const onInlineInput = () => {
+			const hasName = nameInput.value.trim().length > 0;
+			setInlineMode(inline, hasName);
+			if (hasName && host) clearPicker(host);
+		};
+
+		nameInput.addEventListener('input', onInlineInput);
+		for (const input of inline.querySelectorAll(
+			'[data-partner-new-phone], [data-partner-new-email], [data-partner-new-vat]'
+		)) {
+			input.addEventListener('input', onInlineInput);
+		}
+
+		host?.addEventListener('click', (event) => {
+			if (!(event.target instanceof Element)) return;
+			const picked = event.target.closest(
+				'[data-picker-results] button, [data-pos-customer-results] button, [data-pos-invoice-results] button'
+			);
+			if (picked) clearInlineFields(inline);
+		});
+	}
+
+	document.querySelectorAll('[data-partner-inline]').forEach(wirePartnerInline);
+</script>
 
 <style>
 	.sg-partner-inline {
 		margin-top: 0.75rem;
-		padding-top: 0.75rem;
-		border-top: 1px solid color-mix(in srgb, var(--sg-text) 12%, transparent);
+		padding: 0.85rem;
+		border: 1px solid color-mix(in srgb, var(--sg-text) 12%, transparent);
+		border-radius: 0.75rem;
+		background: rgba(0, 0, 0, 0.12);
+	}
+	.sg-partner-inline[data-mode='new'] {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 35%, transparent);
+		background: color-mix(in srgb, var(--sg-flame-yellow) 6%, rgba(0, 0, 0, 0.12));
 	}
 	.sg-partner-inline-hint {
-		margin: 0 0 0.5rem;
-		font-size: 0.875rem;
-		opacity: 0.85;
+		margin: 0 0 0.65rem;
+		font-size: 0.8125rem;
+		font-weight: 650;
+		color: var(--sg-text-on-dark);
+		opacity: 0.9;
 	}
 	.sg-partner-inline-grid {
 		display: grid;
 		gap: 0.65rem;
-		grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+		grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+	}
+	.sg-partner-inline-name {
+		grid-column: 1 / -1;
 	}
 	.sg-partner-inline-grid label {
 		display: flex;
 		flex-direction: column;
-		gap: 0.25rem;
-		font-size: 0.875rem;
+		gap: 0.3rem;
+		min-width: 0;
+	}
+	.sg-partner-inline-grid label > span {
+		font-size: 0.75rem;
+		font-weight: 600;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-partner-inline-grid input {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font: inherit;
+		caret-color: var(--sg-flame-yellow);
+	}
+	.sg-partner-inline-grid input::placeholder {
+		color: color-mix(in srgb, var(--sg-text-on-dark) 38%, transparent);
+	}
+	.sg-partner-inline-grid input:focus-visible {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 55%, var(--sg-glass-border));
+		background: rgba(0, 0, 0, 0.32);
+		outline: none;
+	}
+	.sg-partner-inline-mode {
+		margin: 0.55rem 0 0;
+		font-size: 0.75rem;
+		color: #9be7b0;
 	}
 </style>

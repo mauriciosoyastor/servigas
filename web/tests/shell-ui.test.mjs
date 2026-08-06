@@ -927,7 +927,7 @@ describe("shell UI contracts", () => {
     assert.doesNotMatch(orderForm, /max-width:\s*40rem/);
     assert.match(
       recordForm,
-      /\.sg-record-create-form\s*\{[^}]*repeat\(\s*auto-fit\s*,\s*minmax\(\s*min\(\s*100%\s*,\s*14rem\s*\)\s*,\s*1fr\s*\)\s*\)/s
+      /\.sg-record-create-section-grid\s*\{[^}]*repeat\(\s*auto-fit\s*,\s*minmax\(\s*min\(\s*100%\s*,\s*14rem\s*\)\s*,\s*1fr\s*\)\s*\)/s
     );
     assert.doesNotMatch(recordForm, /max-width:\s*36rem/);
     assert.match(billNew, /sg-create-page/);

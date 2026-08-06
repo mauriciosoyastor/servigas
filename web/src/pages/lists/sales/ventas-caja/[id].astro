@@ -129,6 +129,7 @@ const alreadyInvoiced = hasPosOrderPartner(accountMove);
 				results.hidden = true;
 				results.replaceChildren();
 			}
+			window.sgClearPartnerInline?.(root);
 		}
 
 		async function searchCustomers(q: string) {
