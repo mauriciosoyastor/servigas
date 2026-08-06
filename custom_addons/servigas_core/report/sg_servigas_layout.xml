@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+  <!--
+    Drop-in replacement for web.external_layout on Servigas customer-facing PDFs.
+    Honors address / information_block / layout_document_title like external_layout_standard,
+    but brands with Servigas mark instead of company.external_report_layout.
+  -->
+  <template id="report_servigas_layout">
+    <t t-if="not o" t-set="o" t-value="doc"/>
+    <t t-if="not company">
+      <t t-if="company_id">
+        <t t-set="company" t-value="company_id"/>
+      </t>
+      <t t-elif="o and 'company_id' in o and o.company_id.sudo()">
+        <t t-set="company" t-value="o.company_id.sudo()"/>
+      </t>
+      <t t-else="">
+        <t t-set="company" t-value="res_company"/>
+      </t>
+    </t>
+
+    <div class="page sg-report"
+         style="font-family: DejaVu Sans, sans-serif; color: #1a1a1a;">
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+
+      <div style="display:flex; align-items:center; gap:16px; margin-bottom:16px; border-bottom:2px solid #c45c26; padding-bottom:12px;">
+        <t t-set="sg_mark" t-value="env['report.servigas.brand'].get_mark_src()"/>
+        <img t-if="sg_mark"
+             t-att-src="sg_mark"
+             style="height:56px; width:auto;"
+             alt="Servigas"/>
+        <div style="flex:1;">
+          <div style="font-size:18px; font-weight:700; line-height:1.3;"
+               t-out="layout_document_title"/>
+        </div>
+      </div>
+
+      <t t-call="web.address_layout"/>
+
+      <div class="sg-report-body" style="font-size:12px;">
+        <t t-out="0"/>
+      </div>
+
+      <div style="margin-top:28px; font-size:11px; color:#888; border-top:1px solid #ddd; padding-top:8px;">
+        Servigas
+      </div>
+    </div>
+  </template>
+</odoo>
