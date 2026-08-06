@@ -550,3 +550,34 @@
 **Commits del spike (rama `feature/astro-bff-shell`):** `434c5b2` … `f30ffff` (Tasks 1–6).
 
 **Automatización:** smoke E2E con Odoo dev levantado (`web` + `ODOO_URL`); script CI `npm test` en `web/`; checklist manual Fase A reutilizable para Fase B (skill molde).
+
+---
+
+### 2026-08-05 — Layout PDF Servigas unificado (OT + cotización/pedido + OC + factura)
+
+**Área:** módulo Odoo (`servigas_core`) | reportes  
+**Motivo:** todos los PDFs que salen del taller/BFF (orden de trabajo, cotización/pedido de venta, orden de compra, factura) mostraban el layout nativo `web.external_layout` con el bloque "My Company" en vez de la marca Servigas; se unificó en un layout compartido para dar consistencia visual sin tocar los XMLIDs que usa el BFF.
+
+**Archivos:**
+- `custom_addons/servigas_core/report/sg_servigas_layout.xml` — layout compartido (header/footer Servigas, logo data-URI con degrade)
+- `custom_addons/servigas_core/models/report_servigas_brand.py` — helper de marca (logo/datos de empresa)
+- `custom_addons/servigas_core/report/sg_work_order_report.xml` — OT migrada al layout compartido
+- `custom_addons/servigas_core/report/sg_report_document_inherits.xml` — inherits que cambian `t-call` de `web.external_layout` a `servigas_core.report_servigas_layout` en `sale.report_saleorder_document`, `purchase.report_purchaseorder_document`, `purchase.report_purchasequotation_document` y `account.report_invoice_document`
+- `docs/proyecto/bitacora-cambios.md` *(este archivo)*
+
+**Cambios:**
+- Header/footer Servigas en los 4 tipos de documento; sin cambiar `report_name`/`report_file` (XMLIDs) que consume `web/src/lib/bff/*-share.ts`.
+- Upgrade `-u servigas_core` en `servigas_dev` sin errores de carga XML/QWeb (solo warnings de estilo `@class` → `hasclass()`, no bloqueantes).
+- Smoke vía `odoo-bin shell`: renderizado real de PDF (wkhtmltopdf) para OT, SO, PO y factura — los 4 con "Servigas" en el pie; sin bloque "My Company" salvo en el bloque nativo "Shipping address" de la OC (nombre del `res.company`, dato preexistente fuera de alcance de este cambio).
+- Regresión BFF: 40/40 tests verdes (`sale-order-share`, `purchase-order-share`, `invoice-pdf`, `workshop-order-share`) — confirma que los XMLIDs de reporte no cambiaron.
+
+**Verificación:**
+
+| Check | Resultado |
+|-------|-----------|
+| `-u servigas_core --stop-after-init` contra `servigas_dev` | **PASS** — sin traceback |
+| Render PDF real (`odoo-bin shell`) OT/SO/PO/Factura | **PASS** — 4/4, pie "Servigas" presente |
+| `node --test` BFF share/pdf (con `NODE_ENV=test`) | **PASS** — 40/40 |
+| Smoke visual "Ver PDF" en el shell (navegador, con sesión) | **Pendiente** — sin credenciales admin disponibles en esta sesión |
+
+**Automatización:** ninguna nueva; ver nota en `task-5-report.md` sobre exponer `--restart`/`addons_path` de worktree también en `ensure-odoo-dev.mjs` de esta rama (ya existe en `main`).
