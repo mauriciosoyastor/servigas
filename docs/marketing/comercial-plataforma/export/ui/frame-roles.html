@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Roles</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1920px; height: 1080px; overflow: hidden;
+      font-family: Montserrat, sans-serif;
+      background: #1A1A1A; color: #fff;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px;
+      padding: 56px;
+    }
+    .panel {
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 18px;
+      padding: 28px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    .badge {
+      align-self: flex-start;
+      font-size: 14px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: #FFB300;
+      background: rgba(245,124,0,0.15);
+      border: 1px solid rgba(245,124,0,0.35);
+      padding: 8px 14px; border-radius: 999px;
+    }
+    h2 { font-size: 32px; }
+    .fake-ui {
+      flex: 1;
+      background: linear-gradient(180deg, #2B2B2B, #222);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.08);
+      padding: 20px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .row {
+      height: 48px; border-radius: 10px;
+      background: rgba(255,255,255,0.06);
+      display: flex; align-items: center; padding: 0 16px;
+      color: rgba(255,255,255,0.75); font-size: 16px;
+    }
+    .row.accent {
+      background: linear-gradient(90deg, rgba(255,214,0,0.2), rgba(245,124,0,0.25));
+      border: 1px solid rgba(245,124,0,0.4);
+      color: #fff; font-weight: 600;
+    }
+    .hint { color: rgba(255,255,255,0.55); font-size: 16px; }
+  </style>
+</head>
+<body>
+  <section class="panel">
+    <span class="badge">Cajero</span>
+    <h2>Mostrador</h2>
+    <div class="fake-ui">
+      <div class="row">Buscar producto…</div>
+      <div class="row">Ticket · 3 ítems</div>
+      <div class="row accent">Cobrar</div>
+    </div>
+    <p class="hint">Ve solo caja y tickets</p>
+  </section>
+  <section class="panel">
+    <span class="badge">Depósito</span>
+    <h2>Inventario</h2>
+    <div class="fake-ui">
+      <div class="row">Productos · 8.7k SKUs</div>
+      <div class="row">Sin stock · 12</div>
+      <div class="row accent">Transferencias</div>
+    </div>
+    <p class="hint">Ve stock y movimientos</p>
+  </section>
+  <section class="panel">
+    <span class="badge">Admin</span>
+    <h2>Todo el panel</h2>
+    <div class="fake-ui">
+      <div class="row">Inventario · Ventas</div>
+      <div class="row">Compras · Contabilidad</div>
+      <div class="row accent">Vista completa</div>
+    </div>
+    <p class="hint">Interfaz hecha a su medida</p>
+  </section>
+</body>
+</html>

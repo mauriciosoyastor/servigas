@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Inicio</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --charcoal: #1A1A1A;
+      --charcoal-2: #2B2B2B;
+      --paper: #F7F5F2;
+      --flame: #F57C00;
+      --flame-deep: #E64A19;
+      --ember: #FFB300;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      width: 1920px; height: 1080px; overflow: hidden;
+      font-family: Montserrat, sans-serif;
+      background: linear-gradient(145deg, #141414 0%, #1A1A1A 45%, #242018 100%);
+      color: #fff;
+      display: grid;
+      grid-template-columns: 88px 1fr;
+    }
+    .rail {
+      background: rgba(255,255,255,0.04);
+      border-right: 1px solid rgba(255,255,255,0.08);
+      display: flex; flex-direction: column; align-items: center;
+      padding: 28px 0; gap: 18px;
+    }
+    .rail .dot {
+      width: 44px; height: 44px; border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .rail .dot.active {
+      background: linear-gradient(135deg, #FFD600, #F57C00, #E64A19);
+      box-shadow: 0 0 24px rgba(245,124,0,0.35);
+    }
+    .main { padding: 48px 64px; }
+    .kicker {
+      color: rgba(255,255,255,0.55); font-size: 18px; font-weight: 500;
+      letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 12px;
+    }
+    h1 { font-size: 48px; font-weight: 700; margin-bottom: 8px; }
+    .lead { color: rgba(255,255,255,0.7); font-size: 22px; margin-bottom: 40px; }
+    .grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px;
+    }
+    .tile {
+      background: rgba(255,255,255,0.07);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 16px;
+      padding: 28px;
+      min-height: 220px;
+      display: flex; flex-direction: column; justify-content: space-between;
+    }
+    .tile h2 { font-size: 26px; font-weight: 600; }
+    .tile p { color: rgba(255,255,255,0.6); font-size: 16px; line-height: 1.4; }
+    .tile .ico {
+      width: 42px; height: 42px; border-radius: 12px;
+      background: linear-gradient(135deg, #FFD600, #F57C00);
+      margin-bottom: 18px;
+    }
+    .pos {
+      border-color: rgba(245,124,0,0.45);
+      box-shadow: 0 0 0 1px rgba(245,124,0,0.15), 0 18px 40px rgba(0,0,0,0.25);
+    }
+  </style>
+</head>
+<body>
+  <aside class="rail">
+    <div class="dot active"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+    <div class="dot"></div>
+  </aside>
+  <main class="main">
+    <p class="kicker">Centro de operaciones</p>
+    <h1>¿Qué querés gestionar hoy?</h1>
+    <p class="lead">Inventario, ventas, compras y contabilidad en un solo lugar.</p>
+    <div class="grid">
+      <div class="tile">
+        <div>
+          <div class="ico"></div>
+          <h2>Inventario</h2>
+        </div>
+        <p>Productos, stock y operaciones</p>
+      </div>
+      <div class="tile">
+        <div>
+          <div class="ico"></div>
+          <h2>Ventas</h2>
+        </div>
+        <p>Pedidos, cotizaciones y clientes</p>
+      </div>
+      <div class="tile">
+        <div>
+          <div class="ico"></div>
+          <h2>Compras</h2>
+        </div>
+        <p>Pedidos y proveedores</p>
+      </div>
+      <div class="tile pos">
+        <div>
+          <div class="ico"></div>
+          <h2>Mostrador</h2>
+        </div>
+        <p>Caja y tickets del día</p>
+      </div>
+    </div>
+  </main>
+</body>
+</html>
