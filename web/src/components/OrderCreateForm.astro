@@ -732,7 +732,10 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 			selectedEl.textContent = `Elegido: ${label}`;
 			queryInput.value = label;
 			hideResults();
-			if (kind === 'partner') setPartnerFiscalWarn(row);
+			if (kind === 'partner') {
+				setPartnerFiscalWarn(row);
+				window.sgClearPartnerInline?.(picker);
+			}
 			if (kind === 'product') {
 				draftLabel = label;
 				const price = Number(row?.list_price);

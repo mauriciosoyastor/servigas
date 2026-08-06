@@ -10,8 +10,11 @@ interface FieldDef {
 	key: string;
 	label: string;
 	required?: boolean;
-	type?: 'text' | 'email' | 'select';
+	type?: 'text' | 'email' | 'tel' | 'select';
 	options?: FieldOption[];
+	placeholder?: string;
+	/** Full-width row in the grid */
+	wide?: boolean;
 }
 
 interface Props {
@@ -27,44 +30,140 @@ const { listKey, apiPath, title, hint, fields, listPath } = Astro.props;
 const enableCuitWarn =
 	fields.some((field) => field.key === 'sg_invoice_dest') &&
 	fields.some((field) => field.key === 'vat');
+
+type FieldGroup = 'main' | 'contact' | 'address' | 'other';
+
+function fieldGroup(key: string): FieldGroup {
+	if (key === 'name' || key === 'sg_invoice_dest' || key === 'vat') return 'main';
+	if (key === 'phone' || key === 'email') return 'contact';
+	if (key === 'street' || key === 'city') return 'address';
+	return 'other';
+}
+
+const GROUP_LABELS: Record<FieldGroup, string | null> = {
+	main: 'Datos principales',
+	contact: 'Contacto',
+	address: 'Dirección',
+	other: null,
+};
+
+const fieldSections = enableCuitWarn
+	? (['main', 'contact', 'address', 'other'] as const)
+			.map((group) => ({
+				group,
+				label: GROUP_LABELS[group],
+				fields: fields.filter((field) => fieldGroup(field.key) === group),
+			}))
+			.filter((section) => section.fields.length > 0)
+	: [{ group: 'other' as const, label: null, fields }];
+
+function inputType(field: FieldDef): string {
+	if (field.type === 'email' || field.key === 'email') return 'email';
+	if (field.type === 'tel' || field.key === 'phone') return 'tel';
+	return 'text';
+}
 ---
 
 <section class="sg-record-create sg-glass" data-record-create data-list-key={listKey}>
 	<strong>{title}</strong>
 	<p>{hint}</p>
 	<form class="sg-record-create-form" data-record-create-form>
-		{fields.map((field) => (
-			<label>
-				<span>
-					{field.label}
-					{field.required ? ' *' : ''}
-				</span>
-				{field.type === 'select' && field.options?.length ? (
-					<select
-						class="sg-focus-ring"
-						name={field.key}
-						required={field.required}
-					>
-						{field.options.map((option) => (
-							<option value={option.value}>{option.label}</option>
-						))}
-					</select>
-				) : (
-					<input
-						class="sg-focus-ring"
-						type={field.type === 'email' || field.key === 'email' ? 'email' : 'text'}
-						name={field.key}
-						required={field.required}
-						autocomplete="off"
-						inputmode={isMoneyFieldKey(field.key) ? 'decimal' : undefined}
-						data-money-input={isMoneyFieldKey(field.key) ? true : undefined}
-						placeholder={isMoneyFieldKey(field.key) ? '$ 0,00' : undefined}
-					/>
-				)}
-			</label>
+		{fieldSections.map((section) => (
+			<div
+				class="sg-record-create-section"
+				data-field-section={section.group}
+			>
+				{section.label ? (
+					<h3 class="sg-record-create-section-title">{section.label}</h3>
+				) : null}
+				<div class="sg-record-create-section-grid">
+					{section.fields.map((field) =>
+						field.key === 'sg_invoice_dest' && field.options?.length ? (
+							<fieldset
+								class="sg-invoice-dest sg-record-field-wide"
+								data-invoice-dest
+							>
+								<legend>
+									{field.label}
+									{field.required ? ' *' : ''}
+								</legend>
+								<div class="sg-invoice-dest-options">
+									{field.options.map((option, index) => (
+										<label class="sg-invoice-dest-option">
+											<input
+												class="sg-focus-ring"
+												type="radio"
+												name={field.key}
+												value={option.value}
+												checked={index === 0}
+												required={field.required}
+											/>
+											<span>{option.label}</span>
+										</label>
+									))}
+								</div>
+							</fieldset>
+						) : (
+							<label
+								class:list={{
+									'sg-record-field-wide': field.wide || field.key === 'name',
+									'sg-record-vat-field': field.key === 'vat',
+								}}
+								data-field-key={field.key}
+							>
+								<span>
+									{field.label}
+									{field.required ? ' *' : ''}
+									{field.key === 'vat' ? (
+										<span class="sg-vat-required-mark" data-vat-required hidden>
+											{' '}
+											*
+										</span>
+									) : null}
+								</span>
+								{field.type === 'select' && field.options?.length ? (
+									<select
+										class="sg-focus-ring"
+										name={field.key}
+										required={field.required}
+									>
+										{field.options.map((option) => (
+											<option value={option.value}>{option.label}</option>
+										))}
+									</select>
+								) : (
+									<input
+										class="sg-focus-ring"
+										type={inputType(field)}
+										name={field.key}
+										required={field.required}
+										autocomplete="off"
+										inputmode={
+											field.key === 'vat'
+												? 'numeric'
+												: isMoneyFieldKey(field.key)
+													? 'decimal'
+													: undefined
+										}
+										data-money-input={isMoneyFieldKey(field.key) ? true : undefined}
+										data-vat-input={field.key === 'vat' ? true : undefined}
+										placeholder={
+											field.placeholder ||
+											(isMoneyFieldKey(field.key) ? '$ 0,00' : undefined)
+										}
+									/>
+								)}
+							</label>
+						)
+					)}
+				</div>
+			</div>
 		))}
 		{enableCuitWarn ? (
-			<p class="sg-cuit-fiscal-warn" data-cuit-fiscal-warn hidden></p>
+			<>
+				<p class="sg-doc-type-hint" data-doc-type-hint></p>
+				<p class="sg-cuit-fiscal-warn" data-cuit-fiscal-warn hidden></p>
+			</>
 		) : null}
 		<div class="sg-record-create-actions">
 			<button class="sg-focus-ring" type="submit">Crear</button>
@@ -79,6 +178,9 @@ const enableCuitWarn =
 	const form = root?.querySelector('[data-record-create-form]');
 	const status = root?.querySelector('[data-record-create-status]');
 	const cuitWarn = root?.querySelector('[data-cuit-fiscal-warn]');
+	const docTypeHint = root?.querySelector('[data-doc-type-hint]');
+	const vatInput = root?.querySelector('[data-vat-input]');
+	const vatRequiredMark = root?.querySelector('[data-vat-required]');
 	const CUIT_WEIGHTS = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2];
 	const CUIT_MISSING_MSG = 'Este cliente es Con CUIT: cargá el CUIT para guardar.';
 	const CUIT_INVALID_MSG = 'El CUIT no es válido (revisá los 11 dígitos).';
@@ -93,22 +195,57 @@ const enableCuitWarn =
 		return Number(digits[10]) === expected;
 	};
 
+	const currentDest = () =>
+		String(new FormData(form).get('sg_invoice_dest') || 'cf').toLowerCase();
+
 	const refreshCuitWarn = () => {
-		if (!enableCuitWarn || !(form instanceof HTMLFormElement) || !(cuitWarn instanceof HTMLElement)) {
-			return;
-		}
-		const dest = String(new FormData(form).get('sg_invoice_dest') || 'cf').toLowerCase();
+		if (!enableCuitWarn || !(form instanceof HTMLFormElement)) return;
+
+		const dest = currentDest();
 		const vat = String(new FormData(form).get('vat') || '').trim();
+		const isCuitDest = dest === 'cuit';
+
+		if (vatInput instanceof HTMLInputElement) {
+			vatInput.required = isCuitDest;
+			vatInput.dataset.state = isCuitDest ? 'required' : '';
+		}
+		if (vatRequiredMark instanceof HTMLElement) {
+			vatRequiredMark.hidden = !isCuitDest;
+		}
+		const vatField = root?.querySelector('[data-field-key="vat"]');
+		if (vatField instanceof HTMLElement) {
+			vatField.dataset.active = isCuitDest ? '1' : '';
+		}
+		if (docTypeHint instanceof HTMLElement) {
+			docTypeHint.textContent = isCuitDest
+				? 'Tipo sugerido: Factura A/B (CUIT). Calle y ciudad son obligatorias al publicar una FC.'
+				: 'Tipo sugerido: Factura B/C (consumidor final). El CUIT es opcional.';
+		}
+
+		if (!(cuitWarn instanceof HTMLElement)) return;
+
 		let msg = '';
-		if (dest === 'cuit' && !vat) msg = CUIT_MISSING_MSG;
+		if (isCuitDest && !vat) msg = CUIT_MISSING_MSG;
 		else if (vat && !isValidCuitClient(vat)) msg = CUIT_INVALID_MSG;
+
 		if (msg) {
 			cuitWarn.hidden = false;
 			cuitWarn.textContent = msg;
+			cuitWarn.dataset.state = isCuitDest && !vat ? 'warn' : 'error';
 		} else {
 			cuitWarn.hidden = true;
 			cuitWarn.textContent = '';
+			cuitWarn.dataset.state = '';
 		}
+	};
+
+	const cuitSubmitError = () => {
+		if (!enableCuitWarn || !(form instanceof HTMLFormElement)) return null;
+		const dest = currentDest();
+		const vat = String(new FormData(form).get('vat') || '').trim();
+		if (dest === 'cuit' && !vat) return CUIT_MISSING_MSG;
+		if (vat && !isValidCuitClient(vat)) return CUIT_INVALID_MSG;
+		return null;
 	};
 
 	if (form instanceof HTMLFormElement && enableCuitWarn) {
@@ -120,6 +257,16 @@ const enableCuitWarn =
 	if (form instanceof HTMLFormElement && status instanceof HTMLElement) {
 		form.addEventListener('submit', async (event) => {
 			event.preventDefault();
+
+			const cuitError = cuitSubmitError();
+			if (cuitError) {
+				status.hidden = false;
+				status.textContent = cuitError;
+				status.dataset.state = 'error';
+				refreshCuitWarn();
+				return;
+			}
+
 			status.hidden = false;
 			status.textContent = 'Creando…';
 			status.dataset.state = 'pending';
@@ -174,7 +321,7 @@ const enableCuitWarn =
 		padding: 1.2rem;
 		box-sizing: border-box;
 	}
-	.sg-record-create p {
+	.sg-record-create > p {
 		margin: 0;
 		color: var(--sg-text-muted-dark);
 		font-size: 0.82rem;
@@ -183,21 +330,48 @@ const enableCuitWarn =
 	}
 	.sg-record-create-form {
 		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
-		gap: 0.85rem 1.25rem;
+		gap: 1rem;
 		margin-top: 0.35rem;
 	}
-	.sg-record-create-form label {
+	.sg-record-create-section {
+		display: grid;
+		gap: 0.65rem;
+		padding: 0.85rem;
+		border: 1px solid color-mix(in srgb, var(--sg-text) 10%, transparent);
+		border-radius: 0.85rem;
+		background: rgba(0, 0, 0, 0.1);
+	}
+	.sg-record-create-section-title {
+		margin: 0;
+		font-size: 0.8125rem;
+		font-weight: 700;
+		color: var(--sg-text-on-dark);
+		letter-spacing: 0.01em;
+	}
+	.sg-record-create-section-grid {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+		gap: 0.85rem 1.25rem;
+	}
+	.sg-record-field-wide {
+		grid-column: 1 / -1;
+	}
+	.sg-record-create-form label,
+	.sg-invoice-dest {
 		display: grid;
 		gap: 0.35rem;
 		min-width: 0;
+		margin: 0;
+		padding: 0;
+		border: 0;
 	}
-	.sg-record-create-form span {
+	.sg-record-create-form label > span,
+	.sg-invoice-dest legend {
 		font-size: 0.75rem;
 		font-weight: 600;
 		color: var(--sg-text-muted-dark);
 	}
-	.sg-record-create-form input,
+	.sg-record-create-form input:not([type='radio']),
 	.sg-record-create-form select {
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 0.75rem;
@@ -207,9 +381,89 @@ const enableCuitWarn =
 		font: inherit;
 		width: 100%;
 		box-sizing: border-box;
+		caret-color: var(--sg-flame-yellow);
+	}
+	.sg-record-create-form input:not([type='radio'])::placeholder {
+		color: color-mix(in srgb, var(--sg-text-on-dark) 38%, transparent);
+	}
+	.sg-record-create-form input:not([type='radio']):focus-visible,
+	.sg-record-create-form select:focus-visible {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 55%, var(--sg-glass-border));
+		background: rgba(0, 0, 0, 0.32);
+		outline: none;
+	}
+	.sg-record-create-form select {
+		appearance: none;
+		background-image: linear-gradient(45deg, transparent 50%, var(--sg-text-muted-dark) 50%),
+			linear-gradient(135deg, var(--sg-text-muted-dark) 50%, transparent 50%);
+		background-position:
+			calc(100% - 1.05rem) calc(50% - 0.15rem),
+			calc(100% - 0.7rem) calc(50% - 0.15rem);
+		background-size: 0.35rem 0.35rem;
+		background-repeat: no-repeat;
+		padding-right: 1.8rem;
+	}
+	.sg-record-create-form select option {
+		background: var(--sg-bg-charcoal, #2b2b2b);
+		color: var(--sg-text-on-dark);
+	}
+	.sg-record-vat-field[data-active='1'] input {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 35%, var(--sg-glass-border));
+	}
+	.sg-vat-required-mark {
+		color: var(--sg-text-on-dark);
+	}
+	.sg-invoice-dest-options {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+		gap: 0.55rem;
+	}
+	.sg-invoice-dest-option {
+		position: relative;
+		display: block;
+		cursor: pointer;
+	}
+	.sg-invoice-dest-option input {
+		position: absolute;
+		opacity: 0;
+		width: 1px;
+		height: 1px;
+		pointer-events: none;
+	}
+	.sg-invoice-dest-option span {
+		display: block;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.85rem;
+		color: var(--sg-text-on-dark);
+		background: rgba(0, 0, 0, 0.22);
+		font-size: 0.875rem;
+		font-weight: 650;
+		text-align: center;
+		transition:
+			border-color 0.15s ease,
+			background 0.15s ease,
+			color 0.15s ease;
+	}
+	.sg-invoice-dest-option input:focus-visible + span {
+		outline: 2px solid color-mix(in srgb, var(--sg-flame-yellow) 65%, transparent);
+		outline-offset: 2px;
+	}
+	.sg-invoice-dest-option input:checked + span {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 55%, var(--sg-glass-border));
+		background: color-mix(in srgb, var(--sg-flame-yellow) 18%, rgba(0, 0, 0, 0.22));
+		color: color-mix(in srgb, var(--sg-flame-yellow) 75%, white);
+	}
+	.sg-invoice-dest-option:hover span {
+		border-color: color-mix(in srgb, var(--sg-flame-yellow) 35%, var(--sg-glass-border));
+	}
+	.sg-doc-type-hint {
+		margin: 0;
+		font-size: 0.78rem;
+		line-height: 1.4;
+		color: #9ec5e8;
 	}
 	.sg-record-create-actions {
-		grid-column: 1 / -1;
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
@@ -238,10 +492,12 @@ const enableCuitWarn =
 		color: #ffb4a2;
 	}
 	.sg-cuit-fiscal-warn {
-		grid-column: 1 / -1;
 		margin: 0;
 		font-size: 0.8rem;
 		line-height: 1.4;
 		color: #ffc107;
+	}
+	.sg-cuit-fiscal-warn[data-state='error'] {
+		color: #ffb4a2;
 	}
 </style>

@@ -26,12 +26,32 @@ try {
 			title="Alta de proveedor"
 			hint="Datos del proveedor. CUIT opcional (recomendado para compras/Factura Web)."
 			fields={[
-				{ key: 'name', label: 'Nombre', required: true },
-				{ key: 'vat', label: 'CUIT' },
-				{ key: 'phone', label: 'Teléfono' },
-				{ key: 'email', label: 'Email' },
-				{ key: 'street', label: 'Calle' },
-				{ key: 'city', label: 'Ciudad' },
+				{
+					key: 'name',
+					label: 'Nombre',
+					required: true,
+					placeholder: 'Nombre o razón social',
+				},
+				{ key: 'vat', label: 'CUIT', placeholder: '20-12345678-6' },
+				{
+					key: 'phone',
+					label: 'Teléfono',
+					type: 'tel',
+					placeholder: '351 555 1234',
+				},
+				{
+					key: 'email',
+					label: 'Email',
+					type: 'email',
+					placeholder: 'correo@ejemplo.com',
+				},
+				{
+					key: 'street',
+					label: 'Calle',
+					placeholder: 'Calle y número',
+					wide: true,
+				},
+				{ key: 'city', label: 'Ciudad', placeholder: 'Ciudad' },
 			]}
 		/>
 	</main>
