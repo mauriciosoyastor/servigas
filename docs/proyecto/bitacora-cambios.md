@@ -31,6 +31,17 @@
 
 ---
 
+### 2026-08-05 — Docs: instalación PC mostrador (Docker) actualizada
+
+**Área:** docs | infra  
+**Motivo:** dejar un camino claro de instalación en la PC del negocio (clone → `.env` → build → módulos → atajo → smoke), más update/pull y límites actuales (sin AFIP; PDF OT/factura).  
+**Archivos:** `docs/proyecto/docker-piloto-mostrador.md`, `CONTEXT.md`  
+**Cambios:** guía reordenada “mostrador-first”; smoke con taller/PDF/caja; sección actualizar código + nota upgrade EDI/primary.  
+**Verificación:** lectura de scripts `infra/docker/Start-Servigas.ps1`, `install-modules.ps1`, `docker-compose.yml`  
+**Automatización:** ninguna
+
+---
+
 ### 2026-08-03 — Taller: PDF / WhatsApp / mail de OT + logo
 
 - PDF QWeb `servigas_core.report_sg_work_order` con logo Servigas
