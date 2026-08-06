@@ -7,7 +7,7 @@
     <xpath expr="//t[@t-call='web.external_layout']" position="attributes">
       <attribute name="t-call">servigas_core.report_servigas_layout</attribute>
     </xpath>
-    <xpath expr="//div[contains(@class,'page')]" position="attributes">
+    <xpath expr="//div[hasclass('page')]" position="attributes">
       <attribute name="style">font-family: DejaVu Sans, sans-serif; color: #1a1a1a; font-size: 12px;</attribute>
     </xpath>
   </template>
@@ -17,7 +17,7 @@
     <xpath expr="//t[@t-call='web.external_layout']" position="attributes">
       <attribute name="t-call">servigas_core.report_servigas_layout</attribute>
     </xpath>
-    <xpath expr="//div[contains(@class,'page')]" position="attributes">
+    <xpath expr="//div[hasclass('page')]" position="attributes">
       <attribute name="style">font-family: DejaVu Sans, sans-serif; color: #1a1a1a; font-size: 12px;</attribute>
     </xpath>
   </template>
@@ -27,7 +27,7 @@
     <xpath expr="//t[@t-call='web.external_layout']" position="attributes">
       <attribute name="t-call">servigas_core.report_servigas_layout</attribute>
     </xpath>
-    <xpath expr="//div[contains(@class,'page')]" position="attributes">
+    <xpath expr="//div[hasclass('page')]" position="attributes">
       <attribute name="style">font-family: DejaVu Sans, sans-serif; color: #1a1a1a; font-size: 12px;</attribute>
     </xpath>
   </template>
@@ -37,7 +37,7 @@
     <xpath expr="//t[@t-call='web.external_layout']" position="attributes">
       <attribute name="t-call">servigas_core.report_servigas_layout</attribute>
     </xpath>
-    <xpath expr="//div[contains(@class,'page')]" position="attributes">
+    <xpath expr="//div[hasclass('page')]" position="attributes">
       <attribute name="style">font-family: DejaVu Sans, sans-serif; color: #1a1a1a; font-size: 12px;</attribute>
     </xpath>
   </template>
