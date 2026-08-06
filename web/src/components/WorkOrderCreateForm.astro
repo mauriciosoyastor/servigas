@@ -140,6 +140,21 @@ const today = new Date().toISOString().slice(0, 10);
 						data-money-input
 					/>
 				</label>
+				<label>
+					<span>Seña</span>
+					<input
+						class="sg-focus-ring"
+						type="text"
+						inputmode="decimal"
+						name="deposit"
+						placeholder="$ 0,00"
+						data-money-input
+						data-wo-deposit
+					/>
+				</label>
+				<p class="sg-wo-deposit-hint sg-wo-span-2">
+					La seña se resta del pendiente a cobrar (Importe − Seña − Cobrado en caja).
+				</p>
 			</div>
 		</section>
 
@@ -294,6 +309,12 @@ const today = new Date().toISOString().slice(0, 10);
 					: window.sgMoney?.readMoneyInput(
 							form.querySelector('[data-money-input][name="amount"]')
 					  ) ?? Number(fd.get('amount')),
+			deposit:
+				fd.get('deposit') === '' || fd.get('deposit') == null
+					? undefined
+					: window.sgMoney?.readMoneyInput(
+							form.querySelector('[data-money-input][name="deposit"]')
+					  ) ?? Number(fd.get('deposit')),
 		};
 
 		const file = photoInput?.files?.[0];
@@ -319,7 +340,11 @@ const today = new Date().toISOString().slice(0, 10);
 			});
 			const data = await res.json().catch(() => ({}));
 			if (!res.ok) {
-				setStatus(data?.error || data?.message || 'No se pudo guardar', true);
+				const errMsg =
+					(typeof data?.error?.message === 'string' && data.error.message) ||
+					(typeof data?.message === 'string' && data.message) ||
+					'No se pudo guardar';
+				setStatus(errMsg, true);
 				return;
 			}
 			const path = data.detailPath || `${listPath}/${data.id}`;
@@ -383,6 +408,12 @@ const today = new Date().toISOString().slice(0, 10);
 	}
 	.sg-wo-span-2 {
 		grid-column: span 2;
+	}
+	.sg-wo-deposit-hint {
+		margin: 0;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--sg-text-muted-dark);
 	}
 	.sg-wo-form label {
 		display: flex;

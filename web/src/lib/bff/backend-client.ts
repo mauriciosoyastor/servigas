@@ -172,6 +172,24 @@ export interface BackendClient {
     options?: PosCheckoutOptions
   ): Promise<PosCheckoutResult>;
   getCashHub(odooSessionId: string): Promise<CashHubPayload>;
+  getAlertSettings(odooSessionId: string): Promise<{
+    cashThreshold: number;
+    openHoursThreshold: number;
+    stockAlertsEnabled: boolean;
+    stockMinQty: number;
+  }>;
+  updateAlertSettings(
+    odooSessionId: string,
+    values: Record<string, unknown>
+  ): Promise<{
+    cashThreshold: number;
+    openHoursThreshold: number;
+    stockAlertsEnabled: boolean;
+    stockMinQty: number;
+  }>;
+  countLowStockProducts(
+    odooSessionId: string
+  ): Promise<{ count: number; capped: boolean }>;
   getCashHistory(
     odooSessionId: string,
     limit?: number

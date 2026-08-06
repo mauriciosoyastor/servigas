@@ -123,7 +123,9 @@ describe("shell UI contracts", () => {
     const hub = await source("pages/hubs/[app].astro");
 
     assert.match(hub, /isHubApp\(app\)/);
-    assert.match(hub, /getBackend\(\)\.getHub\(odooSessionId,\s*app,\s*requestedSection\)/);
+    assert.match(hub, /backend\.getHub\(odooSessionId,\s*app,\s*requestedSection\)/);
+    assert.match(hub, /formatLowStockAlertMessage|más de|Bajo stock/);
+    assert.match(hub, /countLowStockProducts|low-stock/);
     assert.match(hub, /thinHubPayload/);
     assert.match(hub, /HUB_LABELS/);
     assert.match(hub, /<HubSubnav/);
@@ -389,6 +391,9 @@ describe("shell UI contracts", () => {
     assert.doesNotMatch(settings, /login\?loginChanged=1/);
     assert.match(settings, /login\?changed=1/);
     assert.match(settings, /\/lists\/integrations/);
+    assert.match(settings, /data-alerts-form/);
+    assert.match(settings, /\/api\/settings\/alerts/);
+    assert.match(settings, /stockMinQty|Stock mínimo global/i);
     assert.doesNotMatch(settings, /todavía no está disponible/);
   });
 
@@ -782,6 +787,8 @@ describe("shell UI contracts", () => {
     assert.match(form, /data-wo-create/);
     assert.match(form, /data-tour=["']workshop-create["']/);
     assert.match(form, /serial_number/);
+    assert.match(form, /name=["']deposit["']|Seña/);
+    assert.match(form, /error\.message|No se pudo guardar/);
     assert.match(form, /Ya atendido/);
     assert.match(form, /\/api\/lists\//);
     assert.match(form, /workshop\/appliances/);
@@ -804,14 +811,17 @@ describe("shell UI contracts", () => {
     assert.match(shareCtrl, /Descargar PDF/);
     const cashCtrl = await source("components/RecordWorkOrderCashControl.astro");
     assert.match(cashCtrl, /data-wo-cash/);
+    assert.match(cashCtrl, /data-remaining/);
     assert.match(cashCtrl, /Registrar cobro/);
     assert.match(cashCtrl, /\/api\/workshop-orders\/collect-cash/);
     assert.match(cashCtrl, /PAYMENT_METHOD_OPTIONS/);
-    assert.match(cashCtrl, /fullyCollected|is-collected|Ya cobrado/);
+    assert.match(cashCtrl, /fullyCollected|is-collected|Ya cobrado|Pendiente de cobrar/);
+    assert.match(cashCtrl, /entra al feed de Caja|Importe − Seña|supera el pendiente/);
     assert.match(orderDetail, /editApiPath|owner_name|Editar/);
     assert.match(orderDetail, /appliance_ref_id|Ver artefacto/);
     assert.match(orderDetail, /\/lists\/workshop\/appliances\/\$\{/);
     assert.match(orderDetail, /amount_collected|workOrderCashRemaining/);
+    assert.match(orderDetail, /deposit|Seña/);
     const listPage = await source("pages/lists/[...slug].astro");
     assert.match(listPage, /workshop\/orders['"][\s\S]*Nueva OT|Nueva OT/);
     const archiveCtrl = await source("components/RecordArchiveControl.astro");

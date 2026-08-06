@@ -24,12 +24,15 @@ const {
 	fullyCollected = false,
 } = Astro.props;
 
+const defaultNum = Number(defaultAmount);
 const amountHint =
-	defaultAmount === '' || defaultAmount == null || Number(defaultAmount) <= 0
+	defaultAmount === '' || defaultAmount == null || !Number.isFinite(defaultNum) || defaultNum <= 0
 		? ''
-		: String(defaultAmount);
+		: formatArs(defaultNum);
 
 const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountCollected)) : '';
+const remainingAttr =
+	remaining != null && Number.isFinite(Number(remaining)) ? String(remaining) : '';
 ---
 
 <section
@@ -38,6 +41,7 @@ const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountColl
 	data-list-key={listKey}
 	data-id={recordId}
 	data-order-name={orderName}
+	data-remaining={remainingAttr || undefined}
 	data-fully-collected={fullyCollected ? '1' : '0'}
 >
 	<p class="sg-wo-cash-title">Registrar cobro en caja</p>
@@ -53,6 +57,10 @@ const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountColl
 					</strong>
 				</>
 			) : null}
+		</p>
+	) : remaining != null && remaining > 0 ? (
+		<p class="sg-wo-cash-progress">
+			Pendiente de cobrar: <strong>{formatArs(remaining)}</strong>
 		</p>
 	) : null}
 	{fullyCollected ? (
@@ -96,8 +104,9 @@ const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountColl
 				Registrar cobro
 			</button>
 			<p class="sg-wo-cash-hint">
-				Requiere caja abierta. El cobro aparece en el feed de Caja; solo el efectivo
-				suma al esperado. No se puede cobrar de más que el pendiente.
+				Al confirmar, el cobro entra al feed de Caja (requiere caja abierta). Solo el
+				efectivo suma al esperado. Pendiente = Importe − Seña − Cobrado; no se puede
+				cobrar de más.
 			</p>
 		</>
 	)}
@@ -137,6 +146,18 @@ const collectedLabel = Number(amountCollected) > 0 ? formatArs(Number(amountColl
 				status.dataset.state = 'error';
 				status.textContent = 'Ingresá un monto válido mayor a 0.';
 				return;
+			}
+			const remainingRaw = root.dataset.remaining;
+			if (remainingRaw !== undefined && remainingRaw !== '') {
+				const remaining = Number(remainingRaw);
+				if (Number.isFinite(remaining) && amount > remaining + 0.001) {
+					const pendingLabel =
+						window.sgMoney?.formatArs(remaining) || String(remaining);
+					status.hidden = false;
+					status.dataset.state = 'error';
+					status.textContent = `El monto supera el pendiente (${pendingLabel}). Bajá el monto o refrescá la ficha.`;
+					return;
+				}
 			}
 			const methodLabel =
 				methodInput?.parentElement?.querySelector('span')?.textContent ||

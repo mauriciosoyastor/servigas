@@ -11,3 +11,4 @@ from . import sg_cash_session
 from . import sg_appliance
 from . import sg_work_order
 from . import report_servigas_brand
+from . import product_template

@@ -9,6 +9,7 @@ import { invalidateBffSession, requireOdooSession } from '../../lib/bff/http.ts'
 import type { HubCard, HubGroup, HubSection } from '../../lib/bff/types.ts';
 import { isHubApp, type HubApp } from '../../lib/shell/hub-apps.ts';
 import { HUB_LABELS, labelHubSections, thinHubPayload } from '../../lib/shell/hub-nav.ts';
+import { formatLowStockAlertMessage } from '../../lib/shell/servigas-settings.ts';
 
 const app = Astro.params.app ?? '';
 const validApp = isHubApp(app);
@@ -20,6 +21,7 @@ let groups: HubGroup[] = [];
 let sections: HubSection[] = [];
 let activeSection = 'summary';
 let hubError = '';
+let lowStockMessage = '';
 
 if (!validApp) {
 	Astro.response.status = 404;
@@ -36,7 +38,16 @@ if (!validApp) {
 	}
 
 	try {
-		const payload = await getBackend().getHub(odooSessionId, app, requestedSection);
+		const backend = getBackend();
+		const payload = await backend.getHub(odooSessionId, app, requestedSection);
+		if (app === 'inventory') {
+			try {
+				const lowStock = await backend.countLowStockProducts(odooSessionId);
+				lowStockMessage = formatLowStockAlertMessage(lowStock);
+			} catch {
+				lowStockMessage = '';
+			}
+		}
 		sections = labelHubSections(
 			app as HubApp,
 			payload.sections?.length
@@ -85,6 +96,16 @@ const sectionName =
 			</header>
 
 			{!hubError ? <HubSubnav app={app} sections={sections} active={activeSection} /> : null}
+
+			{lowStockMessage ? (
+				<section class="sg-hub-alert sg-glass" role="status">
+					<strong>Bajo stock</strong>
+					<p>{lowStockMessage}</p>
+					<a class="sg-focus-ring" href="/lists/inventory/low-stock">
+						Ver listado →
+					</a>
+				</section>
+			) : null}
 
 			{hubError ? (
 				<section class="sg-hub-state sg-glass" role="alert">
@@ -210,6 +231,28 @@ const sectionName =
 		gap: 1rem;
 		margin-bottom: 1.25rem;
 		flex-wrap: wrap;
+	}
+	.sg-hub-alert {
+		display: grid;
+		gap: 0.35rem;
+		margin: 0 0 1rem;
+		padding: 0.9rem 1rem;
+		border-radius: var(--sg-radius-card, 1rem);
+		border: 1px solid rgba(255, 180, 80, 0.35);
+		background: rgba(120, 70, 10, 0.28);
+	}
+	.sg-hub-alert strong {
+		color: #ffd59a;
+	}
+	.sg-hub-alert p {
+		margin: 0;
+		color: var(--sg-text-muted-dark, #c5d0dc);
+		font-size: 0.86rem;
+	}
+	.sg-hub-alert a {
+		color: #ffd59a;
+		font-weight: 650;
+		width: fit-content;
 	}
 	.sg-hub-heading p {
 		margin: 0 0 0.5rem;

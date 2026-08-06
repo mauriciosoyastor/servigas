@@ -25,6 +25,8 @@ export type WorkOrderCreateValues = {
   work_done?: string;
   materials?: string;
   amount?: number;
+  /** Seña / adelanto; resta del pendiente a cobrar. */
+  deposit?: number;
   attachment?: {
     filename: string;
     mimetype: string;
@@ -90,6 +92,18 @@ export function filterWorkOrderCreateValues(
   if ("amount" in values || "importe" in values) {
     const amount = Number(values.amount ?? values.importe);
     if (Number.isFinite(amount) && amount >= 0) out.amount = amount;
+  }
+
+  if (
+    "deposit" in values ||
+    "senia" in values ||
+    "seña" in values ||
+    "amount_deposit" in values
+  ) {
+    const deposit = Number(
+      values.deposit ?? values.senia ?? values["seña"] ?? values.amount_deposit
+    );
+    if (Number.isFinite(deposit) && deposit >= 0) out.deposit = deposit;
   }
 
   const att = values.attachment;

@@ -22,6 +22,12 @@ class SgWorkOrder(models.Model):
     work_done = fields.Text(string="Trabajos realizados")
     materials = fields.Text(string="Materiales")
     amount = fields.Float(string="Importe", digits=(16, 2))
+    deposit = fields.Float(
+        string="Seña",
+        digits=(16, 2),
+        default=0.0,
+        help="Adelanto / seña. Se resta del pendiente a cobrar (Importe − Seña − Cobrado).",
+    )
     amount_collected = fields.Float(
         string="Cobrado en caja",
         digits=(16, 2),
@@ -62,14 +68,27 @@ class SgWorkOrder(models.Model):
         self.write({"state": "draft"})
         return True
 
+    @api.constrains("amount", "deposit")
+    def _check_deposit_vs_amount(self):
+        for wo in self:
+            deposit = float(wo.deposit or 0.0)
+            amount = float(wo.amount or 0.0)
+            if deposit < 0:
+                raise UserError(_("La seña no puede ser negativa."))
+            if amount > 0 and float_compare(deposit, amount, precision_digits=2) > 0:
+                raise UserError(
+                    _("La seña no puede superar el importe de la orden.")
+                )
+
     def _cash_remaining(self):
         """Saldo pendiente; None si amount<=0 (cobro libre una sola vez)."""
         self.ensure_one()
         total = float(self.amount or 0.0)
         collected = max(0.0, float(self.amount_collected or 0.0))
+        deposit = max(0.0, float(self.deposit or 0.0))
         if total <= 0:
             return None
-        return float_round(max(0.0, total - collected), precision_digits=2)
+        return float_round(max(0.0, total - deposit - collected), precision_digits=2)
 
     def _recompute_amount_collected(self):
         Move = self.env["sg.cash.movement"]
@@ -162,6 +181,7 @@ class SgWorkOrder(models.Model):
             "work_done": vals.get("work_done") or False,
             "materials": vals.get("materials") or False,
             "amount": vals.get("amount") or 0.0,
+            "deposit": vals.get("deposit") or 0.0,
             "state": vals.get("state") or "draft",
         }
         return self.create([wo_vals]).id

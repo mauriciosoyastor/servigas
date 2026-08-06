@@ -31,15 +31,24 @@ def _ensure_pos_order_discount(env):
 
 
 def _ensure_pos_payment_methods(env):
-    """Medios de pago del Mostrador Astro: agrega Débito / Mercado Pago al config.
+    """Asegura los 6 medios del Mostrador y los enlaza a todo pos.config.
+
+    Set canónico (alineado al shell BFF / payment-registers):
+      Efectivo · Transferencia / depósito al banco · Cuenta corriente ·
+      Débito · Tarjeta de crédito · Mercado Pago
 
     Renombrar Cash/Card/Customer Account falla si hay sesión POS abierta;
     el BFF ya localiza esos nombres en español.
+    Sin diarios (DB sin plan contable) crea los medios igual; el cobro
+    contable completo requiere caja/banco configurados aparte.
     """
     from odoo.exceptions import UserError
 
     Method = env["pos.payment.method"]
     Config = env["pos.config"]
+    cash_journal = env["account.journal"].search(
+        [("type", "=", "cash")], limit=1
+    )
     bank_journal = env["account.journal"].search(
         [("type", "=", "bank")], limit=1
     )
@@ -48,6 +57,7 @@ def _ensure_pos_payment_methods(env):
         "Cash": "Efectivo",
         "Card": "Transferencia / depósito al banco",
         "Customer Account": "Cuenta corriente",
+        # "Crédito" suelto = cuenta corriente legacy de Odoo (no tarjeta).
         "Crédito": "Cuenta corriente",
     }
     for old_name, new_name in renames.items():
@@ -60,8 +70,15 @@ def _ensure_pos_payment_methods(env):
             # Sesión POS abierta: el label lo resuelve localizePaymentMethodName.
             pass
 
-    def _get_or_create(name, *, is_cash, journal, split=False):
-        existing = Method.search([("name", "=", name)], limit=1)
+    def _find(*names):
+        for name in names:
+            existing = Method.search([("name", "=", name)], limit=1)
+            if existing:
+                return existing
+        return Method.browse()
+
+    def _get_or_create(name, *, is_cash, journal, split=False, aliases=()):
+        existing = _find(name, *aliases)
         if existing:
             return existing
         vals = {
@@ -74,14 +91,47 @@ def _ensure_pos_payment_methods(env):
             vals["journal_id"] = journal.id
         return Method.create(vals)
 
-    # Solo crear medios nuevos; los defaults (Cash/Card/Customer Account) ya existen.
     methods = Method.browse()
-    methods |= _get_or_create("Débito", is_cash=False, journal=bank_journal)
     methods |= _get_or_create(
-        "Mercado Pago", is_cash=False, journal=bank_journal
+        "Efectivo",
+        is_cash=True,
+        journal=cash_journal,
+        aliases=("Cash",),
+    )
+    methods |= _get_or_create(
+        "Transferencia / depósito al banco",
+        is_cash=False,
+        journal=bank_journal,
+        aliases=("Card", "Transferencia"),
+    )
+    methods |= _get_or_create(
+        "Cuenta corriente",
+        is_cash=False,
+        journal=False,
+        split=True,
+        aliases=("Customer Account",),
+    )
+    methods |= _get_or_create(
+        "Débito", is_cash=False, journal=bank_journal, aliases=("Debit",)
+    )
+    methods |= _get_or_create(
+        "Tarjeta de crédito",
+        is_cash=False,
+        journal=bank_journal,
+        aliases=("Credit Card", "Credit", "Tarjeta de credito"),
+    )
+    methods |= _get_or_create(
+        "Mercado Pago",
+        is_cash=False,
+        journal=bank_journal,
+        aliases=("MercadoPago",),
     )
 
-    for config in Config.search([]):
+    configs = Config.search([])
+    if not configs:
+        configs = Config.create({"name": "Mostrador Servigas"})
+
+    for config in configs:
         missing = methods - config.payment_method_ids
         if not missing:
             continue

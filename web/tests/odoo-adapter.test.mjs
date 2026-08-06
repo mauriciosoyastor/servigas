@@ -174,6 +174,33 @@ describe("OdooAdapter.getLauncher", () => {
     );
   });
 
+  it("maps Odoo UserError JSON-RPC to validation_error with the user message", async () => {
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl: async () =>
+        Response.json({
+          error: {
+            code: 200,
+            message: "Odoo Server Error",
+            data: {
+              name: "odoo.exceptions.UserError",
+              message: "No hay una caja abierta. Abrí la caja antes de cobrar.",
+            },
+          },
+        }),
+    });
+
+    await assert.rejects(
+      () => adapter.getLauncher("sess"),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "validation_error" &&
+        err.status === 400 &&
+        /caja abierta/i.test(err.message)
+    );
+  });
+
   it("treats JSON-RPC void responses (no result key) as null", async () => {
     const adapter = new OdooAdapter({
       baseUrl: "http://odoo.test",
@@ -1717,6 +1744,82 @@ describe("OdooAdapter cash session", () => {
       (error) =>
         error?.code === "validation_error" &&
         /ya tiene el cobro/i.test(error?.message || "")
+    );
+  });
+
+  it("surfaces unexpected UserError from collect-cash as validation_error (not connection)", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.work.order" && method === "action_collect_cash") {
+          return Response.json({
+            error: {
+              data: {
+                name: "odoo.exceptions.UserError",
+                message: "El medio de pago no está habilitado en esta caja.",
+              },
+            },
+          });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.collectWorkOrderCash("sess", "workshop/orders", 12, {
+          amount: 10,
+          paymentMethod: "cash",
+        }),
+      (error) =>
+        error?.code === "validation_error" &&
+        /medio de pago no está habilitado/i.test(error?.message || "")
+    );
+  });
+
+  it("maps missing action_collect_cash to a clear action_failed", async () => {
+    const fetchImpl = cashHubFetch({
+      handle: async (_url, _init, body) => {
+        const model = body?.params?.model;
+        const method = body?.params?.method;
+        if (model === "sg.cash.session" && method === "search_read") {
+          return Response.json({ result: [OPEN_CASH_SESSION_ROW] });
+        }
+        if (model === "sg.work.order" && method === "action_collect_cash") {
+          return Response.json({
+            error: {
+              data: {
+                message:
+                  "The method 'sg.work.order.action_collect_cash' does not exist",
+              },
+            },
+          });
+        }
+        return null;
+      },
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+    await assert.rejects(
+      () =>
+        adapter.collectWorkOrderCash("sess", "workshop/orders", 12, {
+          amount: 10,
+          paymentMethod: "cash",
+        }),
+      (error) =>
+        error?.code === "action_failed" &&
+        /addons de este worktree|servigas_core/i.test(error?.message || "")
     );
   });
 });

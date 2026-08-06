@@ -70,3 +70,38 @@ class TestSgWorkOrderShell(TransactionCase):
 
         with self.assertRaises(UserError):
             wo.action_collect_cash(1, "cash")
+
+    def test_deposit_reduces_cash_remaining(self):
+        open_sessions = self.Session.search([("state", "=", "open")])
+        for session in open_sessions:
+            session.write({"state": "closed"})
+        self.Session.action_open_session(opening_balance=50.0)
+
+        wo_id = self.Wo.create_from_shell(
+            {
+                "serial_number": "DEPOSIT-1",
+                "owner_name": "Cliente",
+                "amount": 1000,
+                "deposit": 400,
+            }
+        )
+        wo = self.Wo.browse(wo_id)
+        self.assertEqual(wo.deposit, 400)
+        self.assertEqual(wo._cash_remaining(), 600)
+
+        wo.action_collect_cash(600, "cash")
+        wo.invalidate_recordset()
+        self.assertEqual(wo.amount_collected, 600)
+        self.assertEqual(wo._cash_remaining(), 0)
+
+        with self.assertRaises(UserError):
+            wo.action_collect_cash(1, "cash")
+
+        with self.assertRaises(UserError):
+            self.Wo.create_from_shell(
+                {
+                    "serial_number": "DEPOSIT-2",
+                    "amount": 100,
+                    "deposit": 150,
+                }
+            )

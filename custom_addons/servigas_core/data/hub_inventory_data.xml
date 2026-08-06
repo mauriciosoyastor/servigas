@@ -84,6 +84,22 @@
             <field name="metric_domain">[('is_storable', '=', True), ('qty_available', '&lt;=', 0)]</field>
             <field name="metric_aggregate">count</field>
         </record>
+        <record id="hub_card_inv_summary_low_stock" model="sg.hub.card">
+            <field name="app">inventory</field>
+            <field name="section">summary</field>
+            <field name="show_in_summary" eval="True"/>
+            <field name="sequence">35</field>
+            <field name="label">Bajo stock</field>
+            <field name="hint">Stock ≤ mínimo global (Ajustes → Alertas)</field>
+            <field name="icon">fa-battery-quarter</field>
+            <field name="variant">warning</field>
+            <field name="enter_label">Ver alertas →</field>
+            <field name="action_id" ref="stock.product_template_action_product"/>
+            <field name="domain">[('is_storable', '=', True), ('active', '=', True), ('qty_available', '&lt;=', 999999)]</field>
+            <field name="metric_model">product.template</field>
+            <field name="metric_domain">[('is_storable', '=', True), ('active', '=', True), ('qty_available', '&lt;=', 999999)]</field>
+            <field name="metric_aggregate">count</field>
+        </record>
         <record id="hub_card_inv_summary_transfers" model="sg.hub.card">
             <field name="app">inventory</field>
             <field name="section">summary</field>
