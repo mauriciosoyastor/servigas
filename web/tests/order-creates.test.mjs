@@ -79,4 +79,17 @@ describe("order-creates allowlist", () => {
       null
     );
   });
+
+  it("accepts partnerNew instead of partnerId", () => {
+    assert.deepEqual(
+      filterOrderCreateValues("sales/quotations", {
+        partnerNew: { name: "Cliente nuevo", phone: "351" },
+        lines: [{ productId: 1, qty: 1 }],
+      }),
+      {
+        partnerNew: { name: "Cliente nuevo", phone: "351" },
+        lines: [{ productId: 1, qty: 1 }],
+      }
+    );
+  });
 });

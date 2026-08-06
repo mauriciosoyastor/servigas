@@ -1,4 +1,6 @@
 ---
+import PartnerInlineFields from './PartnerInlineFields.astro';
+
 interface InitialPartner {
 	id: number;
 	label: string;
@@ -196,7 +198,6 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 					type="hidden"
 					name="partnerId"
 					value={initialPartner?.id ? String(initialPartner.id) : ''}
-					required
 					data-picker-id
 				/>
 				<p
@@ -208,6 +209,7 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 				</p>
 				<p class="sg-order-picker-warn" data-partner-fiscal-warn hidden></p>
 				<ul class="sg-order-picker-results" data-picker-results hidden></ul>
+				<PartnerInlineFields label={partnerLabel} />
 			</div>
 		</div>
 
@@ -887,8 +889,12 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 			status.dataset.state = 'pending';
 			const data = new FormData(form);
 			const partnerId = Number(data.get('partnerId'));
-			if (!partnerId) {
-				status.textContent = 'Elegí un contacto de la lista';
+			const partnerNewName = String(data.get('partnerNewName') || '').trim();
+			const partnerNewPhone = String(data.get('partnerNewPhone') || '').trim();
+			const partnerNewEmail = String(data.get('partnerNewEmail') || '').trim();
+			const partnerNewVat = String(data.get('partnerNewVat') || '').trim();
+			if (!partnerId && !partnerNewName) {
+				status.textContent = 'Elegí un contacto de la lista o cargá el nombre';
 				status.dataset.state = 'error';
 				return;
 			}
@@ -898,7 +904,6 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 				return;
 			}
 			const values = {
-				partnerId,
 				lines: lines.map(({ productId, qty, price, discount }) => {
 					const line = { productId, qty };
 					if (price != null) line.price = price;
@@ -906,6 +911,14 @@ const isUpdate = formAction === 'update_invoice_draft' && recordId > 0;
 					return line;
 				}),
 			};
+			if (partnerId > 0) {
+				values.partnerId = partnerId;
+			} else {
+				values.partnerNew = { name: partnerNewName };
+				if (partnerNewPhone) values.partnerNew.phone = partnerNewPhone;
+				if (partnerNewEmail) values.partnerNew.email = partnerNewEmail;
+				if (partnerNewVat) values.partnerNew.vat = partnerNewVat;
+			}
 			const billSource = data.get('billSource');
 			if (typeof billSource === 'string' && billSource.trim()) {
 				values.billSource = billSource.trim();

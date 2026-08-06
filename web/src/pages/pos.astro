@@ -1,6 +1,7 @@
 ---
 import ShellLayout from '../layouts/ShellLayout.astro';
 import ProductImageUploadHost from '../components/ProductImageUploadHost.astro';
+import PartnerInlineFields from '../components/PartnerInlineFields.astro';
 import { BffError } from '../lib/bff/errors.ts';
 import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
@@ -233,6 +234,7 @@ try {
 								<button type="button" class="sg-pos-customer-clear sg-focus-ring" data-pos-customer-clear hidden>
 									Sin cliente
 								</button>
+								<PartnerInlineFields label="Cliente" />
 							</div>
 							<fieldset class="sg-pos-pay-methods" data-pos-pay-methods>
 								<legend>Pago</legend>
@@ -821,15 +823,37 @@ try {
 			statusEl.textContent = 'Registrando venta…';
 			statusEl.dataset.state = 'pending';
 			try {
+				const partnerId = selectedPartnerId();
+				const partnerNewName = String(
+					root?.querySelector('[name="partnerNewName"]')?.value || ''
+				).trim();
+				const payload = {
+					paymentMethodId: selectedPaymentMethodId(),
+					lines: checkoutLinesFromCart(cart),
+				};
+				if (partnerId) {
+					payload.partnerId = partnerId;
+				} else if (partnerNewName) {
+					const partnerNew = { name: partnerNewName };
+					const phone = String(
+						root?.querySelector('[name="partnerNewPhone"]')?.value || ''
+					).trim();
+					const email = String(
+						root?.querySelector('[name="partnerNewEmail"]')?.value || ''
+					).trim();
+					const vat = String(
+						root?.querySelector('[name="partnerNewVat"]')?.value || ''
+					).trim();
+					if (phone) partnerNew.phone = phone;
+					if (email) partnerNew.email = email;
+					if (vat) partnerNew.vat = vat;
+					payload.partnerNew = partnerNew;
+				}
 				const response = await fetch('/api/pos/checkout', {
 					method: 'POST',
 					credentials: 'same-origin',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify({
-						paymentMethodId: selectedPaymentMethodId(),
-						partnerId: selectedPartnerId(),
-						lines: checkoutLinesFromCart(cart),
-					}),
+					body: JSON.stringify(payload),
 				});
 				const payload = await response.json().catch(() => ({}));
 				if (!response.ok) {

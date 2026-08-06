@@ -6,7 +6,8 @@ import {
   json,
   requireOdooSession,
 } from "../../../lib/bff/http.ts";
-import type { PosCheckoutLine } from "../../../lib/bff/types.ts";
+import type { PosCheckoutLine, PosCheckoutOptions } from "../../../lib/bff/types.ts";
+import { parsePartnerNew } from "../../../lib/shell/partner-inline.ts";
 
 export const POST: APIRoute = async ({ cookies, request }) => {
   try {
@@ -15,21 +16,25 @@ export const POST: APIRoute = async ({ cookies, request }) => {
       lines?: PosCheckoutLine[];
       paymentMethodId?: number;
       partnerId?: number;
+      partnerNew?: unknown;
     };
     if (!Array.isArray(body.lines)) {
       throw new BffError("validation_error", 400, "Carrito inválido");
     }
+    const partnerNew = parsePartnerNew(body.partnerNew);
+    const checkoutOptions: PosCheckoutOptions = {
+      paymentMethodId:
+        body.paymentMethodId != null
+          ? Number(body.paymentMethodId)
+          : undefined,
+      partnerId:
+        body.partnerId != null ? Number(body.partnerId) : undefined,
+    };
+    if (partnerNew) checkoutOptions.partnerNew = partnerNew;
     const result = await getBackend().checkoutPosCart(
       odooSessionId,
       body.lines,
-      {
-        paymentMethodId:
-          body.paymentMethodId != null
-            ? Number(body.paymentMethodId)
-            : undefined,
-        partnerId:
-          body.partnerId != null ? Number(body.partnerId) : undefined,
-      }
+      checkoutOptions
     );
     return json(result);
   } catch (err) {

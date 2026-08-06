@@ -150,9 +150,20 @@ export type PosCheckoutLine = {
   discount?: number;
 };
 
-export type PosCheckoutOptions = {
-  paymentMethodId?: number;
+export type PartnerNewInput = {
+  name: string;
+  phone?: string;
+  email?: string;
+  vat?: string;
+};
+
+export type PartnerInlineOptions = {
   partnerId?: number;
+  partnerNew?: PartnerNewInput;
+};
+
+export type PosCheckoutOptions = PartnerInlineOptions & {
+  paymentMethodId?: number;
 };
 
 export type PosCheckoutResult = {

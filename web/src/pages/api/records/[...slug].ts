@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { BffError } from "../../../lib/bff/errors.ts";
 import { getBackend } from "../../../lib/bff/get-backend.ts";
+import type { PosCheckoutOptions } from "../../../lib/bff/types.ts";
 import {
   bffErrorResponse,
   json,
@@ -14,6 +15,7 @@ import {
 } from "../../../lib/shell/workshop-creates.ts";
 import { canCreateInvoiceFromOrder } from "../../../lib/shell/order-invoice.ts";
 import { canCreateInvoiceFromPos } from "../../../lib/shell/pos-invoice.ts";
+import { parsePartnerNew } from "../../../lib/shell/partner-inline.ts";
 import { canRegisterPayment } from "../../../lib/shell/payment-registers.ts";
 import {
   canMarkFwLoaded,
@@ -162,16 +164,19 @@ export const POST: APIRoute = async ({ cookies, params, request }) => {
       if (canCreateInvoiceFromPos(slug)) {
         const partnerId =
           body.partnerId != null ? Number(body.partnerId) : undefined;
-        const result = await getBackend().createInvoiceFromPos(
-          odooSessionId,
-          slug,
-          id,
-          {
+        const partnerNew = parsePartnerNew(body.partnerNew);
+        const invoiceOptions: PosCheckoutOptions = {
             partnerId:
               partnerId != null && Number.isFinite(partnerId)
                 ? partnerId
                 : undefined,
-          }
+        };
+        if (partnerNew) invoiceOptions.partnerNew = partnerNew;
+        const result = await getBackend().createInvoiceFromPos(
+          odooSessionId,
+          slug,
+          id,
+          invoiceOptions
         );
         return json(result);
       }
