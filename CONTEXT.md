@@ -104,6 +104,7 @@ Skill: `astro-bff-shell` (personal). Plan spike: [plan spike](docs/superpowers/p
 | [docs/design/servigas-brand.md](docs/design/servigas-brand.md) | Identidad visual (llama, Montserrat, paleta) |
 | [docs/adr/0001-liquid-glass-odoo-frontend.md](docs/adr/0001-liquid-glass-odoo-frontend.md) | ADR — por qué Liquid Glass y cómo se implementa en `servigas_core` |
 | [docs/proyecto/bitacora-cambios.md](docs/proyecto/bitacora-cambios.md) | **Bitácora viva** — cambios, verificación y backlog de automatización |
+| [docs/proyecto/docker-piloto-mostrador.md](docs/proyecto/docker-piloto-mostrador.md) | **Instalación PC mostrador** — Docker Postgres + Odoo + Astro |
 
 ### Reglas rápidas para agentes
 

@@ -1,136 +1,216 @@
-# Docker piloto — mostrador Servigas (opción C)
+# Servigas en la PC del mostrador (Docker)
 
 Stack reproducible: **Postgres + Odoo 19 + Astro BFF** en contenedores.
-Pensado para instalar en la PC del mostrador sin depender del Postgres/Python de Windows.
+Pensado para la PC del mostrador **sin** depender del Postgres/Python de desarrollo en Windows.
 
 ## Analogía
 
-Es una **mudanza en tres cajas**:
+Es una **mudanza en tres cajas** (todo vive dentro de Docker):
 
-| Caja | Servicio | Puerto en tu PC (default piloto) |
-|------|----------|----------------------------------|
-| Bóveda | Postgres 16 | `5433` (solo debug; el nativo sigue en 5432) |
+| Caja | Servicio | Puerto en la PC (default) |
+|------|----------|---------------------------|
+| Bóveda | Postgres 16 | `5433` (solo debug) |
 | Oficina | Odoo 19 + addons Servigas | `8069` |
-| Mostrador web | Astro BFF | `4322` |
+| Mostrador web | Astro BFF (shell oficial) | `4322` (o `4321` si preferís) |
 
-El día a día de desarrollo (nativo) sigue en `8070` / `4321` / Postgres Windows: **no chocan**.
+En la notebook de desarrollo el nativo sigue en `8070` / `4321` / Postgres Windows: **no chocan** con este piloto.
+
+**Relacionado:** copiar productos/usuarios desde `servigas_dev` → [`copiar-servigas-dev-a-docker.md`](./copiar-servigas-dev-a-docker.md).
+
+---
 
 ## Requisitos
 
-1. [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y **en marcha** (ícono de ballena).
-2. Este repo clonado (carpeta `custom_addons` con `servigas_core` y `servigas_integrations`).
-3. En PowerShell: `docker version` debe mostrar Client **y** Server (si Server falla → abrí Docker Desktop).
+1. Windows 10/11 estable; sesión de usuario del mostrador (arranque automático de Docker Desktop opcional).
+2. [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y **Running** (ícono de ballena).
+3. Repo Servigas en disco (carpeta `custom_addons` con `servigas_core` y `servigas_integrations`).
+4. En PowerShell: `docker version` muestra Client **y** Server (si Server falla → abrí Docker Desktop y esperá).
 
-## Arranque en tu PC (prueba)
+---
 
-Atajo (doble clic / acceso directo):
+## Instalación en la PC del mostrador (paso a paso)
+
+### 1. Clonar o copiar el repo
 
 ```powershell
-cd Desktop\proyectos\servigas-workshop\infra\docker
-python .\build-servigas-ico.py
+cd $env:USERPROFILE\Desktop
+# Si hay git:
+git clone https://github.com/mauriciosoyastor/servigas.git servigas-workshop
+cd servigas-workshop
+git checkout main
+git pull
+```
+
+Si no hay git: copiá la carpeta del proyecto completa (incluye `custom_addons/` e `infra/docker/`).
+
+### 2. Configurar `.env`
+
+```powershell
+cd infra\docker
+copy .env.example .env
+notepad .env
+```
+
+| Variable | Default | En el mostrador real |
+|----------|---------|----------------------|
+| `ODOO_DB` | `servigas` | Dejar así (debe coincidir con `dbfilter` en `odoo.conf`) |
+| `WEB_HOST_PORT` | `4322` | Podés poner `4321` si nadie más lo usa |
+| `ODOO_HOST_PORT` | `8069` | Dejar (no uses `8070`: es el nativo de desarrollo) |
+| `POSTGRES_PASSWORD` | `odoo` | **Cambiar** antes de dejar la PC sin supervisión |
+
+### 3. Primera vez: build + módulos
+
+```powershell
+cd infra\docker
+docker compose --env-file .env up -d --build
+.\install-modules.ps1
+```
+
+- La primera build de Astro puede tardar varios minutos.
+- `install-modules.ps1` crea/actualiza la DB `servigas` e instala `servigas_core` + `servigas_integrations` **sin demos**.
+
+### 4. Usuario admin
+
+1. Abrí http://127.0.0.1:8069 → wizard / login Odoo.
+2. Creá (o usá) el usuario admin de la DB `servigas`.
+3. Cambiá también el **master password** de gestión de DB en `infra/docker/odoo.conf` (`admin_passwd`) si la PC queda en el local.
+
+### 5. Acceso diario (atajo del escritorio)
+
+```powershell
+cd infra\docker
+python .\build-servigas-ico.py          # una vez, genera servigas.ico
 .\Start-Servigas.ps1 -CreateDesktopShortcut
 .\Start-Servigas.ps1
 ```
 
-El acceso **Servigas** del escritorio usa el ícono de la llama (`servigas.ico`).
+El acceso **Servigas** del escritorio:
 
-O a mano:
+- Espera Docker Desktop
+- Levanta `db` + `odoo` + `web`
+- Abre el navegador en el shell Astro
 
-```powershell
-cd Desktop\proyectos\servigas-workshop\infra\docker
-copy .env.example .env
-docker compose --env-file .env up -d --build
-```
+Días siguientes: **doble clic en Servigas** (o `.\Start-Servigas.ps1`).
 
-La primera vez el build de Astro puede tardar varios minutos.
+### 6. Bookmark del shell
 
-### Instalar módulos (solo primera vez / upgrade)
+| URL | Uso |
+|-----|-----|
+| http://127.0.0.1:4322 (o el `WEB_HOST_PORT`) | **Shell operativo** (login del día a día) |
+| http://127.0.0.1:8069 | Odoo backend (solo admin / hotfix) |
 
-```powershell
-.\install-modules.ps1
-```
+Login en Astro con el **mismo** usuario/clave Odoo y DB `servigas`.
 
-Eso crea/actualiza la DB `servigas` e instala `servigas_core` + `servigas_integrations` sin datos demo.
+### 7. (Opcional) Traer catálogo y datos de desarrollo
 
-### Abrir
+Si ya tenés productos/usuarios en `servigas_dev` (Windows), seguí  
+[`copiar-servigas-dev-a-docker.md`](./copiar-servigas-dev-a-docker.md)  
+y después `.\install-modules.ps1` o un `-u` de módulos (paso “Actualizar”).
 
-| URL | Qué es |
-|-----|--------|
-| http://127.0.0.1:4322 | Shell Astro (login operativo) |
-| http://127.0.0.1:8069 | Odoo nativo (wizard DB / backend) |
-
-1. Entrá a Odoo `:8069` si pedís crear usuario master / admin la primera vez.
-2. Luego login en Astro `:4322` con ese usuario y DB `servigas`.
+---
 
 ## Smoke checklist (5–10 min)
 
-- [ ] `docker compose --env-file .env ps` → `db`, `odoo`, `web` up (odoo healthy)
+Hacelo la primera vez y después de cada `git pull` + upgrade.
+
+- [ ] `docker compose --env-file .env ps` → `db`, `odoo`, `web` up (`odoo` healthy)
 - [ ] http://127.0.0.1:8069/web/login responde
 - [ ] http://127.0.0.1:4322/login → entrar
-- [ ] Home / rail carga (Inicio, Mostrador, Caja, …, Cobros, Taller)
+- [ ] Home / rail: Inicio, Mostrador, Caja, Cobros, Taller, …
+- [ ] Mostrador (POS): buscar producto y (si hay caja abierta) cobro de prueba
 - [ ] Hub Taller o listado OT abre sin error de campo
-- [ ] (Opcional) PDF OT / cobro con caja abierta
+- [ ] Ficha OT: Ver / Descargar PDF (debe bajar un `%PDF`, no HTML de error)
+- [ ] (Opcional) PDF de factura desde ficha FC
+- [ ] Caja: abrir sesión y ver feed de movimientos
+
+---
+
+## Actualizar código en el mostrador
+
+Cuando haya cambios mergeados en `main` (layout PDF, taller, caja, etc.):
+
+```powershell
+cd path\to\servigas-workshop
+git pull
+
+cd infra\docker
+docker compose --env-file .env up -d --build web   # si cambió Astro / web/
+.\install-modules.ps1                              # re-aplica / upgrade módulos
+```
+
+Upgrade explícito solo de core (si hace falta):
+
+```powershell
+docker compose --env-file .env run --rm --no-deps odoo `
+  odoo -d servigas -u servigas_core,servigas_integrations `
+  --stop-after-init --db_host=db --db_user=odoo --db_password=odoo
+docker compose --env-file .env up -d
+```
+
+Luego repetí el **smoke checklist** (sobre todo PDF OT/factura y hub Taller).
+
+> **Nota:** el layout PDF de facturas usa un inherit `primary` Servigas para no pelear con `account_edi_ubl_cii`. Si un `-u servigas_core` falla con xpath `web.external_layout`, asegurate de estar en `main` con el fix mergeado.
+
+---
 
 ## Comandos útiles
 
 ```powershell
 cd infra\docker
 
-# Ver logs
+# Estado
+docker compose --env-file .env ps
+
+# Logs
 docker compose --env-file .env logs -f web
 docker compose --env-file .env logs -f odoo
 
 # Parar (conserva datos en volúmenes)
 docker compose --env-file .env down
 
-# Parar y BORRAR datos (reset total del piloto)
+# Parar y BORRAR datos (reset total — pierde productos/usuarios del piloto)
 docker compose --env-file .env down -v
 
-# Rebuild solo Astro tras cambiar web/
+# Solo rebuild Astro tras cambiar web/
 docker compose --env-file .env up -d --build web
-
-# Upgrade módulos tras pull de código
-.\install-modules.ps1
-# o: docker compose run --rm --no-deps odoo odoo -d servigas -u servigas_core --stop-after-init --db_host=db --db_user=odoo --db_password=odoo
 ```
 
-## Variables (`.env`)
+---
 
-Copiá desde `.env.example`. Importantes:
+## Qué incluye / qué no
 
-| Variable | Default piloto | Nota |
-|----------|----------------|------|
-| `ODOO_DB` | `servigas` | Debe coincidir con `dbfilter` en `odoo.conf` |
-| `WEB_HOST_PORT` | `4322` | En el mostrador real podés poner `4321` |
-| `ODOO_HOST_PORT` | `8069` | Oficial Docker Odoo |
-| `POSTGRES_PASSWORD` | `odoo` | **Cambiar** antes de producción |
+| Incluye | No incluye (aún) |
+|---------|------------------|
+| Shell Astro (POS, caja, cobros, taller, listas) | AFIP / emisión electrónica |
+| PDFs con marca Servigas (OT, pedidos, OC, facturas) | eCommerce |
+| Catálogo / compras / contabilidad operativa | Multi-caja / offline |
+| Factura Web (puente manual) | Listas de precio automáticas |
 
-## Instalación en la PC del mostrador
-
-1. Instalar Docker Desktop + iniciar sesión Windows estable (arranque automático opcional).
-2. Clonar este repo (o copiar carpeta).
-3. `infra/docker`: `copy .env.example .env` → ajustar puertos si querés `4321`.
-4. `docker compose --env-file .env up -d --build`
-5. `.\install-modules.ps1`
-6. Crear usuario admin en Odoo; smoke checklist.
-7. Bookmark: Astro en el navegador del mostrador.
-
-**Master password** de gestión de DB Odoo: ver `admin_passwd` en `odoo.conf` (cambiar antes de dejar el local sin supervisión).
-
-## Límites (explícitos)
-
-- No incluye AFIP / emisión electrónica.
-- PDF depende de `wkhtmltopdf` en la imagen oficial `odoo:19.0` (suele venir; si falla PDF, revisar logs Odoo).
-- Los addons se montan **read-only** desde `custom_addons/`; para código nuevo: pull + rebuild web + `-u` módulos.
-- Este Postgres Docker es **aparte** del Postgres de Windows; no mezcla `servigas_dev` nativo.
-- Para copiar productos/datos de `servigas_dev` al piloto: ver [`copiar-servigas-dev-a-docker.md`](./copiar-servigas-dev-a-docker.md).
+---
 
 ## Troubleshooting
 
 | Síntoma | Qué mirar |
 |---------|-----------|
-| `failed to connect to the docker API` / pipe | Abrir **Docker Desktop** y esperar a que diga Running |
+| `failed to connect to the docker API` / pipe | Abrir **Docker Desktop** y esperar Running |
 | Puerto en uso | Cambiar `WEB_HOST_PORT` / `ODOO_HOST_PORT` en `.env` |
-| Astro “Missing ODOO_URL” | El compose ya setea `ODOO_URL=http://odoo:8069` dentro de la red |
-| Módulo no aparece | `install-modules.ps1` y volumen `../../custom_addons` montado |
+| Astro “Missing ODOO_URL” | El compose setea `ODOO_URL=http://odoo:8069` dentro de la red |
+| Módulo no aparece | `install-modules.ps1`; volumen `../../custom_addons` montado |
 | Login Astro falla | DB `servigas` creada + usuario Odoo; `ODOO_DB` en `.env` |
+| PDF falla / HTML en vez de PDF | Logs Odoo; imagen `odoo:19.0` trae wkhtmltopdf; `-u servigas_core` |
+| Upgrade XML `web.external_layout` | `git pull` de `main` con fix factura primary; volver a `-u` |
+| Tras `down -v` “desapareció todo” | Esperado: borraste volúmenes; hay que reinstalar o restaurar dump |
+
+---
+
+## Arranque rápido (dev en la misma máquina)
+
+Si solo querés probar el piloto Docker **sin** ser la PC del negocio:
+
+```powershell
+cd infra\docker
+copy .env.example .env
+docker compose --env-file .env up -d --build
+.\install-modules.ps1
+.\Start-Servigas.ps1
+```
