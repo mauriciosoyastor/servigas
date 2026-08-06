@@ -3,23 +3,16 @@
   <template id="report_sg_work_order_document">
     <t t-call="web.html_container">
       <t t-foreach="docs" t-as="o">
-        <div class="page" style="font-family: DejaVu Sans, sans-serif; color: #1a1a1a;">
-          <!-- charset hint for wkhtmltopdf on Windows -->
-          <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-          <div style="display:flex; align-items:center; gap:16px; margin-bottom:20px; border-bottom:2px solid #c45c26; padding-bottom:12px;">
-            <img t-if="o.get_report_brand_mark_src()"
-                 t-att-src="o.get_report_brand_mark_src()"
-                 style="height:56px; width:auto;" alt="Servigas"/>
-            <div>
-              <div style="font-size:20px; font-weight:700;">Orden de trabajo</div>
-              <div style="font-size:13px; color:#555;">
-                <span t-esc="o.name"/> &#183;
-                <span t-esc="dict(o._fields['state'].selection).get(o.state)"/> &#183;
-                <span t-field="o.date"/>
-              </div>
-            </div>
-          </div>
-
+        <t t-set="layout_document_title">
+          <span>Orden de trabajo</span>
+          <span> &#183; </span>
+          <span t-esc="o.name"/>
+          <span> &#183; </span>
+          <span t-esc="dict(o._fields['state'].selection).get(o.state)"/>
+          <span> &#183; </span>
+          <span t-field="o.date"/>
+        </t>
+        <t t-call="servigas_core.report_servigas_layout">
           <h3 style="font-size:14px; margin:16px 0 8px;">Cliente</h3>
           <table style="width:100%; font-size:12px; border-collapse:collapse;">
             <tr>
@@ -84,11 +77,7 @@
               <span t-esc="'%.2f' % (o.amount,)"/>
             </div>
           </t>
-
-          <div style="margin-top:28px; font-size:11px; color:#888; border-top:1px solid #ddd; padding-top:8px;">
-            Servigas
-          </div>
-        </div>
+        </t>
       </t>
     </t>
   </template>

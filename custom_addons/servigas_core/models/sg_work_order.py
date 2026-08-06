@@ -1,8 +1,6 @@
 from odoo import api, fields, models, _
 from odoo.exceptions import UserError
-from odoo.tools import file_open, float_compare, float_round
-
-from . import sg_work_order_report_assets as report_assets
+from odoo.tools import float_compare, float_round
 
 
 class SgWorkOrder(models.Model):
@@ -46,12 +44,7 @@ class SgWorkOrder(models.Model):
     def get_report_brand_mark_src(self):
         """Data-URI del símbolo Servigas para el PDF (no depende de HTTP static)."""
         self.ensure_one()
-        try:
-            with file_open(report_assets.MARK_PRINT_RELATIVE, "rb") as handle:
-                raw = handle.read()
-        except (FileNotFoundError, OSError, ValueError):
-            return ""
-        return report_assets.mark_data_uri_or_empty(raw)
+        return self.env["report.servigas.brand"].get_mark_src()
 
     @api.model_create_multi
     def create(self, vals_list):
