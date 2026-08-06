@@ -4,6 +4,11 @@ from odoo import fields, models
 class AccountMove(models.Model):
     _inherit = "account.move"
 
+    def _get_name_invoice_report(self):
+        """Use Servigas-branded invoice QWeb (primary inherit) for shell PDFs."""
+        self.ensure_one()
+        return "servigas_core.report_invoice_document_servigas"
+
     sg_fw_loaded = fields.Boolean(
         string="Cargada en Factura Web",
         default=False,
