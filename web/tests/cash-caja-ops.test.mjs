@@ -2,6 +2,8 @@ import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import {
   filterCashFeed,
+  resolveCashFeedFilter,
+  cajaFeedHref,
   suggestedBankWithdraw,
   validateCashClose,
   buildCashAlerts,
@@ -51,6 +53,16 @@ describe("cash feed filters", () => {
     assert.equal(filterCashFeed(feed, "transfer").length, 1);
     assert.equal(filterCashFeed(feed, "card").length, 1);
     assert.equal(filterCashFeed(feed, "manual").length, 1);
+  });
+
+  it("resolves filter query and builds feed href", () => {
+    assert.equal(resolveCashFeedFilter(null), "all");
+    assert.equal(resolveCashFeedFilter(""), "all");
+    assert.equal(resolveCashFeedFilter("manual"), "manual");
+    assert.equal(resolveCashFeedFilter("nope"), "all");
+    assert.equal(cajaFeedHref("all"), "/caja?filter=all#movimientos");
+    assert.equal(cajaFeedHref("cash"), "/caja?filter=cash#movimientos");
+    assert.equal(cajaFeedHref("manual"), "/caja?filter=manual#movimientos");
   });
 });
 
