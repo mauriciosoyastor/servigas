@@ -5,7 +5,7 @@ import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
 import type { CashHubPayload } from '../lib/bff/types.ts';
 import { CASH_MOTIVES_IN, CASH_MOTIVES_OUT } from '../lib/caja/cash-motives.ts';
-import { CASH_SHIFTS, filterCashFeed, type CashFeedFilter } from '../lib/caja/cash-ops.ts';
+import { CASH_SHIFTS, filterCashFeed, resolveCashFeedFilter, cajaFeedHref, type CashFeedFilter } from '../lib/caja/cash-ops.ts';
 import { formatArs } from '../lib/money/ars.ts';
 
 let userName = '';
@@ -19,10 +19,7 @@ let hub: CashHubPayload = {
 	suggestedBankWithdraw: 0,
 };
 let error = '';
-const filterParam = (Astro.url.searchParams.get('filter') || 'all') as CashFeedFilter;
-const activeFilter: CashFeedFilter = ['all', 'cash', 'transfer', 'card', 'manual'].includes(filterParam)
-	? filterParam
-	: 'all';
+const activeFilter = resolveCashFeedFilter(Astro.url.searchParams.get('filter'));
 
 try {
 	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
@@ -101,6 +98,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 		class="sg-caja"
 		data-caja-root
 		data-open={isOpen ? '1' : '0'}
+		data-filter={activeFilter}
 		data-suggested-bank={hub.suggestedBankWithdraw}
 		data-expected={summary?.expectedCash ?? 0}
 	>
@@ -356,7 +354,8 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 						{filterLinks.map((item) => (
 							<a
 								class:list={['sg-caja-filter', activeFilter === item.key && 'is-active']}
-								href={`/caja?filter=${item.key}#movimientos`}
+								href={cajaFeedHref(item.key)}
+								aria-current={activeFilter === item.key ? 'page' : undefined}
 							>
 								{item.label}
 							</a>
@@ -402,9 +401,17 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 		TOUR_DONE_KEY,
 		setTourStep,
 	} from '../lib/shell/onboarding-tour.ts';
+	import {
+		cajaFeedHref,
+		resolveCashFeedFilter,
+	} from '../lib/caja/cash-ops.ts';
 
 	const root = document.querySelector<HTMLElement>('[data-caja-root]');
 	const flash = document.querySelector<HTMLElement>('[data-caja-flash]');
+
+	function feedReturnHref() {
+		return cajaFeedHref(resolveCashFeedFilter(root?.dataset.filter));
+	}
 
 	function showFlash(message: string, isError = false) {
 		if (!flash) return;
@@ -486,7 +493,7 @@ const filterLinks: { key: CashFeedFilter; label: string }[] = [
 					motiveCode: String(data.get('motiveCode') || ''),
 					note: String(data.get('note') || ''),
 				});
-				window.location.href = '/caja';
+				window.location.href = feedReturnHref();
 			} catch (err) {
 				showFlash(err instanceof Error ? err.message : 'Error al registrar', true);
 			}

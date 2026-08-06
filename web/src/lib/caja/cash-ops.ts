@@ -2,6 +2,27 @@ import type { CashFeedItem } from "./cash-feed.ts";
 
 export type CashFeedFilter = "all" | "cash" | "transfer" | "card" | "manual";
 
+const CASH_FEED_FILTERS: readonly CashFeedFilter[] = [
+  "all",
+  "cash",
+  "transfer",
+  "card",
+  "manual",
+];
+
+export function resolveCashFeedFilter(
+  raw: string | null | undefined
+): CashFeedFilter {
+  const value = String(raw || "all");
+  return (CASH_FEED_FILTERS as readonly string[]).includes(value)
+    ? (value as CashFeedFilter)
+    : "all";
+}
+
+export function cajaFeedHref(filter: CashFeedFilter = "all"): string {
+  return `/caja?filter=${resolveCashFeedFilter(filter)}#movimientos`;
+}
+
 export type CashAlert = {
   code: "open_too_long" | "high_cash_no_bank";
   message: string;

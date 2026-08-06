@@ -160,7 +160,11 @@ describe("shell UI contracts", () => {
     assert.match(page, /name="shift"/);
     assert.match(page, /CASH_SHIFTS/);
     assert.match(page, /filterCashFeed/);
+    assert.match(page, /resolveCashFeedFilter|cajaFeedHref/);
     assert.match(page, /sg-caja-filters/);
+    assert.match(page, /aria-current/);
+    assert.match(page, /cajaFeedHref\(/);
+    assert.match(page, /data-filter=\{activeFilter\}/);
     assert.match(page, /href=["']\/caja\/historial["']/);
     assert.match(page, /Historial/);
     assert.match(page, /sg-caja-alerts/);
