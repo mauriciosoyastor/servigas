@@ -2,6 +2,12 @@
  * Workshop serial helpers + work-order create filter (Astro BFF).
  */
 
+import {
+  parsePartnerNew,
+  partnerNewFromWorkshopOwner,
+  type PartnerNewInput,
+} from "./partner-inline.ts";
+
 export function normalizeSerial(raw: unknown): string {
   if (raw === null || raw === undefined) return "";
   return String(raw)
@@ -20,6 +26,7 @@ export type WorkOrderCreateValues = {
   owner_name?: string;
   owner_phone?: string;
   partner_id?: number;
+  partnerNew?: PartnerNewInput;
   problem?: string;
   observation?: string;
   work_done?: string;
@@ -69,7 +76,14 @@ export function filterWorkOrderCreateValues(
   if (owner_phone) out.owner_phone = owner_phone;
 
   const partnerId = Number(values.partner_id ?? values.partnerId);
-  if (Number.isFinite(partnerId) && partnerId > 0) out.partner_id = partnerId;
+  if (Number.isFinite(partnerId) && partnerId > 0) {
+    out.partner_id = partnerId;
+  } else {
+    const explicit = parsePartnerNew(values.partnerNew ?? values.partner_new);
+    const derived = partnerNewFromWorkshopOwner(values);
+    const partnerNew = explicit || derived;
+    if (partnerNew) out.partnerNew = partnerNew;
+  }
 
   for (const key of [
     "problem",

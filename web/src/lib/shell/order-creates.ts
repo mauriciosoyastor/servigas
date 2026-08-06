@@ -2,6 +2,11 @@
  * Allowlisted order creates (cotización / pedido a proveedor), multi-line.
  */
 
+import {
+  parsePartnerResolution,
+  type PartnerNewInput,
+  type PartnerResolution,
+} from "./partner-inline.ts";
 import { resolveRecordListKey } from "./record-lists.ts";
 
 export type OrderCreateDef = {
@@ -34,9 +39,12 @@ export type OrderCreateLine = {
 };
 
 export type OrderCreateValues = {
-  partnerId: number;
+  partnerId?: number;
+  partnerNew?: PartnerNewInput;
   lines: OrderCreateLine[];
 };
+
+export type { PartnerNewInput, PartnerResolution };
 
 function canonicalOrderKey(listKey: string): string {
   return resolveRecordListKey(listKey) || listKey;
@@ -83,8 +91,8 @@ export function filterOrderCreateValues(
 ): OrderCreateValues | null {
   if (!getOrderCreateDef(listKey)) return null;
 
-  const partnerId = Number(values.partnerId ?? values.partner_id);
-  if (!Number.isFinite(partnerId) || partnerId <= 0) return null;
+  const partner = parsePartnerResolution(values);
+  if (!partner) return null;
 
   let lines: OrderCreateLine[] = [];
   if (Array.isArray(values.lines)) {
@@ -106,5 +114,9 @@ export function filterOrderCreateValues(
   }
 
   if (!lines.length) return null;
-  return { partnerId, lines };
+
+  const out: OrderCreateValues = { lines };
+  if (partner.partnerId) out.partnerId = partner.partnerId;
+  if (partner.partnerNew) out.partnerNew = partner.partnerNew;
+  return out;
 }

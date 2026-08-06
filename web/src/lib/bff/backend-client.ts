@@ -127,7 +127,7 @@ export interface BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number,
-    options?: { partnerId?: number }
+    options?: PosCheckoutOptions
   ): Promise<{ ok: true; id: number; detailPath: string }>;
   registerPayment(
     odooSessionId: string,

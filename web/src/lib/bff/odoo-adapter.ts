@@ -122,6 +122,17 @@ import {
   filterWorkOrderCreateValues,
 } from "../shell/workshop-creates.ts";
 import {
+  cuitConflictMessage,
+  partnerCreateDefaults,
+  partnerKindFromListKey,
+  partnerNamesMatch,
+  PARTNER_MISSING_MSG,
+  type PartnerKind,
+  type PartnerNewInput,
+  type PartnerResolution,
+} from "../shell/partner-inline.ts";
+import { normalizeCuit } from "../shell/cuit.ts";
+import {
   billSourceLabel,
   normalizeBillAttachment,
 } from "../shell/bill-attachment.ts";
@@ -1533,50 +1544,142 @@ export class OdooAdapter implements BackendClient {
     odooSessionId: string,
     name: string
   ): Promise<number> {
-    const trimmed = name.trim().slice(0, 128);
+    return this.#ensurePartnerId(odooSessionId, "supplier", { name: name.trim() });
+  }
+
+  async #findPartnerByNormalizedVat(
+    odooSessionId: string,
+    vatDigits: string
+  ): Promise<{ id: number; name: string } | null> {
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "res.partner",
+      [["vat", "ilike", vatDigits]],
+      ["id", "name", "vat"],
+      10,
+      0,
+      "id"
+    );
+    for (const row of rows) {
+      if (normalizeCuit(row.vat) === vatDigits) {
+        const id = Number(row.id);
+        if (Number.isFinite(id) && id > 0) {
+          return { id, name: String(row.name || "") };
+        }
+      }
+    }
+    return null;
+  }
+
+  async #ensurePartnerRank(
+    odooSessionId: string,
+    partnerId: number,
+    kind: PartnerKind
+  ): Promise<void> {
+    const rankField = kind === "customer" ? "customer_rank" : "supplier_rank";
+    const [partner] = await this.#searchRead(
+      odooSessionId,
+      "res.partner",
+      [["id", "=", partnerId]],
+      ["id", rankField],
+      1,
+      0,
+      "id"
+    );
+    if (!partner?.id) return;
+    if (Number(partner[rankField] || 0) <= 0) {
+      await this.#callKw(odooSessionId, "res.partner", "write", [
+        [partnerId],
+        { [rankField]: 1 },
+      ]);
+    }
+  }
+
+  async #ensurePartnerId(
+    odooSessionId: string,
+    kind: PartnerKind,
+    input: PartnerNewInput
+  ): Promise<number> {
+    const name = String(input.name || "").trim().slice(0, 128);
+    if (!name) {
+      throw new BffError("validation_error", 400, PARTNER_MISSING_MSG);
+    }
+
+    const vatDigits = input.vat ? normalizeCuit(input.vat) : null;
+    if (vatDigits) {
+      const byVat = await this.#findPartnerByNormalizedVat(
+        odooSessionId,
+        vatDigits
+      );
+      if (byVat) {
+        if (!partnerNamesMatch(byVat.name, name)) {
+          throw new BffError(
+            "validation_error",
+            400,
+            cuitConflictMessage(vatDigits, byVat.name)
+          );
+        }
+        await this.#ensurePartnerRank(odooSessionId, byVat.id, kind);
+        return byVat.id;
+      }
+    }
+
     const existing = await this.#searchRead(
       odooSessionId,
       "res.partner",
-      [
-        ["name", "=ilike", trimmed],
-        ["supplier_rank", ">", 0],
-      ],
-      ["id", "name", "supplier_rank"],
+      [["name", "=ilike", name]],
+      ["id", "name", "customer_rank", "supplier_rank", "vat"],
       5,
       0,
       "id"
     );
-    const exact = existing.find(
-      (row) => String(row.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    const exact = existing.find((row) =>
+      partnerNamesMatch(String(row.name || ""), name)
     );
-    if (exact) return Number(exact.id);
-    const anyPartner = await this.#searchRead(
-      odooSessionId,
-      "res.partner",
-      [["name", "=ilike", trimmed]],
-      ["id", "name", "supplier_rank"],
-      5,
-      0,
-      "id"
-    );
-    const partnerExact = anyPartner.find(
-      (row) => String(row.name || "").trim().toLowerCase() === trimmed.toLowerCase()
-    );
-    if (partnerExact) {
-      const id = Number(partnerExact.id);
-      if (Number(partnerExact.supplier_rank || 0) <= 0) {
-        await this.#callKw(odooSessionId, "res.partner", "write", [
-          [id],
-          { supplier_rank: 1 },
-        ]);
+    if (exact) {
+      const id = Number(exact.id);
+      if (vatDigits) {
+        const existingVat = normalizeCuit(exact.vat);
+        if (existingVat && existingVat !== vatDigits) {
+          throw new BffError(
+            "validation_error",
+            400,
+            cuitConflictMessage(vatDigits, String(exact.name || ""))
+          );
+        }
       }
+      await this.#ensurePartnerRank(odooSessionId, id, kind);
       return id;
     }
+
+    const createVals: Record<string, string | number | boolean> = {
+      name,
+      ...partnerCreateDefaults(kind),
+    };
+    if (input.phone) createVals.phone = input.phone.slice(0, 64);
+    if (input.email) createVals.email = input.email.slice(0, 254);
+    if (input.vat) createVals.vat = input.vat.trim().slice(0, 32);
+
     return Number(
-      await this.#callKw(odooSessionId, "res.partner", "create", [
-        { name: trimmed, supplier_rank: 1, company_type: "company" },
-      ])
+      await this.#callKw(odooSessionId, "res.partner", "create", [createVals])
     );
+  }
+
+  async #resolvePartnerId(
+    odooSessionId: string,
+    kind: PartnerKind,
+    resolution: PartnerResolution
+  ): Promise<number> {
+    const requested = Number(resolution.partnerId);
+    if (Number.isFinite(requested) && requested > 0) {
+      return requested;
+    }
+
+    if (resolution.partnerNew) {
+      return this.#ensurePartnerId(odooSessionId, kind, resolution.partnerNew);
+    }
+
+    throw new BffError("validation_error", 400, PARTNER_MISSING_MSG);
   }
 
   async #upsertSupplierInfo(
@@ -1747,6 +1850,15 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Datos de alta inválidos");
     }
 
+    const partnerId = await this.#resolvePartnerId(
+      odooSessionId,
+      partnerKindFromListKey(listKey),
+      {
+        partnerId: filtered.partnerId,
+        partnerNew: filtered.partnerNew,
+      }
+    );
+
     const invoice_line_ids = filtered.lines.map((line) => {
       const vals: Record<string, number> = {
         product_id: line.productId,
@@ -1759,7 +1871,7 @@ export class OdooAdapter implements BackendClient {
 
     const createVals: Record<string, unknown> = {
       move_type: invoiceDef.moveType,
-      partner_id: filtered.partnerId,
+      partner_id: partnerId,
       invoice_line_ids,
     };
     // Odoo 19 exige invoice_date para publicar FP/NC proveedor.
@@ -1832,6 +1944,15 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("validation_error", 400, "Datos de edición inválidos");
     }
 
+    const partnerId = await this.#resolvePartnerId(
+      odooSessionId,
+      partnerKindFromListKey(listKey),
+      {
+        partnerId: filtered.partnerId,
+        partnerNew: filtered.partnerNew,
+      }
+    );
+
     const [move] = await this.#callKw<Record<string, unknown>[]>(
       odooSessionId,
       "account.move",
@@ -1868,7 +1989,7 @@ export class OdooAdapter implements BackendClient {
     }
 
     const writeVals: Record<string, unknown> = {
-      partner_id: filtered.partnerId,
+      partner_id: partnerId,
       invoice_line_ids,
     };
     if (filtered.billSource) {
@@ -2209,6 +2330,15 @@ export class OdooAdapter implements BackendClient {
       );
     }
 
+    let resolvedPartnerId = filtered.partner_id;
+    if (!resolvedPartnerId && filtered.partnerNew) {
+      resolvedPartnerId = await this.#resolvePartnerId(
+        odooSessionId,
+        "customer",
+        { partnerNew: filtered.partnerNew }
+      );
+    }
+
     let attachment: { filename: string; mimetype: string; content: string } | undefined;
     if (filtered.attachment) {
       const normalized = normalizeBillAttachment(filtered.attachment);
@@ -2221,6 +2351,8 @@ export class OdooAdapter implements BackendClient {
 
     const payload: Record<string, unknown> = { ...filtered };
     delete payload.attachment;
+    delete payload.partnerNew;
+    if (resolvedPartnerId) payload.partner_id = resolvedPartnerId;
 
     const id = Number(
       await this.#callKw<number>(
@@ -2277,6 +2409,15 @@ export class OdooAdapter implements BackendClient {
       throw new BffError("not_found", 404, "Datos de alta inválidos");
     }
 
+    const partnerId = await this.#resolvePartnerId(
+      odooSessionId,
+      partnerKindFromListKey(listKey),
+      {
+        partnerId: filtered.partnerId,
+        partnerNew: filtered.partnerNew,
+      }
+    );
+
     const order_line = filtered.lines.map((line) => {
       const vals: Record<string, number> = {
         product_id: line.productId,
@@ -2293,7 +2434,7 @@ export class OdooAdapter implements BackendClient {
       "create",
       [
         {
-          partner_id: filtered.partnerId,
+          partner_id: partnerId,
           order_line,
         },
       ]
@@ -2768,7 +2909,7 @@ export class OdooAdapter implements BackendClient {
     odooSessionId: string,
     listKey: string,
     id: number,
-    options: { partnerId?: number } = {}
+    options: PosCheckoutOptions = {}
   ): Promise<{ ok: true; id: number; detailPath: string }> {
     if (!canCreateInvoiceFromPos(listKey)) {
       throw new BffError("not_found", 404, "Facturación no permitida");
@@ -2849,11 +2990,14 @@ export class OdooAdapter implements BackendClient {
       partnerId = requestedPartner;
     }
     if (partnerId <= 0) {
-      throw new BffError(
-        "validation_error",
-        400,
-        "Elegí un cliente para facturar esta venta de caja"
-      );
+      partnerId = await this.#resolvePartnerId(odooSessionId, "customer", {
+        partnerId: options.partnerId,
+        partnerNew: options.partnerNew,
+      });
+      await this.#callKw(odooSessionId, "pos.order", "write", [
+        [id],
+        { partner_id: partnerId },
+      ]);
     }
 
     const lines = await this.#searchRead(
@@ -4108,8 +4252,7 @@ export class OdooAdapter implements BackendClient {
       return await this.#checkoutPosOrder(
         odooSessionId,
         clean,
-        options.paymentMethodId,
-        options.partnerId
+        options
       );
     } catch (cause) {
       if (cause instanceof BffError && cause.code === "unauthorized") throw cause;
@@ -4286,8 +4429,7 @@ export class OdooAdapter implements BackendClient {
       price: number;
       discount: number;
     }[],
-    preferredPaymentMethodId?: number,
-    preferredPartnerId?: number
+    options: PosCheckoutOptions = {}
   ): Promise<PosCheckoutResult> {
     const sessionId = await this.#ensureOpenPosSession(odooSessionId);
     const taxByProduct = await this.#resolveProductTaxes(
@@ -4320,23 +4462,24 @@ export class OdooAdapter implements BackendClient {
 
     let partnerId: number | false = false;
     let partnerName: string | null = null;
-    const requestedPartner = Number(preferredPartnerId);
-    if (Number.isFinite(requestedPartner) && requestedPartner > 0) {
-      const partners = await this.#searchRead(
+    const hasPartnerRequest =
+      (Number(options.partnerId) > 0) || Boolean(options.partnerNew?.name);
+    if (hasPartnerRequest) {
+      const resolved = await this.#resolvePartnerId(odooSessionId, "customer", {
+        partnerId: options.partnerId,
+        partnerNew: options.partnerNew,
+      });
+      const [partner] = await this.#searchRead(
         odooSessionId,
         "res.partner",
-        [["id", "=", requestedPartner]],
+        [["id", "=", resolved]],
         ["name"],
         1,
         0,
         "id asc"
       );
-      const partner = partners[0];
-      if (!partner?.id) {
-        throw new BffError("not_found", 404, "Cliente no encontrado");
-      }
-      partnerId = Number(partner.id);
-      partnerName = String(partner.name || "");
+      partnerId = resolved;
+      partnerName = String(partner?.name || "");
     }
 
     const paymentMethods = await this.#searchRead(
@@ -4349,7 +4492,7 @@ export class OdooAdapter implements BackendClient {
       "id asc"
     );
     const preferred = paymentMethods.find(
-      (row) => Number(row.id) === Number(preferredPaymentMethodId)
+      (row) => Number(row.id) === Number(options.paymentMethodId)
     );
     const cash =
       preferred ||

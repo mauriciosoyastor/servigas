@@ -1,5 +1,6 @@
 ---
 import RecordDetailBody from '../../../../components/RecordDetailBody.astro';
+import PartnerInlineFields from '../../../../components/PartnerInlineFields.astro';
 import ShellLayout from '../../../../layouts/ShellLayout.astro';
 import { loadRecordDetail } from '../../../../lib/shell/load-record-detail.ts';
 import {
@@ -78,6 +79,7 @@ const alreadyInvoiced = hasPosOrderPartner(accountMove);
 						<ul class="sg-pos-invoice-results" data-pos-invoice-results hidden></ul>
 						<p class="sg-pos-invoice-selected" data-pos-invoice-selected hidden></p>
 						<input type="hidden" data-pos-invoice-partner value={hasPartner ? '' : ''} />
+						<PartnerInlineFields label="Cliente" />
 						<div class="sg-pos-invoice-actions">
 							<button
 								type="button"
@@ -215,10 +217,14 @@ const alreadyInvoiced = hasPosOrderPartner(accountMove);
 
 		btn?.addEventListener('click', async () => {
 			const partnerId = Number(partnerInput?.value || 0);
-			if (!hasPartnerAlready && !(partnerId > 0)) {
+			const partnerNewName = String(
+				root.querySelector('[name="partnerNewName"]')?.value || ''
+			).trim();
+			if (!hasPartnerAlready && !(partnerId > 0) && !partnerNewName) {
 				if (status) {
 					status.hidden = false;
-					status.textContent = 'Elegí un cliente o Usar Consumidor Final';
+					status.textContent =
+						'Elegí un cliente, cargá uno nuevo o Usar Consumidor Final';
 					status.dataset.state = 'error';
 				}
 				return;
@@ -243,6 +249,22 @@ const alreadyInvoiced = hasPosOrderPartner(accountMove);
 					id: Number(root.dataset.id),
 				};
 				if (partnerId > 0) body.partnerId = partnerId;
+				else if (partnerNewName) {
+					const partnerNew: Record<string, string> = { name: partnerNewName };
+					const phone = String(
+						root.querySelector('[name="partnerNewPhone"]')?.value || ''
+					).trim();
+					const email = String(
+						root.querySelector('[name="partnerNewEmail"]')?.value || ''
+					).trim();
+					const vat = String(
+						root.querySelector('[name="partnerNewVat"]')?.value || ''
+					).trim();
+					if (phone) partnerNew.phone = phone;
+					if (email) partnerNew.email = email;
+					if (vat) partnerNew.vat = vat;
+					body.partnerNew = partnerNew;
+				}
 				const response = await fetch(root.dataset.api || '', {
 					method: 'POST',
 					credentials: 'same-origin',

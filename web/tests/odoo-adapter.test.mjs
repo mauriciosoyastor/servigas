@@ -1725,10 +1725,20 @@ describe("OdooAdapter.createRecord workshop/orders", () => {
   it("creates OT via create_from_shell and returns detail path", async () => {
     const fetchImpl = mock.fn(async (_url, init) => {
       const body = JSON.parse(init.body);
+      if (
+        body.params?.method === "search_read" &&
+        body.params?.model === "res.partner"
+      ) {
+        return Response.json({ result: [] });
+      }
+      if (body.params?.method === "create" && body.params?.model === "res.partner") {
+        return Response.json({ result: 55 });
+      }
       assert.equal(body.params.model, "sg.work.order");
       assert.equal(body.params.method, "create_from_shell");
       assert.equal(body.params.args[0].serial_number, "SER-99");
       assert.equal(body.params.args[0].owner_name, "Ana");
+      assert.equal(body.params.args[0].partner_id, 55);
       assert.equal(body.params.args[0].amount, 1500);
       return Response.json({ result: 77 });
     });
@@ -1746,7 +1756,7 @@ describe("OdooAdapter.createRecord workshop/orders", () => {
     });
     assert.equal(result.id, 77);
     assert.equal(result.detailPath, "/lists/workshop/orders/77");
-    assert.equal(fetchImpl.mock.calls.length, 1);
+    assert.ok(fetchImpl.mock.calls.length >= 2);
   });
 
   it("rejects OT create without serial before calling Odoo", async () => {
@@ -3214,6 +3224,121 @@ describe("OdooAdapter.createRecord quotations", () => {
       product_uom_qty: 1,
       price_unit: 50,
     });
+  });
+});
+
+describe("OdooAdapter inline partner ensure", () => {
+  it("creates customer when partnerNew is sent on quotation create", async () => {
+    const calls = [];
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      calls.push({
+        model: body.params?.model,
+        method: body.params?.method,
+        args: body.params?.args,
+      });
+      if (body.params?.method === "search_read" && body.params?.model === "res.partner") {
+        return Response.json({ result: [] });
+      }
+      if (body.params?.method === "create" && body.params?.model === "res.partner") {
+        return Response.json({ result: 99 });
+      }
+      if (body.params?.method === "create" && body.params?.model === "sale.order") {
+        return Response.json({ result: 77 });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    const result = await adapter.createRecord("sess", "sales/quotations", {
+      partnerNew: { name: "Cliente nuevo", phone: "351555" },
+      productId: 42,
+      qty: 1,
+    });
+    assert.equal(result.id, 77);
+
+    const orderCreate = calls.find(
+      (c) => c.model === "sale.order" && c.method === "create"
+    );
+    assert.equal(orderCreate.args[0].partner_id, 99);
+
+    const partnerCreate = calls.find(
+      (c) => c.model === "res.partner" && c.method === "create"
+    );
+    assert.equal(partnerCreate.args[0].name, "Cliente nuevo");
+    assert.equal(partnerCreate.args[0].customer_rank, 1);
+  });
+
+  it("rejects cuit conflict with different name", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "search_read" && body.params?.model === "res.partner") {
+        return Response.json({
+          result: [
+            {
+              id: 5,
+              name: "Empresa Existente SA",
+              vat: "20-12345678-6",
+            },
+          ],
+        });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await assert.rejects(
+      () =>
+        adapter.createRecord("sess", "sales/quotations", {
+          partnerNew: { name: "Otro Nombre", vat: "20123456786" },
+          productId: 1,
+          qty: 1,
+        }),
+      (err) =>
+        err instanceof BffError &&
+        err.code === "validation_error" &&
+        /CUIT.*Empresa Existente/i.test(err.message)
+    );
+  });
+
+  it("reuses partner by exact name without creating", async () => {
+    const fetchImpl = mock.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      if (body.params?.method === "search_read" && body.params?.model === "res.partner") {
+        return Response.json({
+          result: [{ id: 12, name: "Juan Pérez", customer_rank: 1, vat: false }],
+        });
+      }
+      if (body.params?.method === "create" && body.params?.model === "purchase.order") {
+        return Response.json({ result: 55 });
+      }
+      return Response.json({ result: [] });
+    });
+    const adapter = new OdooAdapter({
+      baseUrl: "http://odoo.test",
+      db: "servigas_dev",
+      fetchImpl,
+    });
+
+    await adapter.createRecord("sess", "purchase/solicitudes", {
+      partnerNew: { name: "juan pérez" },
+      productId: 2,
+      qty: 1,
+    });
+
+    const partnerCreates = fetchImpl.mock.calls.filter((call) => {
+      const body = JSON.parse(call.arguments[1].body);
+      return body.params?.model === "res.partner" && body.params?.method === "create";
+    });
+    assert.equal(partnerCreates.length, 0);
   });
 });
 

@@ -41,6 +41,14 @@ const today = new Date().toISOString().slice(0, 10);
 					<span>Celular</span>
 					<input class="sg-focus-ring" type="tel" name="owner_phone" autocomplete="tel" />
 				</label>
+				<label>
+					<span>Email</span>
+					<input class="sg-focus-ring" type="email" name="partner_email" autocomplete="email" />
+				</label>
+				<label>
+					<span>CUIT (opcional)</span>
+					<input class="sg-focus-ring" type="text" name="partner_vat" inputmode="numeric" autocomplete="off" />
+				</label>
 				<label class="sg-wo-span">
 					<span>Buscar cliente Servigas</span>
 					<input
@@ -278,6 +286,8 @@ const today = new Date().toISOString().slice(0, 10);
 			date: String(fd.get('date') || ''),
 			owner_name: String(fd.get('owner_name') || ''),
 			owner_phone: String(fd.get('owner_phone') || ''),
+			partner_email: String(fd.get('partner_email') || ''),
+			partner_vat: String(fd.get('partner_vat') || ''),
 			partnerId: Number(fd.get('partnerId') || 0) || undefined,
 			serial_number: String(fd.get('serial_number') || ''),
 			brand: String(fd.get('brand') || ''),
