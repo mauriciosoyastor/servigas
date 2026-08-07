@@ -1,8 +1,0 @@
-barcode,default_code,name,list_price,standard_price,categoria,proveedor
-7791000000001,PRACT-COC-01,Práctica Cocina Hornalla,11000.00,6500.00,Práctica Cocina,Demo Proveedor
-7791000000002,PRACT-COC-02,Práctica Cocina Termostato,9000.00,5200.00,Práctica Cocina,Demo Proveedor
-7791000000003,PRACT-COC-03,Práctica Cocina Perilla,3500.00,2000.00,Práctica Cocina,Demo Proveedor
-7792000000001,PRACT-CAL-01,Práctica Calefacción Válvula,16000.00,9500.00,Práctica Calefacción,Demo Proveedor
-7792000000002,PRACT-CAL-02,Práctica Calefacción Sensor,13000.00,7500.00,Práctica Calefacción,Demo Proveedor
-7793000000001,PRACT-FIL-01,Práctica Filtros Cartucho,4800.00,2700.00,Práctica Filtros,Demo Proveedor
-7793000000002,PRACT-FIL-02,Práctica Filtros Junta,950.00,450.00,Práctica Filtros,Demo Proveedor
