@@ -135,10 +135,14 @@ git pull
 
 cd infra\docker
 docker compose --env-file .env up -d --build web   # si cambió Astro / web/
-.\install-modules.ps1                              # re-aplica / upgrade módulos
+.\upgrade-modules.ps1                              # -u servigas_core (DB ya existente)
 ```
 
-Upgrade explícito solo de core (si hace falta):
+> **Importante:** `install-modules.ps1` es solo para la **primera** instalación (`-i`).
+> Tras un `git pull`, usá **`upgrade-modules.ps1`** para aplicar campos nuevos en Odoo
+> (p. ej. listado de OT de taller, alertas de stock, seña en OT).
+
+Upgrade manual equivalente:
 
 ```powershell
 docker compose --env-file .env run --rm --no-deps odoo `
@@ -197,6 +201,7 @@ docker compose --env-file .env up -d --build web
 | Astro “Missing ODOO_URL” | El compose setea `ODOO_URL=http://odoo:8069` dentro de la red |
 | Módulo no aparece | `install-modules.ps1`; volumen `../../custom_addons` montado |
 | Login Astro falla | DB `servigas` creada + usuario Odoo; `ODOO_DB` en `.env` |
+| Taller → “No se pudo abrir el listado” | Tras `git pull`, correr `.\upgrade-modules.ps1` (`-u servigas_core`) |
 | PDF falla / HTML en vez de PDF | Logs Odoo; imagen `odoo:19.0` trae wkhtmltopdf; `-u servigas_core` |
 | Upgrade XML `web.external_layout` | `git pull` de `main` con fix factura primary; volver a `-u` |
 | Tras `down -v` “desapareció todo” | Esperado: borraste volúmenes; hay que reinstalar o restaurar dump |
