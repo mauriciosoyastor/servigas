@@ -829,12 +829,12 @@ try {
 				const partnerNewName = String(
 					root?.querySelector('[name="partnerNewName"]')?.value || ''
 				).trim();
-				const payload = {
+				const checkoutBody = {
 					paymentMethodId: selectedPaymentMethodId(),
 					lines: checkoutLinesFromCart(cart),
 				};
 				if (partnerId) {
-					payload.partnerId = partnerId;
+					checkoutBody.partnerId = partnerId;
 				} else if (partnerNewName) {
 					const partnerNew = { name: partnerNewName };
 					const phone = String(
@@ -849,17 +849,17 @@ try {
 					if (phone) partnerNew.phone = phone;
 					if (email) partnerNew.email = email;
 					if (vat) partnerNew.vat = vat;
-					payload.partnerNew = partnerNew;
+					checkoutBody.partnerNew = partnerNew;
 				}
 				const response = await fetch('/api/pos/checkout', {
 					method: 'POST',
 					credentials: 'same-origin',
 					headers: { 'content-type': 'application/json' },
-					body: JSON.stringify(payload),
+					body: JSON.stringify(checkoutBody),
 				});
-				const payload = await response.json().catch(() => ({}));
+				const result = await response.json().catch(() => ({}));
 				if (!response.ok) {
-					throw new Error(payload?.error?.message || 'No se pudo registrar');
+					throw new Error(result?.error?.message || 'No se pudo registrar');
 				}
 				statusEl.textContent = 'Listo';
 				statusEl.dataset.state = 'ok';
@@ -867,7 +867,7 @@ try {
 				pad = emptyNumpad();
 				clearCustomer();
 				render();
-				showReceipt(payload);
+				showReceipt(result);
 			} catch (error) {
 				statusEl.textContent =
 					error instanceof Error ? error.message : 'No se pudo registrar';
