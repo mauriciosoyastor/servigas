@@ -42,6 +42,7 @@ describe("workshop-order-cash helpers", () => {
     assert.equal(normalizeWorkOrderCashMedium("transfer"), "transfer");
     assert.equal(normalizeWorkOrderCashMedium("card"), "card");
     assert.equal(normalizeWorkOrderCashMedium("debit"), "card");
+    assert.equal(normalizeWorkOrderCashMedium("credit"), "card");
     assert.equal(normalizeWorkOrderCashMedium("mercadopago"), "transfer");
     assert.equal(normalizeWorkOrderCashMedium("account"), "transfer");
     assert.equal(normalizeWorkOrderCashMedium("nope"), null);
@@ -72,6 +73,19 @@ describe("workshop-order-cash helpers", () => {
     assert.equal(canRegisterWorkOrderCash(1000, 1000, 1), false);
     assert.equal(canRegisterWorkOrderCash(0, 0, 100), true);
     assert.equal(canRegisterWorkOrderCash(0, 50, 10), false);
+  });
+
+  it("subtracts seña (deposit) from pending balance", () => {
+    // Importe 120000, seña 40000 → pendiente 80000
+    assert.equal(workOrderCashRemaining(120000, 0, 40000), 80000);
+    // Seña + cobro en caja
+    assert.equal(workOrderCashRemaining(120000, 20000, 40000), 60000);
+    // Seña no puede dejar pendiente negativo
+    assert.equal(workOrderCashRemaining(1000, 0, 1500), 0);
+    // Sin importe: cobro libre (seña ignorada para el null)
+    assert.equal(workOrderCashRemaining(0, 0, 50), null);
+    assert.equal(canRegisterWorkOrderCash(120000, 0, 80000, 40000), true);
+    assert.equal(canRegisterWorkOrderCash(120000, 0, 80001, 40000), false);
   });
 });
 

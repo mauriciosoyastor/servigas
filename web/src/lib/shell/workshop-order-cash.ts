@@ -15,6 +15,7 @@ const MEDIUM_BY_METHOD: Record<string, CashMedium> = {
   mercadopago: "transfer",
   card: "card",
   debit: "card",
+  credit: "card",
 };
 
 function roundCents(value: number): number {
@@ -55,27 +56,30 @@ export function workOrderCashFeedHref(workOrderId: number): string | null {
 /** Saldo pendiente de cobro; `null` si la OT no tiene importe (cobro libre una vez). */
 export function workOrderCashRemaining(
   amount: number,
-  amountCollected: number
+  amountCollected: number,
+  deposit: number = 0
 ): number | null {
   const total = Number(amount) || 0;
   const collected = Math.max(0, Number(amountCollected) || 0);
+  const senia = Math.max(0, Number(deposit) || 0);
   if (total <= 0) return null;
-  return roundCents(Math.max(0, total - collected));
+  return roundCents(Math.max(0, total - senia - collected));
 }
 
 /**
  * ¿Se puede registrar este cobro?
- * - Con importe: no superar el restante.
+ * - Con importe: no superar el restante (importe − seña − cobrado).
  * - Sin importe: solo el primer cobro (amountCollected == 0).
  */
 export function canRegisterWorkOrderCash(
   amount: number,
   amountCollected: number,
-  collectAmount: number
+  collectAmount: number,
+  deposit: number = 0
 ): boolean {
   const pay = Number(collectAmount);
   if (!Number.isFinite(pay) || pay <= 0) return false;
-  const remaining = workOrderCashRemaining(amount, amountCollected);
+  const remaining = workOrderCashRemaining(amount, amountCollected, deposit);
   if (remaining == null) {
     return (Number(amountCollected) || 0) <= 0;
   }

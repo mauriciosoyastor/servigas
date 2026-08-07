@@ -13,6 +13,10 @@ const PAYMENT_METHOD_LABELS: Record<string, string> = {
   debit: "Débito",
   debito: "Débito",
   débito: "Débito",
+  credit: "Tarjeta de crédito",
+  "credit card": "Tarjeta de crédito",
+  "tarjeta de credito": "Tarjeta de crédito",
+  "tarjeta de crédito": "Tarjeta de crédito",
   "mercado pago": "Mercado Pago",
   mercadopago: "Mercado Pago",
 };

@@ -42,6 +42,23 @@ describe("filterWorkOrderCreateValues", () => {
     assert.equal(out.partner_id, 12);
     assert.equal(out.amount, 15000);
   });
+
+  it("accepts seña (deposit) and aliases", () => {
+    const out = filterWorkOrderCreateValues({
+      serial_number: "SER-1",
+      amount: 120000,
+      senia: 40000,
+    });
+    assert.ok(out);
+    assert.equal(out.deposit, 40000);
+
+    const alt = filterWorkOrderCreateValues({
+      serial_number: "SER-2",
+      deposit: 1000,
+    });
+    assert.ok(alt);
+    assert.equal(alt.deposit, 1000);
+  });
 });
 
 describe("canCreateWorkOrder", () => {

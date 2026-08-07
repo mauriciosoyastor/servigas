@@ -68,6 +68,7 @@ const WRITES: Record<string, WriteConfig> = {
       available_in_pos: true,
     },
     numericCreateFields: ["list_price"],
+    numericUpdateFields: ["list_price"],
     canArchive: true,
   },
   "inventory/categories": {
@@ -87,12 +88,13 @@ const WRITES: Record<string, WriteConfig> = {
       "work_done",
       "materials",
       "amount",
+      "deposit",
       "partner_id",
     ],
     createFields: [],
     createDefaults: {},
     relationIdFields: ["partner_id"],
-    numericUpdateFields: ["amount"],
+    numericUpdateFields: ["amount", "deposit"],
     canArchive: false,
   },
 };

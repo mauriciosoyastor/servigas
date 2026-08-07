@@ -1,14 +1,23 @@
 ---
 import PasswordField from '../components/PasswordField.astro';
 import ShellLayout from '../layouts/ShellLayout.astro';
+import { getBackend } from '../lib/bff/get-backend.ts';
 import { invalidateBffSession, requireOdooSession } from '../lib/bff/http.ts';
+import { SETTINGS_DEFAULTS } from '../lib/shell/servigas-settings.ts';
+import { formatArs } from '../lib/money/ars.ts';
 
 let userName = '';
 let userLogin = '';
+let alertSettings = { ...SETTINGS_DEFAULTS };
 try {
-	const { session } = requireOdooSession(Astro.cookies);
+	const { session, odooSessionId } = requireOdooSession(Astro.cookies);
 	userName = session.name || session.login;
 	userLogin = session.login || '';
+	try {
+		alertSettings = await getBackend().getAlertSettings(odooSessionId);
+	} catch {
+		/* defaults */
+	}
 } catch {
 	invalidateBffSession(Astro.cookies);
 	return Astro.redirect('/login');
@@ -28,7 +37,7 @@ const initials = userName
 			<p>Inicio</p>
 			<h1>Ajustes</h1>
 			<p class="sg-landing-lead">
-				Gestioná tu cuenta. Otras configuraciones de empresa siguen en Integraciones.
+				Gestioná tu cuenta y las alertas de caja y stock.
 			</p>
 		</header>
 
@@ -121,6 +130,71 @@ const initials = userName
 				<p class="sg-settings-error" data-change-password-error role="alert" hidden></p>
 				<button class="sg-landing-cta sg-focus-ring" type="submit">
 					Guardar contraseña
+				</button>
+			</form>
+		</section>
+
+		<section class="sg-landing-card sg-glass" aria-labelledby="settings-alerts-title">
+			<strong id="settings-alerts-title">Alertas</strong>
+			<p>
+				Umbrales de caja y el mínimo global de stock para avisos en Inventario.
+			</p>
+			<form data-alerts-form class="sg-settings-form sg-settings-alerts">
+				<label>
+					<span>Efectivo alto sin retiro al banco (ARS)</span>
+					<input
+						class="sg-focus-ring"
+						type="text"
+						inputmode="decimal"
+						name="cashThreshold"
+						required
+						data-money-input
+						value={String(alertSettings.cashThreshold)}
+						placeholder={formatArs(SETTINGS_DEFAULTS.cashThreshold)}
+					/>
+				</label>
+				<label>
+					<span>Horas máximas con caja abierta</span>
+					<input
+						class="sg-focus-ring"
+						type="number"
+						name="openHoursThreshold"
+						min="1"
+						max="168"
+						step="1"
+						required
+						value={alertSettings.openHoursThreshold}
+					/>
+				</label>
+				<label>
+					<span>Stock mínimo global (unidades)</span>
+					<input
+						class="sg-focus-ring"
+						type="number"
+						name="stockMinQty"
+						min="0"
+						max="1000000"
+						step="1"
+						required
+						value={alertSettings.stockMinQty}
+					/>
+				</label>
+				<label class="sg-settings-check">
+					<input
+						type="checkbox"
+						name="stockAlertsEnabled"
+						checked={alertSettings.stockAlertsEnabled}
+					/>
+					<span>Mostrar alertas de bajo stock en Inventario</span>
+				</label>
+				<p class="sg-settings-hint">
+					Bajo stock = cantidad disponible ≤ este mínimo global (si el mínimo &gt; 0).
+					Con mínimo 0 no hay alerta de cantidad.
+				</p>
+				<p class="sg-settings-error" data-alerts-error role="alert" hidden></p>
+				<p class="sg-settings-success" data-alerts-success role="status" hidden></p>
+				<button class="sg-landing-cta sg-focus-ring" type="submit">
+					Guardar alertas
 				</button>
 			</form>
 		</section>
@@ -286,6 +360,83 @@ const initials = userName
 			error.hidden = false;
 		} finally {
 			submit.disabled = false;
+		}
+	});
+
+	const alertsForm = document.querySelector<HTMLFormElement>('[data-alerts-form]');
+	const alertsError = document.querySelector<HTMLElement>('[data-alerts-error]');
+	const alertsSuccess = document.querySelector<HTMLElement>('[data-alerts-success]');
+	const alertsSubmit = alertsForm?.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+	alertsForm?.addEventListener('submit', async (event) => {
+		event.preventDefault();
+		if (!alertsSubmit || !alertsError || !alertsForm) return;
+		alertsError.hidden = true;
+		if (alertsSuccess) alertsSuccess.hidden = true;
+
+		const cashInput = alertsForm.querySelector<HTMLInputElement>(
+			'[name="cashThreshold"]'
+		);
+		const hoursInput = alertsForm.querySelector<HTMLInputElement>(
+			'[name="openHoursThreshold"]'
+		);
+		const stockMinInput = alertsForm.querySelector<HTMLInputElement>(
+			'[name="stockMinQty"]'
+		);
+		const stockInput = alertsForm.querySelector<HTMLInputElement>(
+			'[name="stockAlertsEnabled"]'
+		);
+		const cashThreshold =
+			window.sgMoney?.readMoneyInput(cashInput!) ??
+			Number(cashInput?.value || NaN);
+		const openHoursThreshold = Number(hoursInput?.value || NaN);
+		const stockMinQty = Number(stockMinInput?.value || NaN);
+		if (!Number.isFinite(cashThreshold) || cashThreshold < 0) {
+			alertsError.textContent = 'Ingresá un umbral de efectivo válido';
+			alertsError.hidden = false;
+			return;
+		}
+		if (!Number.isFinite(openHoursThreshold) || openHoursThreshold <= 0) {
+			alertsError.textContent = 'Ingresá horas válidas (1–168)';
+			alertsError.hidden = false;
+			return;
+		}
+		if (!Number.isFinite(stockMinQty) || stockMinQty < 0) {
+			alertsError.textContent = 'Ingresá un stock mínimo válido (0 o más)';
+			alertsError.hidden = false;
+			return;
+		}
+
+		alertsSubmit.disabled = true;
+		try {
+			const response = await fetch('/api/settings/alerts', {
+				method: 'POST',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					cashThreshold,
+					openHoursThreshold,
+					stockMinQty,
+					stockAlertsEnabled: Boolean(stockInput?.checked),
+				}),
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(
+					payload?.error?.message || 'No se pudieron guardar las alertas'
+				);
+			}
+			if (alertsSuccess) {
+				alertsSuccess.textContent = 'Alertas guardadas.';
+				alertsSuccess.hidden = false;
+			}
+		} catch (cause) {
+			alertsError.textContent =
+				cause instanceof Error
+					? cause.message
+					: 'No se pudieron guardar las alertas';
+			alertsError.hidden = false;
+		} finally {
+			alertsSubmit.disabled = false;
 		}
 	});
 </script>
@@ -473,6 +624,32 @@ const initials = userName
 		font-size: 0.82rem !important;
 	}
 	.sg-settings-hint {
+		margin: 0;
+		font-size: 0.78rem;
+		line-height: 1.35;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-settings-check {
+		display: flex !important;
+		flex-direction: row !important;
+		align-items: center;
+		gap: 0.55rem;
+	}
+	.sg-settings-check input {
+		width: auto;
+		min-height: 0;
+		padding: 0;
+	}
+	.sg-settings-alerts input[type='number'] {
+		width: 100%;
+		box-sizing: border-box;
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.75rem;
+		padding: 0.65rem 0.8rem;
+		background: rgba(0, 0, 0, 0.32);
+		color: var(--sg-text-on-dark);
+		font: inherit;
+	}
 		margin: 0 !important;
 		color: rgba(255, 255, 255, 0.55) !important;
 		font-size: 0.78rem !important;

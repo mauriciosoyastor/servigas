@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!-- Opción A: alertas de stock solo con mínimo global (Ajustes).
+         Desactivamos la vista por-producto; el campo puede quedar en BD. -->
+    <record id="view_product_template_form_sg_stock_min" model="ir.ui.view">
+        <field name="name">product.template.form.sg.stock.min</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_form_view"/>
+        <field name="active" eval="False"/>
+        <field name="arch" type="xml">
+            <xpath expr="//div[@name='options']" position="before">
+                <group string="Alerta de stock (Servigas)" invisible="1">
+                    <field name="sg_stock_min_qty" invisible="1"/>
+                </group>
+            </xpath>
+        </field>
+    </record>
+</odoo>

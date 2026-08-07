@@ -32,12 +32,13 @@ describe("payment-registers allowlist", () => {
         "Transferencia / depósito al banco",
         "Cuenta corriente",
         "Débito",
+        "Tarjeta de crédito",
         "Mercado Pago",
       ]
     );
     assert.deepEqual(
       PAYMENT_METHOD_OPTIONS.map((option) => option.value),
-      ["cash", "transfer", "account", "debit", "mercadopago"]
+      ["cash", "transfer", "account", "debit", "credit", "mercadopago"]
     );
   });
 
@@ -64,6 +65,12 @@ describe("payment-registers allowlist", () => {
         paymentMethod: "mercadopago",
       }),
       { paymentMethod: "mercadopago" }
+    );
+    assert.deepEqual(
+      filterPaymentRegisterValues("accounting/customer-invoices", {
+        paymentMethod: "credit",
+      }),
+      { paymentMethod: "credit" }
     );
     assert.deepEqual(
       filterPaymentRegisterValues("accounting/customer-invoices", {
@@ -103,12 +110,14 @@ describe("payment-registers allowlist", () => {
       { id: 4, name: "Transferencias", type: "bank" },
       { id: 5, name: "Débito", type: "bank" },
       { id: 6, name: "Cuenta corriente clientes", type: "bank" },
+      { id: 7, name: "Tarjeta de crédito", type: "bank" },
     ];
     assert.equal(pickJournalId("cash", journals), 1);
     assert.equal(pickJournalId("transfer", journals), 4);
     assert.equal(pickJournalId("mercadopago", journals), 3);
     assert.equal(pickJournalId("debit", journals), 5);
     assert.equal(pickJournalId("account", journals), 6);
+    assert.equal(pickJournalId("credit", journals), 7);
     assert.equal(pickJournalId("cash", [{ id: 9, name: "Bank", type: "bank" }]), null);
   });
 });

@@ -27,6 +27,22 @@ const applyPatchesScript = path.join(
   "apply-odoo-patches.ps1"
 );
 const windowsPdfDoc = path.join(workspaceRoot, "docs", "WINDOWS-PDF.md");
+const forceRestart =
+  process.argv.includes("--restart") ||
+  process.env.ODOO_FORCE_RESTART === "1";
+
+/** Addons of *this* worktree/repo — not a sibling checkout hardcoded in servigas.conf. */
+function resolveAddonsPath() {
+  const customAddons = path.join(repoRoot, "custom_addons");
+  if (!existsSync(customAddons)) {
+    throw new Error(`No se encontró custom_addons en ${customAddons}`);
+  }
+  return [
+    customAddons,
+    path.join(odooDir, "addons"),
+    path.join(odooDir, "odoo", "addons"),
+  ].join(",");
+}
 
 function portOpen(host, port) {
   return new Promise((resolve) => {
@@ -99,6 +115,38 @@ function envWithWkhtmltopdfPath() {
   };
 }
 
+async function stopOdooIfListening() {
+  if (!(await portOpen(ODOO_HOST, ODOO_PORT))) return false;
+  if (process.platform === "win32") {
+    const listed = spawnSync(
+      "powershell.exe",
+      [
+        "-NoProfile",
+        "-Command",
+        `(Get-NetTCPConnection -LocalPort ${ODOO_PORT} -State Listen -ErrorAction SilentlyContinue).OwningProcess | Sort-Object -Unique`,
+      ],
+      { encoding: "utf8" }
+    );
+    const pids = String(listed.stdout || "")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^\d+$/.test(line));
+    for (const pid of pids) {
+      spawnSync("taskkill", ["/PID", pid, "/T", "/F"], { encoding: "utf8" });
+    }
+  } else {
+    spawnSync("bash", ["-lc", `fuser -k ${ODOO_PORT}/tcp`], {
+      encoding: "utf8",
+    });
+  }
+  const started = Date.now();
+  while (Date.now() - started < 15_000) {
+    if (!(await portOpen(ODOO_HOST, ODOO_PORT))) return true;
+    await new Promise((r) => setTimeout(r, 400));
+  }
+  throw new Error(`No se pudo liberar el puerto ${ODOO_PORT}`);
+}
+
 function startOdoo() {
   if (!existsSync(odooBin)) {
     throw new Error(`No se encontró odoo-bin en ${odooBin}`);
@@ -112,9 +160,18 @@ function startOdoo() {
     console.log(`PDF: wkhtmltopdf en PATH → ${binDir}`);
   }
 
+  const addonsPath = resolveAddonsPath();
+  console.log(`addons_path (worktree) → ${addonsPath.split(",")[0]}`);
+
   const child = spawn(
     "python",
-    ["odoo-bin", "-c", odooConfig, `--http-port=${ODOO_PORT}`],
+    [
+      "odoo-bin",
+      "-c",
+      odooConfig,
+      `--http-port=${ODOO_PORT}`,
+      `--addons-path=${addonsPath}`,
+    ],
     {
       cwd: odooDir,
       detached: true,
@@ -200,9 +257,16 @@ function warnPdfPrereqs() {
 warnPdfPrereqs();
 
 const alreadyUp = await portOpen(ODOO_HOST, ODOO_PORT);
-if (alreadyUp) {
-  console.log(`Odoo ya está en http://${ODOO_HOST}:${ODOO_PORT}`);
+if (alreadyUp && !forceRestart) {
+  console.log(
+    `Odoo ya está en http://${ODOO_HOST}:${ODOO_PORT} (usá --restart si cambiaste de worktree)`
+  );
   process.exit(0);
+}
+
+if (alreadyUp && forceRestart) {
+  console.log(`Reiniciando Odoo en :${ODOO_PORT} con addons de este worktree…`);
+  await stopOdooIfListening();
 }
 
 console.log(`Odoo no responde en :${ODOO_PORT}. Arrancando…`);

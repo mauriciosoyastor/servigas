@@ -21,6 +21,7 @@ export type PaymentMethodCode =
   | "transfer"
   | "account"
   | "debit"
+  | "credit"
   | "mercadopago"
   | "card";
 
@@ -32,6 +33,7 @@ export const PAYMENT_METHOD_OPTIONS: ReadonlyArray<{
   { value: "transfer", label: "Transferencia / depósito al banco" },
   { value: "account", label: "Cuenta corriente" },
   { value: "debit", label: "Débito" },
+  { value: "credit", label: "Tarjeta de crédito" },
   { value: "mercadopago", label: "Mercado Pago" },
 ];
 
@@ -40,6 +42,7 @@ const PAYMENT_METHOD_CODES = new Set<string>([
   "transfer",
   "account",
   "debit",
+  "credit",
   "mercadopago",
   "card",
 ]);
@@ -154,11 +157,21 @@ export function journalNameHints(method: PaymentMethodCode): string[] {
   if (method === "mercadopago") {
     return ["mercado pago", "mercadopago", "mp"];
   }
+  if (method === "credit") {
+    return [
+      "tarjeta de crédito",
+      "tarjeta de credito",
+      "credit card",
+      "crédito",
+      "credito",
+      "credit",
+    ];
+  }
   if (method === "debit" || method === "card") {
-    return ["débito", "debito", "debit", "tarjeta", "card"];
+    return ["débito", "debito", "debit"];
   }
   if (method === "account") {
-    return ["cuenta corriente", "cuenta", "crédito", "credito"];
+    return ["cuenta corriente", "cuenta"];
   }
   return ["efectivo", "caja", "cash"];
 }
