@@ -10,7 +10,7 @@ import type { PriceListImportApplyLine } from "../../../lib/bff/types.ts";
 import { TEMPLATE_CSV } from "../../../lib/shell/price-list-import.ts";
 
 type Body = {
-  action?: "preview" | "apply" | "template";
+  action?: "preview" | "apply" | "template" | "analyze";
   filename?: string;
   content?: string;
   mapping?: Record<string, string>;
@@ -32,7 +32,7 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     }
 
     const action = body.action || "preview";
-    if (!["preview", "apply", "template"].includes(action)) {
+    if (!["preview", "apply", "template", "analyze"].includes(action)) {
       throw new BffError("validation_error", 400, "Acción inválida");
     }
 
@@ -45,6 +45,23 @@ export const POST: APIRoute = async ({ cookies, request }) => {
     }
 
     const { odooSessionId } = requireOdooSession(cookies);
+
+    if (action === "analyze") {
+      const filename = String(body.filename || "").trim();
+      const content = String(body.content || "");
+      if (!filename || !content) {
+        throw new BffError(
+          "validation_error",
+          400,
+          "Subí un archivo Excel (.xlsx / .xls) o CSV con nombre y contenido."
+        );
+      }
+      const analysis = await getBackend().analyzePriceListImport(odooSessionId, {
+        filename,
+        content,
+      });
+      return json({ ok: true, analysis });
+    }
 
     if (action === "preview") {
       const filename = String(body.filename || "").trim();

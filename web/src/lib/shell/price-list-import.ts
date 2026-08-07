@@ -67,6 +67,11 @@ const FIELD_ALIASES: Record<keyof PriceListMapping, string[]> = {
   default_code: [
     "default code",
     "default_code",
+    "codigo articulo",
+    "código artículo",
+    "codigo de articulo",
+    "código de artículo",
+    "codigo art",
     "codigo",
     "código",
     "codigo interno",
@@ -76,10 +81,33 @@ const FIELD_ALIASES: Record<keyof PriceListMapping, string[]> = {
     "codigo fabricante",
     "código fabricante",
   ],
-  name: ["name", "nombre", "descripcion", "descripción", "producto", "detalle"],
+  name: [
+    "name",
+    "nombre",
+    "descripcion articulo",
+    "descripción artículo",
+    "descripcion art",
+    "descripcion",
+    "descripción",
+    "designacion",
+    "designación",
+    "denominacion",
+    "denominación",
+    "producto",
+    "detalle",
+  ],
   list_price: [
     "list price",
     "list_price",
+    "valores sin iva",
+    "valor sin iva",
+    "p.lista s/iva",
+    "p lista s/iva",
+    "p.lista",
+    "p lista",
+    "precio lista",
+    "p.venta",
+    "p venta",
     "precio",
     "precio venta",
     "precio de venta",
@@ -102,6 +130,8 @@ const FIELD_ALIASES: Record<keyof PriceListMapping, string[]> = {
     "categ",
     "tipo",
     "rubro",
+    "agrupacion",
+    "agrupación",
   ],
   proveedor: [
     "proveedor",
@@ -111,6 +141,32 @@ const FIELD_ALIASES: Record<keyof PriceListMapping, string[]> = {
     "marca proveedor",
   ],
 };
+
+/** Spanish labels for the column-mapping step in the import UI. */
+export const MAPPING_FIELD_LABELS: Record<keyof PriceListMapping, string> = {
+  barcode: "Código de barras",
+  default_code: "Código / SKU",
+  name: "Nombre del producto",
+  list_price: "Precio de venta",
+  standard_price: "Costo",
+  categoria: "Categoría",
+  proveedor: "Proveedor",
+};
+
+/** Fields shown in the mapping UI (required fields marked in the page). */
+export const MAPPING_UI_FIELDS: (keyof PriceListMapping)[] = [
+  "name",
+  "default_code",
+  "barcode",
+  "list_price",
+  "standard_price",
+  "categoria",
+  "proveedor",
+];
+
+const HEADER_SCAN_MAX_ROWS = 25;
+const HEADERLESS_MIN_SCORE = 3;
+const SYNTHETIC_HEADER_PREFIX = "__col_";
 
 export const TEMPLATE_CSV =
   "barcode,default_code,name,list_price,standard_price,categoria,proveedor\n" +
@@ -122,7 +178,7 @@ export function isRejectedFilename(filename: string | null | undefined): boolean
   return REJECTED_EXTENSIONS.some((ext) => name.endsWith(ext));
 }
 
-function normHeader(value: string): string {
+export function normHeader(value: string): string {
   return value
     .trim()
     .toLowerCase()
@@ -130,26 +186,382 @@ function normHeader(value: string): string {
     .replace(/\s+/g, " ");
 }
 
+function sortedAliases(field: keyof PriceListMapping): string[] {
+  return [...FIELD_ALIASES[field]].sort((a, b) => b.length - a.length);
+}
+
+function headerMatchesFieldExact(norm: string, field: keyof PriceListMapping): boolean {
+  return FIELD_ALIASES[field].includes(norm);
+}
+
+function headerMatchesFieldPartial(norm: string, field: keyof PriceListMapping): boolean {
+  if (!norm || norm.length > 120) return false;
+  for (const alias of sortedAliases(field)) {
+    if (alias.length >= 4 && norm.includes(alias)) return true;
+  }
+  if (field === "list_price") {
+    if (/^p[\.\s]?\s*venta\b/.test(norm)) return true;
+    if (/p[\.\s]?lista/.test(norm)) return true;
+    if (/valores?\s*sin\s*iva/.test(norm)) return true;
+  }
+  if (field === "name" && /designacion/.test(norm)) return true;
+  if (field === "default_code" && /codigo\s+(de\s+)?articulo/.test(norm)) return true;
+  if (field === "categoria" && /agrupacion/.test(norm)) return true;
+  return false;
+}
+
+function scoreHeaderCell(norm: string): number {
+  if (!norm) return 0;
+  if (norm.length > 80) return -4;
+  if (/actualizados|vigencia|lista de precios|convertí|fueron actualizados/i.test(norm)) {
+    return -5;
+  }
+  let score = 0;
+  for (const field of Object.keys(FIELD_ALIASES) as (keyof PriceListMapping)[]) {
+    if (headerMatchesFieldExact(norm, field) || headerMatchesFieldPartial(norm, field)) {
+      score += 2;
+    }
+  }
+  return score;
+}
+
+function scoreHeaderRow(cells: string[]): number {
+  let score = 0;
+  let nonEmpty = 0;
+  for (const cell of cells) {
+    const trimmed = cell.trim();
+    if (!trimmed) continue;
+    nonEmpty += 1;
+    score += scoreHeaderCell(normHeader(trimmed));
+  }
+  if (nonEmpty < 2) score -= 10;
+  return score;
+}
+
+export function detectHeaderRowIndex(matrix: unknown[][]): number {
+  let bestIdx = 0;
+  let bestScore = -Infinity;
+  const limit = Math.min(matrix.length, HEADER_SCAN_MAX_ROWS);
+  for (let i = 0; i < limit; i++) {
+    const row = matrix[i];
+    if (!Array.isArray(row)) continue;
+    const cells = row.map((cell) => cellToString(cell).trim());
+    let score = scoreHeaderRow(cells);
+    if (looksLikeDataRow(cells)) score -= 8;
+    const nextIdx = nextNonEmptyRowIndex(matrix, i + 1);
+    if (nextIdx >= 0) {
+      const nextCells = (matrix[nextIdx] as unknown[]).map((cell) =>
+        cellToString(cell).trim()
+      );
+      if (looksLikeDataRow(nextCells)) score += 5;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = i;
+    }
+  }
+  return bestIdx;
+}
+
+function looksLikePrice(value: string): boolean {
+  const parsed = parsePrice(value);
+  return parsed.amount !== null && !parsed.invalid;
+}
+
+function looksLikeProductCode(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length > 40) return false;
+  return /^[\w.\-/]+$/.test(text) && /\d/.test(text);
+}
+
+function looksLikeProductName(value: string): boolean {
+  const text = value.trim();
+  if (!text || text.length < 3) return false;
+  if (looksLikeProductCode(text) && !/\s/.test(text) && text.length <= 16) return false;
+  return /[a-záéíóúñ]/i.test(text);
+}
+
+function looksLikeDataRow(cells: string[]): boolean {
+  const nonEmpty = cells.map((c) => c.trim()).filter(Boolean);
+  if (nonEmpty.length < 2) return false;
+  const priceCount = nonEmpty.filter(looksLikePrice).length;
+  const codeCount = nonEmpty.filter(looksLikeProductCode).length;
+  const nameCount = nonEmpty.filter(
+    (c) => looksLikeProductName(c) && !looksLikeProductCode(c)
+  ).length;
+  return (codeCount >= 1 && nameCount >= 1) || (nameCount >= 1 && priceCount >= 1);
+}
+
+function nextNonEmptyRowIndex(matrix: unknown[][], start: number): number {
+  for (let i = start; i < matrix.length; i++) {
+    const row = matrix[i];
+    if (!Array.isArray(row)) continue;
+    if (row.some((cell) => cellToString(cell).trim())) return i;
+  }
+  return -1;
+}
+
+/** When no header row is found, infer column roles from the first data rows (Fercor-style). */
+export function inferHeaderlessLayout(matrix: unknown[][]): {
+  headers: string[];
+  mapping: PriceListMapping;
+} | null {
+  const sample: string[][] = [];
+  for (const row of matrix) {
+    if (!Array.isArray(row)) continue;
+    const cells = row.map((cell) => cellToString(cell).trim());
+    if (cells.some(Boolean)) sample.push(cells);
+    if (sample.length >= 5) break;
+  }
+  if (sample.length < 2) return null;
+
+  const colCount = Math.max(...sample.map((row) => row.length));
+  if (colCount < 2) return null;
+
+  let codeCol = -1;
+  let nameCol = -1;
+  let priceCol = -1;
+
+  const threshold = Math.ceil(sample.length * 0.6);
+  const priceThreshold = Math.ceil(sample.length * 0.5);
+
+  for (let c = 0; c < colCount; c++) {
+    const values = sample.map((row) => row[c] || "");
+    const codeHits = values.filter(looksLikeProductCode).length;
+    if (codeCol < 0 && codeHits >= threshold) codeCol = c;
+  }
+  for (let c = 0; c < colCount; c++) {
+    if (c === codeCol) continue;
+    const values = sample.map((row) => row[c] || "");
+    const nameHits = values.filter(looksLikeProductName).length;
+    if (nameCol < 0 && nameHits >= threshold) nameCol = c;
+  }
+  for (let c = 0; c < colCount; c++) {
+    if (c === codeCol || c === nameCol) continue;
+    const values = sample.map((row) => row[c] || "");
+    const priceHits = values.filter(looksLikePrice).length;
+    if (priceCol < 0 && priceHits >= priceThreshold) priceCol = c;
+  }
+
+  if (nameCol < 0) return null;
+  if (priceCol < 0 && codeCol < 0) return null;
+
+  const headers = Array.from({ length: colCount }, (_, i) => `${SYNTHETIC_HEADER_PREFIX}${i}`);
+  const mapping: PriceListMapping = { name: headers[nameCol] };
+  if (codeCol >= 0 && codeCol !== nameCol) mapping.default_code = headers[codeCol];
+  if (priceCol >= 0) mapping.list_price = headers[priceCol];
+
+  return { headers, mapping };
+}
+
+export function isMappingComplete(mapping: PriceListMapping): boolean {
+  return Boolean(mapping.name) && Boolean(mapping.list_price || mapping.standard_price);
+}
+
 export function suggestMapping(headers: string[]): PriceListMapping {
   const mapping: PriceListMapping = {};
   const used = new Set<string>();
-  const normalized = new Map(
-    headers.filter(Boolean).map((h) => [h, normHeader(h)] as const)
-  );
+  const entries = headers
+    .filter(Boolean)
+    .map((header) => [header, normHeader(header)] as const);
 
-  for (const [field, aliases] of Object.entries(FIELD_ALIASES) as Array<
-    [keyof PriceListMapping, string[]]
-  >) {
-    for (const [header, norm] of normalized) {
+  const fields = Object.keys(FIELD_ALIASES) as (keyof PriceListMapping)[];
+
+  for (const field of fields) {
+    for (const [header, norm] of entries) {
       if (used.has(header)) continue;
-      if (aliases.includes(norm)) {
+      if (headerMatchesFieldExact(norm, field)) {
         mapping[field] = header;
         used.add(header);
         break;
       }
     }
   }
+
+  for (const field of fields) {
+    if (mapping[field]) continue;
+    for (const [header, norm] of entries) {
+      if (used.has(header)) continue;
+      if (headerMatchesFieldPartial(norm, field)) {
+        mapping[field] = header;
+        used.add(header);
+        break;
+      }
+    }
+  }
+
   return mapping;
+}
+
+function uniqueHeaderLabel(raw: string, index: number, used: Set<string>): string {
+  const base = raw.trim() || `Columna ${index + 1}`;
+  if (!used.has(base)) {
+    used.add(base);
+    return base;
+  }
+  let n = 2;
+  while (used.has(`${base} (${n})`)) n += 1;
+  const label = `${base} (${n})`;
+  used.add(label);
+  return label;
+}
+
+function matrixColumnCount(matrix: unknown[][]): number {
+  let max = 0;
+  for (const row of matrix) {
+    if (Array.isArray(row) && row.length > max) max = row.length;
+  }
+  return max;
+}
+
+function buildHeadersFromRow(headerCells: unknown[], columnCount: number): string[] {
+  const used = new Set<string>();
+  const headers: string[] = [];
+  for (let i = 0; i < columnCount; i++) {
+    const raw = i < headerCells.length ? cellToString(headerCells[i]).trim() : "";
+    headers.push(uniqueHeaderLabel(raw, i, used));
+  }
+  return headers;
+}
+
+/** If price wasn't mapped from headers, pick the unused column that looks most like prices. */
+export function enrichMappingFromData(
+  headers: string[],
+  rows: Record<string, string>[],
+  mapping: PriceListMapping
+): PriceListMapping {
+  if (mapping.list_price || mapping.standard_price || !rows.length) return mapping;
+  const used = new Set(Object.values(mapping).filter(Boolean));
+  const sample = rows.slice(0, 30);
+  let bestHeader: string | undefined;
+  let bestHits = 0;
+  for (const header of headers) {
+    if (used.has(header)) continue;
+    const hits = sample.filter((row) => looksLikePrice(row[header] || "")).length;
+    if (hits > bestHits) {
+      bestHits = hits;
+      bestHeader = header;
+    }
+  }
+  const minHits = Math.min(3, Math.max(1, Math.ceil(sample.length * 0.5)));
+  if (bestHeader && bestHits >= minHits) {
+    return { ...mapping, list_price: bestHeader };
+  }
+  return mapping;
+}
+
+function matrixToTabular(matrix: unknown[][]): {
+  headers: string[];
+  rows: Record<string, string>[];
+  headerRowIndex: number;
+  presetMapping?: PriceListMapping;
+  error: string | null;
+} {
+  if (!matrix.length) {
+    return { headers: [], rows: [], headerRowIndex: 0, error: "El archivo está vacío." };
+  }
+
+  const columnCount = matrixColumnCount(matrix);
+  const headerRowIndex = detectHeaderRowIndex(matrix);
+  const headerCells = Array.isArray(matrix[headerRowIndex]) ? matrix[headerRowIndex] : [];
+  const headerScore = scoreHeaderRow(
+    Array.from({ length: columnCount }, (_, i) =>
+      cellToString(headerCells[i] ?? "").trim()
+    )
+  );
+
+  let headers: string[];
+  let dataStart: number;
+  let presetMapping: PriceListMapping | undefined;
+
+  if (headerScore < HEADERLESS_MIN_SCORE) {
+    const headerless = inferHeaderlessLayout(matrix);
+    if (headerless) {
+      headers = headerless.headers;
+      dataStart = 0;
+      presetMapping = headerless.mapping;
+    } else {
+      headers = buildHeadersFromRow(headerCells, columnCount);
+      dataStart = headerRowIndex + 1;
+    }
+  } else {
+    headers = buildHeadersFromRow(headerCells, columnCount);
+    dataStart = headerRowIndex + 1;
+  }
+
+  if (!headers.some(Boolean)) {
+    return {
+      headers: [],
+      rows: [],
+      headerRowIndex,
+      error: "No se encontraron encabezados de columnas.",
+    };
+  }
+
+  const rows: Record<string, string>[] = [];
+  for (const line of matrix.slice(dataStart)) {
+    const cells = Array.isArray(line) ? line : [];
+    const row: Record<string, string> = {};
+    let any = false;
+    headers.forEach((header, i) => {
+      const value = cellToString(cells[i] ?? "").trim();
+      row[header] = value;
+      if (value) any = true;
+    });
+    if (any) rows.push(row);
+  }
+
+  return { headers, rows, headerRowIndex, error: null, ...(presetMapping ? { presetMapping } : {}) };
+}
+
+export type TabularParseResult = {
+  headers: string[];
+  rows: Record<string, string>[];
+  headerRowIndex: number;
+  suggestedMapping?: PriceListMapping;
+  sheetName?: string;
+  error: string | null;
+};
+
+export type PriceListAnalyzeResult = {
+  headers: string[];
+  suggestedMapping: PriceListMapping;
+  needsMapping: boolean;
+  rowCount: number;
+  headerRowIndex: number;
+  sampleRows: Record<string, string>[];
+  sheetName?: string;
+  error?: string;
+};
+
+export function analyzeTabularFile(
+  filename: string | null | undefined,
+  content: string
+): PriceListAnalyzeResult | { error: string } {
+  const parsed = parseTabularText(filename, content);
+  if (parsed.error) {
+    return { error: parsed.error };
+  }
+  if (!parsed.rows.length) {
+    return {
+      error:
+        "El archivo no tiene filas de datos. Revisá que la hoja con productos no esté vacía y que no sea solo la portada.",
+    };
+  }
+  const suggestedMapping = enrichMappingFromData(
+    parsed.headers,
+    parsed.rows,
+    parsed.suggestedMapping ?? suggestMapping(parsed.headers)
+  );
+  return {
+    headers: parsed.headers,
+    suggestedMapping,
+    needsMapping: !isMappingComplete(suggestedMapping),
+    rowCount: parsed.rows.length,
+    headerRowIndex: parsed.headerRowIndex,
+    sampleRows: parsed.rows.slice(0, 3),
+    sheetName: parsed.sheetName,
+  };
 }
 
 export function parsePrice(value: unknown): { amount: number | null; invalid: boolean } {
@@ -334,30 +746,17 @@ export function buildProductIndexes(products: CatalogProduct[]): ProductIndexes 
   return { byBarcode, byCode, byName };
 }
 
-function parseCsvText(text: string): {
-  headers: string[];
-  rows: Record<string, string>[];
-  error: string | null;
-} {
-  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/).filter((line) => line.length);
-  if (!lines.length) {
-    return { headers: [], rows: [], error: "El archivo CSV está vacío." };
-  }
-  const headers = splitCsvLine(lines[0]).map((h) => h.trim());
-  if (!headers.some(Boolean)) {
-    return { headers: [], rows: [], error: "El archivo CSV no tiene encabezados." };
-  }
-  const rows: Record<string, string>[] = [];
-  for (const line of lines.slice(1)) {
-    if (!line.trim()) continue;
-    const cells = splitCsvLine(line);
-    const row: Record<string, string> = {};
-    headers.forEach((header, i) => {
-      row[header] = cells[i] ?? "";
-    });
-    rows.push(row);
-  }
-  return { headers, rows, error: null };
+function parseCsvText(text: string): TabularParseResult {
+  const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
+  const matrix = lines.map((line) => splitCsvLine(line));
+  const result = matrixToTabular(matrix);
+  if (result.error) return { ...result, suggestedMapping: undefined };
+  const suggestedMapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
+  return { ...result, suggestedMapping };
 }
 
 function splitCsvLine(line: string): string[] {
@@ -421,16 +820,58 @@ function looksLikeExcelBuffer(buffer: Buffer): boolean {
   );
 }
 
-function parseExcelContent(content: string): {
+function sheetToMatrix(sheet: XLSX.WorkSheet): unknown[][] {
+  return XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+  });
+}
+
+function scoreParsedSheet(result: {
   headers: string[];
   rows: Record<string, string>[];
+  presetMapping?: PriceListMapping;
   error: string | null;
-} {
+}): number {
+  if (result.error) return -1;
+  const mapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
+  let score = result.rows.length * 10 + result.headers.length;
+  if (isMappingComplete(mapping)) score += 100;
+  else if (mapping.name) score += 25;
+  if (mapping.list_price || mapping.standard_price) score += 40;
+  return score;
+}
+
+function pickBestWorkbookSheet(workbook: XLSX.WorkBook): {
+  sheetName: string;
+  matrix: unknown[][];
+} | null {
+  let best: { sheetName: string; matrix: unknown[][]; score: number } | null = null;
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+    const matrix = sheetToMatrix(sheet);
+    const parsed = matrixToTabular(matrix);
+    const score = scoreParsedSheet(parsed);
+    if (!best || score > best.score) {
+      best = { sheetName, matrix, score };
+    }
+  }
+  return best ? { sheetName: best.sheetName, matrix: best.matrix } : null;
+}
+
+function parseExcelContent(content: string): TabularParseResult {
   const b64 = stripBase64Payload(content);
   if (!b64) {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "El archivo Excel está vacío.",
     };
   }
@@ -442,6 +883,7 @@ function parseExcelContent(content: string): {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "No se pudo leer el Excel. Subí un .xlsx o .xls válido.",
     };
   }
@@ -449,6 +891,7 @@ function parseExcelContent(content: string): {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "El archivo Excel está vacío.",
     };
   }
@@ -456,6 +899,7 @@ function parseExcelContent(content: string): {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "El archivo Excel no es válido.",
     };
   }
@@ -467,73 +911,51 @@ function parseExcelContent(content: string): {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "El archivo Excel no es válido.",
     };
   }
 
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
+  if (!workbook.SheetNames.length) {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error: "El Excel no tiene hojas.",
     };
   }
 
-  const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-  });
-
-  if (!matrix.length) {
+  const picked = pickBestWorkbookSheet(workbook);
+  if (!picked) {
     return {
       headers: [],
       rows: [],
-      error: "El archivo Excel está vacío.",
+      headerRowIndex: 0,
+      error: "El Excel no tiene hojas.",
     };
   }
 
-  const headerRow = Array.isArray(matrix[0]) ? matrix[0] : [];
-  const headers = headerRow.map((cell) => cellToString(cell).trim());
-  if (!headers.some(Boolean)) {
-    return {
-      headers: [],
-      rows: [],
-      error: "El archivo Excel no tiene encabezados.",
-    };
+  const result = matrixToTabular(picked.matrix);
+  if (result.error) {
+    return { ...result, sheetName: picked.sheetName };
   }
-
-  const rows: Record<string, string>[] = [];
-  for (const line of matrix.slice(1)) {
-    const cells = Array.isArray(line) ? line : [];
-    const row: Record<string, string> = {};
-    let any = false;
-    headers.forEach((header, i) => {
-      if (!header) return;
-      const value = cellToString(cells[i] ?? "").trim();
-      row[header] = value;
-      if (value) any = true;
-    });
-    if (any) rows.push(row);
-  }
-
-  return { headers, rows, error: null };
+  const suggestedMapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
+  return { ...result, suggestedMapping, sheetName: picked.sheetName };
 }
 
 export function parseTabularText(
   filename: string | null | undefined,
   text: string
-): {
-  headers: string[];
-  rows: Record<string, string>[];
-  error: string | null;
-} {
+): TabularParseResult {
   if (isRejectedFilename(filename)) {
     return {
       headers: [],
       rows: [],
+      headerRowIndex: 0,
       error:
         "PDF e imágenes no se importan en esta versión. Convertí la lista a Excel o CSV.",
     };

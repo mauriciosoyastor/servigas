@@ -311,6 +311,18 @@ export interface BackendClient {
     contentType: string;
     filename: string;
   }>;
+  analyzePriceListImport(
+    odooSessionId: string,
+    input: { filename: string; content: string }
+  ): Promise<{
+    headers: string[];
+    suggestedMapping: PriceListMapping;
+    needsMapping: boolean;
+    rowCount: number;
+    headerRowIndex: number;
+    sampleRows: Record<string, string>[];
+    sheetName?: string;
+  }>;
   previewPriceListImport(
     odooSessionId: string,
     input: {
