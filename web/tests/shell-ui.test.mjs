@@ -704,6 +704,8 @@ describe("shell UI contracts", () => {
     assert.match(productNew, /inventory\/products/);
     assert.match(productImport, /Cargar lista de precios\/Productos/);
     assert.match(productImport, /\/api\/inventory\/price-list-import/);
+    assert.match(productImport, /data-step="mapping"/);
+    assert.match(productImport, /action: 'analyze'/);
     assert.match(productImport, /\.xlsx|\.xls/);
     assert.match(productImport, /readAsDataURL|isExcelFile/);
     assert.match(productImport, /data-import-error-banner/);

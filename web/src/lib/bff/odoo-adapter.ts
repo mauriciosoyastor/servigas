@@ -63,6 +63,7 @@ import {
   localizePaymentMethodName,
 } from "../pos/payment-methods.ts";
 import {
+  analyzeTabularFile,
   buildProductIndexes,
   classifyRows,
   parseTabularText,
@@ -1131,6 +1132,17 @@ export class OdooAdapter implements BackendClient {
     return { id: Number(id), detailPath };
   }
 
+  async analyzePriceListImport(
+    _odooSessionId: string,
+    input: { filename: string; content: string }
+  ) {
+    const result = analyzeTabularFile(input.filename, input.content);
+    if ("error" in result) {
+      throw new BffError("validation_error", 400, result.error);
+    }
+    return result;
+  }
+
   async previewPriceListImport(
     odooSessionId: string,
     input: {
@@ -1148,7 +1160,7 @@ export class OdooAdapter implements BackendClient {
     }
 
     const mapping = {
-      ...suggestMapping(parsed.headers),
+      ...(parsed.suggestedMapping ?? suggestMapping(parsed.headers)),
       ...(input.mapping || {}),
     };
     if (!mapping.name) {

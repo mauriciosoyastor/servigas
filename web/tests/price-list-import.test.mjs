@@ -4,7 +4,11 @@ import * as XLSX from "xlsx";
 
 import {
   TEMPLATE_CSV,
+  analyzeTabularFile,
   classifyRows,
+  detectHeaderRowIndex,
+  inferHeaderlessLayout,
+  isMappingComplete,
   isRejectedFilename,
   labelImportReason,
   labelImportStatus,
@@ -70,6 +74,108 @@ describe("price-list-import mapping", () => {
   it("template includes categoria and proveedor", () => {
     assert.match(TEMPLATE_CSV, /categoria/);
     assert.match(TEMPLATE_CSV, /proveedor/);
+  });
+
+  it("maps Orbis supplier headers", () => {
+    assert.deepEqual(
+      suggestMapping([
+        "Agrupación",
+        "Código Artículo",
+        "Descripción Artículo",
+        "Estado Artículo",
+        "Precio",
+      ]),
+      {
+        categoria: "Agrupación",
+        default_code: "Código Artículo",
+        name: "Descripción Artículo",
+        list_price: "Precio",
+      }
+    );
+    assert.equal(
+      isMappingComplete(
+        suggestMapping([
+          "Agrupación",
+          "Código Artículo",
+          "Descripción Artículo",
+          "Precio",
+        ])
+      ),
+      true
+    );
+  });
+
+  it("maps Eskabe supplier headers", () => {
+    const mapping = suggestMapping([
+      "CODIGO",
+      "DESIGNACION",
+      "MODELO",
+      "GAS/EL",
+      "VALORES SIN IVA",
+    ]);
+    assert.equal(mapping.default_code, "CODIGO");
+    assert.equal(mapping.name, "DESIGNACION");
+    assert.equal(mapping.list_price, "VALORES SIN IVA");
+    assert.equal(isMappingComplete(mapping), true);
+  });
+
+  it("detects Carr Sur header row below logo block", () => {
+    const matrix = [
+      ["Fernando Miguel Carreras"],
+      ["", "", "LOGO"],
+      [],
+      [],
+      [],
+      [],
+      [],
+      [],
+      ["Precios actualizados al 05/06/2026"],
+      ["Codigo", "Los precios en rojo fueron actualizados", "Moneda", "P.Venta", "IVA"],
+      [],
+      [],
+      [],
+      [],
+      ["0007600", "ABRAZADERA.- GAS ALAMBRE", "$", "753.07", "21"],
+    ];
+    assert.equal(detectHeaderRowIndex(matrix), 9);
+    const b64 = workbookToBase64(matrix);
+    const parsed = parseTabularText("carr-sur.xlsx", b64);
+    assert.equal(parsed.error, null);
+    assert.equal(parsed.headerRowIndex, 9);
+    assert.equal(parsed.rows[0]["Codigo"], "0007600");
+    assert.equal(parsed.rows[0]["Los precios en rojo fueron actualizados"], "ABRAZADERA.- GAS ALAMBRE");
+    assert.equal(parsed.suggestedMapping?.default_code, "Codigo");
+    assert.equal(parsed.suggestedMapping?.list_price, "P.Venta");
+    assert.equal(isMappingComplete(parsed.suggestedMapping || {}), false);
+  });
+
+  it("infers headerless Fercor layout", () => {
+    const matrix = [
+      ["R0037", "TERMOCUPLA LONGVIE CON MAZA 32 CM", "$ 5,279.00", "2"],
+      ["G1509", "INY. CALEFON ORBIS BOTONERA PILOTO", "$ 827.00", "3"],
+      ["G1246", "CALEFAC ORBIS CONJ SOSTEN QUEMA PILOTO", "$ 16,800", "4"],
+    ];
+    const layout = inferHeaderlessLayout(matrix);
+    assert.ok(layout);
+    assert.equal(layout.mapping.name, "__col_1");
+    assert.equal(layout.mapping.default_code, "__col_0");
+    assert.equal(layout.mapping.list_price, "__col_2");
+    const b64 = workbookToBase64(matrix);
+    const parsed = parseTabularText("fercor.xlsx", b64);
+    assert.equal(parsed.error, null);
+    assert.equal(parsed.rows.length, 3);
+    assert.equal(parsed.rows[0][layout.headers[1]], "TERMOCUPLA LONGVIE CON MAZA 32 CM");
+    assert.equal(isMappingComplete(parsed.suggestedMapping || {}), true);
+  });
+
+  it("analyze reports needsMapping when name column missing", () => {
+    const analysis = analyzeTabularFile(
+      "lista.csv",
+      "Codigo,Moneda,P.Venta\n0001,$,100\n"
+    );
+    assert.ok(!("error" in analysis));
+    assert.equal(analysis.needsMapping, true);
+    assert.equal(analysis.suggestedMapping.list_price, "P.Venta");
   });
 });
 

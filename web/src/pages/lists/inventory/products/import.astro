@@ -4,6 +4,8 @@ import { invalidateBffSession, requireOdooSession } from '../../../../lib/bff/ht
 import {
 	labelImportReason,
 	labelImportStatus,
+	MAPPING_FIELD_LABELS,
+	MAPPING_UI_FIELDS,
 } from '../../../../lib/shell/price-list-import.ts';
 
 let userName = '';
@@ -36,6 +38,10 @@ const reasonLabels = Object.fromEntries(
 		] as const
 	).map((key) => [key, labelImportReason(key)])
 );
+const mappingFieldLabels = MAPPING_FIELD_LABELS;
+const mappingUiFields = MAPPING_UI_FIELDS;
+const requiredMappingFields = ['name'];
+const priceMappingFields = ['list_price', 'standard_price'];
 ---
 
 <ShellLayout title="Cargar lista de precios/Productos | Servigas" active="inventory" userName={userName}>
@@ -66,8 +72,24 @@ const reasonLabels = Object.fromEntries(
 			<p class="sg-import-status" data-status hidden></p>
 		</section>
 
+		<section class="sg-import-card sg-glass" data-step="mapping" hidden>
+			<strong>2. Columnas</strong>
+			<p class="sg-import-lead sg-import-map-lead">
+				No reconocimos todas las columnas automáticamente. Elegí qué columna del archivo
+				corresponde a cada campo. <strong>Nombre</strong> y al menos un <strong>precio</strong> son obligatorios.
+			</p>
+			<p class="sg-import-map-meta" data-map-meta hidden></p>
+			<div class="sg-import-map-grid" data-mapping-fields></div>
+			<div class="sg-import-actions">
+				<button type="button" class="sg-focus-ring sg-import-primary" data-confirm-mapping>
+					Ver preview
+				</button>
+				<button type="button" class="sg-focus-ring" data-back-upload>Volver al archivo</button>
+			</div>
+		</section>
+
 		<section class="sg-import-card sg-glass" data-step="preview" hidden>
-			<strong>2. Preview</strong>
+			<strong>3. Preview</strong>
 			<p class="sg-import-counts" data-counts></p>
 			<p class="sg-import-error-banner" data-import-error-banner hidden role="status"></p>
 			<div class="sg-import-table-wrap">
@@ -105,13 +127,18 @@ const reasonLabels = Object.fromEntries(
 	</main>
 </ShellLayout>
 
-<script define:vars={{ statusLabels, reasonLabels }}>
+<script define:vars={{ statusLabels, reasonLabels, mappingFieldLabels, mappingUiFields, requiredMappingFields, priceMappingFields }}>
 	const root = document.querySelector('[data-price-import]');
 	if (!(root instanceof HTMLElement)) {
 		// no-op
 	} else {
 		const statusEl = root.querySelector('[data-status]');
 		const fileInput = root.querySelector('[data-file-input]');
+		const mappingSection = root.querySelector('[data-step="mapping"]');
+		const mappingFieldsEl = root.querySelector('[data-mapping-fields]');
+		const mapMetaEl = root.querySelector('[data-map-meta]');
+		const confirmMappingBtn = root.querySelector('[data-confirm-mapping]');
+		const backUploadBtn = root.querySelector('[data-back-upload]');
 		const previewSection = root.querySelector('[data-step="preview"]');
 		const doneSection = root.querySelector('[data-step="done"]');
 		const uploadSection = root.querySelector('[data-step="upload"]');
@@ -124,6 +151,12 @@ const reasonLabels = Object.fromEntries(
 
 		/** @type {any[]} */
 		let lines = [];
+		/** @type {string[]} */
+		let fileHeaders = [];
+		/** @type {Record<string, string>} */
+		let currentMapping = {};
+		let pendingFilename = '';
+		let pendingContent = '';
 
 		function setStatus(text, state = 'pending') {
 			if (!(statusEl instanceof HTMLElement)) return;
@@ -138,6 +171,120 @@ const reasonLabels = Object.fromEntries(
 
 		function labelReason(reason) {
 			return reasonLabels[reason] || reason || '';
+		}
+
+		function hideAllSteps() {
+			for (const section of [uploadSection, mappingSection, previewSection, doneSection]) {
+				if (section instanceof HTMLElement) section.hidden = true;
+			}
+		}
+
+		function showStep(step) {
+			hideAllSteps();
+			if (step === 'upload' && uploadSection instanceof HTMLElement) uploadSection.hidden = false;
+			if (step === 'mapping' && mappingSection instanceof HTMLElement) mappingSection.hidden = false;
+			if (step === 'preview' && previewSection instanceof HTMLElement) previewSection.hidden = false;
+			if (step === 'done' && doneSection instanceof HTMLElement) doneSection.hidden = false;
+		}
+
+		function readMappingFromForm() {
+			/** @type {Record<string, string>} */
+			const mapping = {};
+			if (!(mappingFieldsEl instanceof HTMLElement)) return mapping;
+			for (const select of mappingFieldsEl.querySelectorAll('select[data-map-field]')) {
+				if (!(select instanceof HTMLSelectElement)) continue;
+				const field = select.dataset.mapField || '';
+				const value = select.value.trim();
+				if (field && value) mapping[field] = value;
+			}
+			return mapping;
+		}
+
+		function validateMapping(mapping) {
+			if (!mapping.name) {
+				return 'Indicá qué columna es el nombre del producto.';
+			}
+			if (!mapping.list_price && !mapping.standard_price) {
+				return 'Indicá al menos una columna de precio (venta o costo).';
+			}
+			return '';
+		}
+
+		function renderMappingForm(headers, suggestedMapping, rowCount, headerRowIndex) {
+			if (!(mappingFieldsEl instanceof HTMLElement)) return;
+			currentMapping = { ...suggestedMapping };
+			fileHeaders = headers;
+			mappingFieldsEl.innerHTML = '';
+
+			for (const field of mappingUiFields) {
+				const label = mappingFieldLabels[field] || field;
+				const isRequired =
+					requiredMappingFields.includes(field) ||
+					(field === 'list_price' && !currentMapping.standard_price) ||
+					(field === 'standard_price' && !currentMapping.list_price);
+				const wrap = document.createElement('label');
+				wrap.className = 'sg-import-map-field';
+				const select = document.createElement('select');
+				select.dataset.mapField = field;
+				select.className = 'sg-focus-ring';
+				const empty = document.createElement('option');
+				empty.value = '';
+				empty.textContent = '— No importar —';
+				select.appendChild(empty);
+				for (const header of headers) {
+					const opt = document.createElement('option');
+					opt.value = header;
+					opt.textContent = header;
+					if (currentMapping[field] === header) opt.selected = true;
+					select.appendChild(opt);
+				}
+				const title = document.createElement('span');
+				title.textContent = isRequired && field !== 'standard_price' && field !== 'list_price'
+					? `${label} *`
+					: field === 'list_price' || field === 'standard_price'
+						? `${label} (al menos uno *)`
+						: label;
+				wrap.appendChild(title);
+				wrap.appendChild(select);
+				mappingFieldsEl.appendChild(wrap);
+			}
+
+			if (mapMetaEl instanceof HTMLElement) {
+				const rowHint =
+					headerRowIndex > 0
+						? ` Encabezados detectados en la fila ${headerRowIndex + 1}.`
+						: '';
+				mapMetaEl.hidden = false;
+				mapMetaEl.textContent = `${rowCount} filas de datos · ${headers.length} columnas.${rowHint}`;
+			}
+			showStep('mapping');
+		}
+
+		async function requestPreview(filename, content, mapping) {
+			const validationError = validateMapping(mapping);
+			if (validationError) {
+				setStatus(validationError, 'error');
+				return false;
+			}
+			setStatus('Generando preview…');
+			const response = await fetch('/api/inventory/price-list-import', {
+				method: 'POST',
+				credentials: 'same-origin',
+				headers: { 'content-type': 'application/json' },
+				body: JSON.stringify({
+					action: 'preview',
+					filename,
+					content,
+					mapping,
+				}),
+			});
+			const payload = await response.json().catch(() => ({}));
+			if (!response.ok) {
+				throw new Error(payload?.error?.message || 'No se pudo analizar');
+			}
+			renderPreview(payload.preview);
+			setStatus('Preview listo. Revisá y confirmá.', 'ok');
+			return true;
 		}
 
 		function selectedCount() {
@@ -223,9 +370,7 @@ const reasonLabels = Object.fromEntries(
 			bodyEl.querySelectorAll('input[data-line]').forEach((input) => {
 				input.addEventListener('change', syncApplyButton);
 			});
-			if (uploadSection instanceof HTMLElement) uploadSection.hidden = true;
-			if (previewSection instanceof HTMLElement) previewSection.hidden = false;
-			if (doneSection instanceof HTMLElement) doneSection.hidden = true;
+			showStep('preview');
 			syncApplyButton();
 		}
 
@@ -269,23 +414,57 @@ const reasonLabels = Object.fromEntries(
 				const content = isExcelFile(file)
 					? await readFileAsDataUrl(file)
 					: await readFileAsText(file);
+				pendingFilename = file.name;
+				pendingContent = content;
+
 				const response = await fetch('/api/inventory/price-list-import', {
 					method: 'POST',
 					credentials: 'same-origin',
 					headers: { 'content-type': 'application/json' },
 					body: JSON.stringify({
-						action: 'preview',
+						action: 'analyze',
 						filename: file.name,
 						content,
 					}),
 				});
 				const payload = await response.json().catch(() => ({}));
 				if (!response.ok) throw new Error(payload?.error?.message || 'No se pudo analizar');
-				renderPreview(payload.preview);
-				setStatus('Preview listo. Revisá y confirmá.', 'ok');
+
+				const analysis = payload.analysis || {};
+				if (analysis.needsMapping) {
+					renderMappingForm(
+						analysis.headers || [],
+						analysis.suggestedMapping || {},
+						analysis.rowCount || 0,
+						analysis.headerRowIndex || 0
+					);
+					setStatus('Revisá el mapeo de columnas y continuá.', 'pending');
+					return;
+				}
+
+				await requestPreview(file.name, content, analysis.suggestedMapping || {});
 			} catch (error) {
 				setStatus(error instanceof Error ? error.message : 'Error', 'error');
 			}
+		});
+
+		confirmMappingBtn?.addEventListener('click', async () => {
+			if (!(confirmMappingBtn instanceof HTMLButtonElement)) return;
+			confirmMappingBtn.disabled = true;
+			try {
+				const mapping = readMappingFromForm();
+				await requestPreview(pendingFilename, pendingContent, mapping);
+			} catch (error) {
+				setStatus(error instanceof Error ? error.message : 'Error', 'error');
+			} finally {
+				confirmMappingBtn.disabled = false;
+			}
+		});
+
+		backUploadBtn?.addEventListener('click', () => {
+			showStep('upload');
+			setStatus('');
+			if (fileInput instanceof HTMLInputElement) fileInput.value = '';
 		});
 
 		applyBtn?.addEventListener('click', async () => {
@@ -311,8 +490,7 @@ const reasonLabels = Object.fromEntries(
 				});
 				const payload = await response.json().catch(() => ({}));
 				if (!response.ok) throw new Error(payload?.error?.message || 'No se pudo importar');
-				if (previewSection instanceof HTMLElement) previewSection.hidden = true;
-				if (doneSection instanceof HTMLElement) doneSection.hidden = false;
+				showStep('done');
 				if (doneMessage instanceof HTMLElement) {
 					doneMessage.textContent = `Creados: ${payload.created} · Actualizados: ${payload.updated} · Omitidos: ${payload.skipped}`;
 				}
@@ -391,6 +569,36 @@ const reasonLabels = Object.fromEntries(
 	}
 	.sg-import-file input {
 		display: none;
+	}
+	.sg-import-map-lead {
+		max-width: 42rem;
+		margin: 0 !important;
+		font-size: 0.88rem !important;
+	}
+	.sg-import-map-meta {
+		margin: 0;
+		font-size: 0.8rem;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-import-map-grid {
+		display: grid;
+		gap: 0.75rem;
+		grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr));
+	}
+	.sg-import-map-field {
+		display: grid;
+		gap: 0.35rem;
+		font-size: 0.78rem;
+		font-weight: 600;
+		color: var(--sg-text-muted-dark);
+	}
+	.sg-import-map-field select {
+		border: 1px solid var(--sg-glass-border);
+		border-radius: 0.65rem;
+		padding: 0.5rem 0.65rem;
+		background: rgba(0, 0, 0, 0.25);
+		color: var(--sg-text-on-dark);
+		font-size: 0.82rem;
 	}
 	.sg-import-status[data-state='error'] {
 		color: #ffb4a8;
