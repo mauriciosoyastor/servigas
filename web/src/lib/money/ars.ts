@@ -12,6 +12,7 @@ const MONEY_FIELD_KEYS = new Set([
   "amount_tax",
   "amount_residual",
   "amount_collected",
+  "deposit",
   "price_unit",
   "price_subtotal",
   "price_total",

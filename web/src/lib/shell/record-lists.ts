@@ -11,6 +11,7 @@ export type RecordListKey =
   | "inventory/products"
   | "inventory/variants"
   | "inventory/no-stock"
+  | "inventory/low-stock"
   | "inventory/stockables"
   | "inventory/no-price"
   | "inventory/transfers"
@@ -310,6 +311,32 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
     imageField: "image_128",
     searchFields: ["name", "default_code", "display_name", "barcode"],
     detailPath: "/lists/inventory/variants/:id",
+  },
+  "inventory/low-stock": {
+    key: "inventory/low-stock",
+    path: "/lists/inventory/low-stock",
+    title: "Bajo stock",
+    hint: "Stock ≤ mínimo global (Ajustes) — nombre, código o barras",
+    model: "product.template",
+    domain: [
+      ["is_storable", "=", true],
+      ["active", "=", true],
+    ],
+    fields: [
+      "name",
+      "default_code",
+      "barcode",
+      "qty_available",
+      "active",
+    ],
+    columns: productCols("name"),
+    limit: 50,
+    order: "name asc",
+    hubBack: "/hubs/inventory",
+    railApp: "inventory",
+    imageField: "image_128",
+    searchFields: ["name", "default_code", "barcode"],
+    detailPath: "/lists/inventory/products/:id",
   },
   "inventory/stockables": {
     key: "inventory/stockables",
@@ -1719,6 +1746,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "work_done",
       "materials",
       "amount",
+      "deposit",
       "amount_collected",
       "state",
       "appliance_id",
@@ -1731,6 +1759,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       { key: "serial_number", label: "Serie" },
       { key: "owner_name", label: "Propietario" },
       { key: "amount", label: "Importe" },
+      { key: "deposit", label: "Seña" },
       { key: "amount_collected", label: "Cobrado" },
       { key: "state", label: "Estado" },
     ],
@@ -1760,6 +1789,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       "work_done",
       "materials",
       "amount",
+      "deposit",
       "amount_collected",
       "state",
       "appliance_id",
@@ -1772,6 +1802,7 @@ const LISTS: Record<RecordListKey, RecordListDef> = {
       { key: "serial_number", label: "Serie" },
       { key: "owner_name", label: "Propietario" },
       { key: "amount", label: "Importe" },
+      { key: "deposit", label: "Seña" },
       { key: "amount_collected", label: "Cobrado" },
       { key: "state", label: "Estado" },
     ],
@@ -2326,6 +2357,11 @@ type RouteRule = {
 const ROUTE_RULES: RouteRule[] = [
   {
     model: "product.template",
+    path: "/lists/inventory/low-stock",
+    match: (d) => domainHas(d, "qty_available"),
+  },
+  {
+    model: "product.template",
     path: "/lists/inventory/no-price",
     match: (d) => domainHas(d, "list_price"),
   },
@@ -2745,6 +2781,7 @@ const ACCENT_INSENSITIVE_LIST_KEYS = new Set([
   "inventory/products",
   "inventory/variants",
   "inventory/no-stock",
+  "inventory/low-stock",
   "inventory/stockables",
   "inventory/no-price",
 ]);

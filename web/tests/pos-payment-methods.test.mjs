@@ -18,6 +18,14 @@ describe("pos payment method labels", () => {
     );
     assert.equal(localizePaymentMethodName("Crédito"), "Cuenta corriente");
     assert.equal(localizePaymentMethodName("Débito"), "Débito");
+    assert.equal(
+      localizePaymentMethodName("Tarjeta de crédito"),
+      "Tarjeta de crédito"
+    );
+    assert.equal(
+      localizePaymentMethodName("Credit Card"),
+      "Tarjeta de crédito"
+    );
     assert.equal(localizePaymentMethodName("Mercado Pago"), "Mercado Pago");
   });
 

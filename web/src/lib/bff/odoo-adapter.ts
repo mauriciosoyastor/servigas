@@ -44,6 +44,14 @@ import {
   workOrderCashFeedLabel,
 } from "../shell/workshop-order-cash.ts";
 import {
+  LOW_STOCK_SCAN_LIMIT,
+  SETTINGS_PARAM,
+  filterAlertSettingsValues,
+  isProductLowStock,
+  settingsFromParams,
+  type ServigasAlertSettings,
+} from "../shell/servigas-settings.ts";
+import {
   buildCashAlerts,
   canOwnerWithdraw,
   resolveCashShift,
@@ -721,6 +729,7 @@ export class OdooAdapter implements BackendClient {
       fields = fields.filter(
         (field) =>
           field !== "qty_available" &&
+          field !== "sg_stock_min_qty" &&
           field !== "sg_fw_loaded" &&
           field !== "sg_fw_number" &&
           field !== "sg_fw_loaded_at"
@@ -761,6 +770,26 @@ export class OdooAdapter implements BackendClient {
       );
       filteredTotal = matched.length;
       rawRows = matched.slice(offset, offset + def.limit);
+    }
+
+    if (def.key === "inventory/low-stock") {
+      // Umbral global (Ajustes); filtramos qty ≤ stockMinQty en BFF.
+      const alertSettings = await this.getAlertSettings(odooSessionId);
+      const minQty = alertSettings.stockMinQty;
+      if (minQty <= 0 || !alertSettings.stockAlertsEnabled) {
+        filteredTotal = 0;
+        rawRows = [];
+      } else {
+        const scanLimit = LOW_STOCK_SCAN_LIMIT;
+        if (!accentInsensitiveSearch) {
+          rawRows = await readOnce(domain, scanLimit, 0);
+        }
+        const matched = rawRows.filter((row) =>
+          isProductLowStock(Number(row.qty_available) || 0, minQty)
+        );
+        filteredTotal = matched.length;
+        rawRows = matched.slice(offset, offset + def.limit);
+      }
     }
 
     if (
@@ -914,6 +943,7 @@ export class OdooAdapter implements BackendClient {
       default_code: "Referencia",
       barcode: "Barras",
       qty_available: "Stock",
+      sg_stock_min_qty: "Stock mínimo",
       active: "Activo",
       vat: "CUIT",
       street: "Calle",
@@ -943,6 +973,7 @@ export class OdooAdapter implements BackendClient {
       work_done: "Trabajos",
       materials: "Materiales",
       amount: "Importe",
+      deposit: "Seña",
       amount_collected: "Cobrado en caja",
       appliance_id: "Artefacto",
       work_order_count: "OT",
@@ -3446,10 +3477,11 @@ export class OdooAdapter implements BackendClient {
   }
 
   async getCashHub(odooSessionId: string): Promise<CashHubPayload> {
-    const [session, history, capabilities] = await Promise.all([
+    const [session, history, capabilities, alertSettings] = await Promise.all([
       this.getOpenCashSession(odooSessionId),
       this.getCashHistory(odooSessionId, 10),
       this.#getCashCapabilities(odooSessionId),
+      this.getAlertSettings(odooSessionId),
     ]);
     if (!session) {
       return {
@@ -3467,8 +3499,8 @@ export class OdooAdapter implements BackendClient {
     const alerts = buildCashAlerts({
       openedAt: session.openedAt,
       expectedCash: summary.expectedCash,
-      cashThreshold: 100_000,
-      openHoursThreshold: 12,
+      cashThreshold: alertSettings.cashThreshold,
+      openHoursThreshold: alertSettings.openHoursThreshold,
       feed,
     });
     return {
@@ -3483,6 +3515,107 @@ export class OdooAdapter implements BackendClient {
         session.openingBalance
       ),
     };
+  }
+
+  async getAlertSettings(
+    odooSessionId: string
+  ): Promise<ServigasAlertSettings> {
+    const keys = Object.values(SETTINGS_PARAM);
+    const rows = await this.#searchRead(
+      odooSessionId,
+      "ir.config_parameter",
+      [["key", "in", keys]],
+      ["key", "value"],
+      keys.length,
+      0,
+      "id asc"
+    );
+    const map: Record<string, string> = {};
+    for (const row of rows) {
+      const key = String(row.key || "");
+      if (key) map[key] = String(row.value ?? "");
+    }
+    return settingsFromParams(map);
+  }
+
+  async updateAlertSettings(
+    odooSessionId: string,
+    values: Record<string, unknown>
+  ): Promise<ServigasAlertSettings> {
+    const filtered = filterAlertSettingsValues(values);
+    if (!filtered) {
+      throw new BffError(
+        "validation_error",
+        400,
+        "Revisá los umbrales de alerta"
+      );
+    }
+    const writes: Array<[string, string]> = [];
+    if (filtered.cashThreshold !== undefined) {
+      writes.push([
+        SETTINGS_PARAM.cashThreshold,
+        String(filtered.cashThreshold),
+      ]);
+    }
+    if (filtered.openHoursThreshold !== undefined) {
+      writes.push([
+        SETTINGS_PARAM.openHoursThreshold,
+        String(filtered.openHoursThreshold),
+      ]);
+    }
+    if (filtered.stockAlertsEnabled !== undefined) {
+      writes.push([
+        SETTINGS_PARAM.stockAlertsEnabled,
+        filtered.stockAlertsEnabled ? "True" : "False",
+      ]);
+    }
+    if (filtered.stockMinQty !== undefined) {
+      writes.push([SETTINGS_PARAM.stockMinQty, String(filtered.stockMinQty)]);
+    }
+    for (const [key, value] of writes) {
+      await this.#callKw(odooSessionId, "ir.config_parameter", "set_param", [
+        key,
+        value,
+      ]);
+    }
+    return this.getAlertSettings(odooSessionId);
+  }
+
+  async countLowStockProducts(
+    odooSessionId: string
+  ): Promise<{ count: number; capped: boolean }> {
+    const settings = await this.getAlertSettings(odooSessionId);
+    if (!settings.stockAlertsEnabled || settings.stockMinQty <= 0) {
+      return { count: 0, capped: false };
+    }
+    try {
+      const rows = await this.#searchRead(
+        odooSessionId,
+        "product.template",
+        [
+          ["is_storable", "=", true],
+          ["active", "=", true],
+        ],
+        ["qty_available"],
+        LOW_STOCK_SCAN_LIMIT,
+        0,
+        "id asc"
+      );
+      const count = rows.filter((row) =>
+        isProductLowStock(
+          Number(row.qty_available) || 0,
+          settings.stockMinQty
+        )
+      ).length;
+      // Muestra completa → puede haber más fuera del tope de escaneo.
+      const capped = rows.length >= LOW_STOCK_SCAN_LIMIT;
+      return { count, capped };
+    } catch (cause) {
+      if (cause instanceof BffError && cause.code === "unauthorized") {
+        throw cause;
+      }
+      return { count: 0, capped: false };
+    }
   }
 
   async openCashSession(
@@ -3696,6 +3829,13 @@ export class OdooAdapter implements BackendClient {
             "validation_error",
             400,
             "No hay una caja abierta. Abrí la caja antes de cobrar."
+          );
+        }
+        if (/does not exist|no such method/i.test(msg)) {
+          throw new BffError(
+            "action_failed",
+            503,
+            "Odoo no tiene el cobro de OT actualizado. Reiniciá Odoo con los addons de este worktree (`npm run odoo:ensure -- --restart`) y actualizá servigas_core."
           );
         }
         throw cause;
@@ -5836,12 +5976,54 @@ export class OdooAdapter implements BackendClient {
     const payload = (await response.json()) as JsonRpcResponse<T>;
     if (payload.error !== undefined) {
       const errorText = this.#describeRpcError(payload.error);
+      const dataName =
+        payload.error &&
+        typeof payload.error === "object" &&
+        "data" in payload.error &&
+        payload.error.data &&
+        typeof payload.error.data === "object" &&
+        "name" in payload.error.data
+          ? String(
+              (payload.error.data as { name?: unknown }).name || ""
+            )
+          : "";
+
       if (
+        dataName === "odoo.http.SessionExpiredException" ||
+        /session expired|invalid session/i.test(errorText)
+      ) {
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
+      }
+
+      // Business rules from Odoo — never disguise as "could not connect".
+      if (
+        dataName === "odoo.exceptions.UserError" ||
+        dataName === "odoo.exceptions.ValidationError" ||
+        dataName === "odoo.exceptions.RedirectWarning"
+      ) {
+        throw new BffError(
+          "validation_error",
+          400,
+          errorText || "Revisá los datos e intentá de nuevo"
+        );
+      }
+
+      if (
+        dataName === "odoo.exceptions.AccessError" ||
+        dataName === "odoo.exceptions.AccessDenied" ||
         /(session|access|authenticat|unauthoriz|permission)/i.test(
           errorText
         )
       ) {
-        throw new BffError("unauthorized", 401, "La sesión de Odoo no es válida");
+        throw new BffError(
+          "unauthorized",
+          401,
+          "La sesión de Odoo no es válida"
+        );
       }
 
       throw new BffError(
