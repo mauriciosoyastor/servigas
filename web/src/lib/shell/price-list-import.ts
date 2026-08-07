@@ -406,6 +406,50 @@ function uniqueHeaderLabel(raw: string, index: number, used: Set<string>): strin
   return label;
 }
 
+function matrixColumnCount(matrix: unknown[][]): number {
+  let max = 0;
+  for (const row of matrix) {
+    if (Array.isArray(row) && row.length > max) max = row.length;
+  }
+  return max;
+}
+
+function buildHeadersFromRow(headerCells: unknown[], columnCount: number): string[] {
+  const used = new Set<string>();
+  const headers: string[] = [];
+  for (let i = 0; i < columnCount; i++) {
+    const raw = i < headerCells.length ? cellToString(headerCells[i]).trim() : "";
+    headers.push(uniqueHeaderLabel(raw, i, used));
+  }
+  return headers;
+}
+
+/** If price wasn't mapped from headers, pick the unused column that looks most like prices. */
+export function enrichMappingFromData(
+  headers: string[],
+  rows: Record<string, string>[],
+  mapping: PriceListMapping
+): PriceListMapping {
+  if (mapping.list_price || mapping.standard_price || !rows.length) return mapping;
+  const used = new Set(Object.values(mapping).filter(Boolean));
+  const sample = rows.slice(0, 30);
+  let bestHeader: string | undefined;
+  let bestHits = 0;
+  for (const header of headers) {
+    if (used.has(header)) continue;
+    const hits = sample.filter((row) => looksLikePrice(row[header] || "")).length;
+    if (hits > bestHits) {
+      bestHits = hits;
+      bestHeader = header;
+    }
+  }
+  const minHits = Math.min(3, Math.max(1, Math.ceil(sample.length * 0.5)));
+  if (bestHeader && bestHits >= minHits) {
+    return { ...mapping, list_price: bestHeader };
+  }
+  return mapping;
+}
+
 function matrixToTabular(matrix: unknown[][]): {
   headers: string[];
   rows: Record<string, string>[];
@@ -417,9 +461,14 @@ function matrixToTabular(matrix: unknown[][]): {
     return { headers: [], rows: [], headerRowIndex: 0, error: "El archivo está vacío." };
   }
 
+  const columnCount = matrixColumnCount(matrix);
   const headerRowIndex = detectHeaderRowIndex(matrix);
   const headerCells = Array.isArray(matrix[headerRowIndex]) ? matrix[headerRowIndex] : [];
-  const headerScore = scoreHeaderRow(headerCells.map((cell) => cellToString(cell).trim()));
+  const headerScore = scoreHeaderRow(
+    Array.from({ length: columnCount }, (_, i) =>
+      cellToString(headerCells[i] ?? "").trim()
+    )
+  );
 
   let headers: string[];
   let dataStart: number;
@@ -432,17 +481,11 @@ function matrixToTabular(matrix: unknown[][]): {
       dataStart = 0;
       presetMapping = headerless.mapping;
     } else {
-      const used = new Set<string>();
-      headers = headerCells.map((cell, i) =>
-        uniqueHeaderLabel(cellToString(cell).trim(), i, used)
-      );
+      headers = buildHeadersFromRow(headerCells, columnCount);
       dataStart = headerRowIndex + 1;
     }
   } else {
-    const used = new Set<string>();
-    headers = headerCells.map((cell, i) =>
-      uniqueHeaderLabel(cellToString(cell).trim(), i, used)
-    );
+    headers = buildHeadersFromRow(headerCells, columnCount);
     dataStart = headerRowIndex + 1;
   }
 
@@ -476,6 +519,7 @@ export type TabularParseResult = {
   rows: Record<string, string>[];
   headerRowIndex: number;
   suggestedMapping?: PriceListMapping;
+  sheetName?: string;
   error: string | null;
 };
 
@@ -485,6 +529,8 @@ export type PriceListAnalyzeResult = {
   needsMapping: boolean;
   rowCount: number;
   headerRowIndex: number;
+  sampleRows: Record<string, string>[];
+  sheetName?: string;
   error?: string;
 };
 
@@ -496,13 +542,25 @@ export function analyzeTabularFile(
   if (parsed.error) {
     return { error: parsed.error };
   }
-  const suggestedMapping = parsed.suggestedMapping ?? suggestMapping(parsed.headers);
+  if (!parsed.rows.length) {
+    return {
+      error:
+        "El archivo no tiene filas de datos. Revisá que la hoja con productos no esté vacía y que no sea solo la portada.",
+    };
+  }
+  const suggestedMapping = enrichMappingFromData(
+    parsed.headers,
+    parsed.rows,
+    parsed.suggestedMapping ?? suggestMapping(parsed.headers)
+  );
   return {
     headers: parsed.headers,
     suggestedMapping,
     needsMapping: !isMappingComplete(suggestedMapping),
     rowCount: parsed.rows.length,
     headerRowIndex: parsed.headerRowIndex,
+    sampleRows: parsed.rows.slice(0, 3),
+    sheetName: parsed.sheetName,
   };
 }
 
@@ -692,7 +750,12 @@ function parseCsvText(text: string): TabularParseResult {
   const lines = text.replace(/^\uFEFF/, "").split(/\r?\n/);
   const matrix = lines.map((line) => splitCsvLine(line));
   const result = matrixToTabular(matrix);
-  const suggestedMapping = result.presetMapping ?? suggestMapping(result.headers);
+  if (result.error) return { ...result, suggestedMapping: undefined };
+  const suggestedMapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
   return { ...result, suggestedMapping };
 }
 
@@ -757,6 +820,51 @@ function looksLikeExcelBuffer(buffer: Buffer): boolean {
   );
 }
 
+function sheetToMatrix(sheet: XLSX.WorkSheet): unknown[][] {
+  return XLSX.utils.sheet_to_json<unknown[]>(sheet, {
+    header: 1,
+    defval: "",
+    raw: false,
+  });
+}
+
+function scoreParsedSheet(result: {
+  headers: string[];
+  rows: Record<string, string>[];
+  presetMapping?: PriceListMapping;
+  error: string | null;
+}): number {
+  if (result.error) return -1;
+  const mapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
+  let score = result.rows.length * 10 + result.headers.length;
+  if (isMappingComplete(mapping)) score += 100;
+  else if (mapping.name) score += 25;
+  if (mapping.list_price || mapping.standard_price) score += 40;
+  return score;
+}
+
+function pickBestWorkbookSheet(workbook: XLSX.WorkBook): {
+  sheetName: string;
+  matrix: unknown[][];
+} | null {
+  let best: { sheetName: string; matrix: unknown[][]; score: number } | null = null;
+  for (const sheetName of workbook.SheetNames) {
+    const sheet = workbook.Sheets[sheetName];
+    if (!sheet) continue;
+    const matrix = sheetToMatrix(sheet);
+    const parsed = matrixToTabular(matrix);
+    const score = scoreParsedSheet(parsed);
+    if (!best || score > best.score) {
+      best = { sheetName, matrix, score };
+    }
+  }
+  return best ? { sheetName: best.sheetName, matrix: best.matrix } : null;
+}
+
 function parseExcelContent(content: string): TabularParseResult {
   const b64 = stripBase64Payload(content);
   if (!b64) {
@@ -808,8 +916,7 @@ function parseExcelContent(content: string): TabularParseResult {
     };
   }
 
-  const sheetName = workbook.SheetNames[0];
-  if (!sheetName) {
+  if (!workbook.SheetNames.length) {
     return {
       headers: [],
       rows: [],
@@ -818,16 +925,26 @@ function parseExcelContent(content: string): TabularParseResult {
     };
   }
 
-  const sheet = workbook.Sheets[sheetName];
-  const matrix = XLSX.utils.sheet_to_json<unknown[]>(sheet, {
-    header: 1,
-    defval: "",
-    raw: false,
-  });
+  const picked = pickBestWorkbookSheet(workbook);
+  if (!picked) {
+    return {
+      headers: [],
+      rows: [],
+      headerRowIndex: 0,
+      error: "El Excel no tiene hojas.",
+    };
+  }
 
-  const result = matrixToTabular(matrix);
-  const suggestedMapping = result.presetMapping ?? suggestMapping(result.headers);
-  return { ...result, suggestedMapping };
+  const result = matrixToTabular(picked.matrix);
+  if (result.error) {
+    return { ...result, sheetName: picked.sheetName };
+  }
+  const suggestedMapping = enrichMappingFromData(
+    result.headers,
+    result.rows,
+    result.presetMapping ?? suggestMapping(result.headers)
+  );
+  return { ...result, suggestedMapping, sheetName: picked.sheetName };
 }
 
 export function parseTabularText(

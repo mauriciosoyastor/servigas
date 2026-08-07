@@ -66,6 +66,7 @@ import {
   analyzeTabularFile,
   buildProductIndexes,
   classifyRows,
+  enrichMappingFromData,
   parseTabularText,
   resolveApplyStatus,
   suggestMapping,
@@ -1160,7 +1161,11 @@ export class OdooAdapter implements BackendClient {
     }
 
     const mapping = {
-      ...(parsed.suggestedMapping ?? suggestMapping(parsed.headers)),
+      ...enrichMappingFromData(
+        parsed.headers,
+        parsed.rows,
+        parsed.suggestedMapping ?? suggestMapping(parsed.headers)
+      ),
       ...(input.mapping || {}),
     };
     if (!mapping.name) {

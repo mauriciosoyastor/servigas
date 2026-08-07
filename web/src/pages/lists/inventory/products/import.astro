@@ -79,7 +79,21 @@ const priceMappingFields = ['list_price', 'standard_price'];
 				corresponde a cada campo. <strong>Nombre</strong> y al menos un <strong>precio</strong> son obligatorios.
 			</p>
 			<p class="sg-import-map-meta" data-map-meta hidden></p>
+			<p class="sg-import-status" data-map-status hidden></p>
+			<div class="sg-import-sample-wrap" data-sample-wrap hidden>
+				<strong class="sg-import-sample-title">Muestra del archivo</strong>
+				<div class="sg-import-table-wrap sg-import-sample-table">
+					<table class="sg-import-table">
+						<thead data-sample-head></thead>
+						<tbody data-sample-body></tbody>
+					</table>
+				</div>
+			</div>
 			<div class="sg-import-map-grid" data-mapping-fields></div>
+			<label class="sg-import-map-field sg-import-fixed-proveedor">
+				<span>Proveedor fijo (si no hay columna)</span>
+				<input type="text" class="sg-focus-ring" data-fixed-proveedor placeholder="Ej: Orbis" autocomplete="off" />
+			</label>
 			<div class="sg-import-actions">
 				<button type="button" class="sg-focus-ring sg-import-primary" data-confirm-mapping>
 					Ver preview
@@ -137,6 +151,11 @@ const priceMappingFields = ['list_price', 'standard_price'];
 		const mappingSection = root.querySelector('[data-step="mapping"]');
 		const mappingFieldsEl = root.querySelector('[data-mapping-fields]');
 		const mapMetaEl = root.querySelector('[data-map-meta]');
+		const mapStatusEl = root.querySelector('[data-map-status]');
+		const sampleWrap = root.querySelector('[data-sample-wrap]');
+		const sampleHead = root.querySelector('[data-sample-head]');
+		const sampleBody = root.querySelector('[data-sample-body]');
+		const fixedProveedorInput = root.querySelector('[data-fixed-proveedor]');
 		const confirmMappingBtn = root.querySelector('[data-confirm-mapping]');
 		const backUploadBtn = root.querySelector('[data-back-upload]');
 		const previewSection = root.querySelector('[data-step="preview"]');
@@ -157,12 +176,15 @@ const priceMappingFields = ['list_price', 'standard_price'];
 		let currentMapping = {};
 		let pendingFilename = '';
 		let pendingContent = '';
+		let fixedProveedor = '';
 
 		function setStatus(text, state = 'pending') {
-			if (!(statusEl instanceof HTMLElement)) return;
-			statusEl.hidden = !text;
-			statusEl.textContent = text || '';
-			statusEl.dataset.state = state;
+			for (const el of [statusEl, mapStatusEl]) {
+				if (!(el instanceof HTMLElement)) continue;
+				el.hidden = !text;
+				el.textContent = text || '';
+				el.dataset.state = state;
+			}
 		}
 
 		function labelStatus(status) {
@@ -171,6 +193,14 @@ const priceMappingFields = ['list_price', 'standard_price'];
 
 		function labelReason(reason) {
 			return reasonLabels[reason] || reason || '';
+		}
+
+		function guessProveedorFromFilename(filename) {
+			const base = String(filename || '')
+				.replace(/\.(xlsx|xls|csv)$/i, '')
+				.replace(/[_-]+/g, ' ')
+				.trim();
+			return base;
 		}
 
 		function hideAllSteps() {
@@ -205,25 +235,60 @@ const priceMappingFields = ['list_price', 'standard_price'];
 				return 'Indicá qué columna es el nombre del producto.';
 			}
 			if (!mapping.list_price && !mapping.standard_price) {
-				return 'Indicá al menos una columna de precio (venta o costo).';
+				return 'Indicá al menos una columna de precio (venta o costo). En la muestra de arriba debería verse el precio.';
 			}
 			return '';
 		}
 
-		function renderMappingForm(headers, suggestedMapping, rowCount, headerRowIndex) {
+		function syncConfirmMappingButton() {
+			if (!(confirmMappingBtn instanceof HTMLButtonElement)) return;
+			const mapping = readMappingFromForm();
+			confirmMappingBtn.disabled = Boolean(validateMapping(mapping));
+		}
+
+		function renderSample(headers, sampleRows) {
+			if (!(sampleWrap instanceof HTMLElement) || !(sampleHead instanceof HTMLElement) || !(sampleBody instanceof HTMLElement)) {
+				return;
+			}
+			if (!headers.length || !sampleRows?.length) {
+				sampleWrap.hidden = true;
+				return;
+			}
+			sampleWrap.hidden = false;
+			sampleHead.innerHTML = `<tr>${headers.map((h) => `<th>${escapeHtml(h)}</th>`).join('')}</tr>`;
+			sampleBody.innerHTML = '';
+			for (const row of sampleRows.slice(0, 3)) {
+				const tr = document.createElement('tr');
+				tr.innerHTML = headers
+					.map((h) => `<td>${escapeHtml(row[h] ?? '')}</td>`)
+					.join('');
+				sampleBody.appendChild(tr);
+			}
+		}
+
+		function renderMappingForm(analysis) {
 			if (!(mappingFieldsEl instanceof HTMLElement)) return;
+			const headers = analysis.headers || [];
+			const suggestedMapping = analysis.suggestedMapping || {};
+			const rowCount = analysis.rowCount || 0;
+			const headerRowIndex = analysis.headerRowIndex || 0;
+			const sampleRows = analysis.sampleRows || [];
+			const sheetName = analysis.sheetName || '';
+
 			currentMapping = { ...suggestedMapping };
 			fileHeaders = headers;
 			mappingFieldsEl.innerHTML = '';
 
 			for (const field of mappingUiFields) {
 				const label = mappingFieldLabels[field] || field;
-				const isRequired =
-					requiredMappingFields.includes(field) ||
-					(field === 'list_price' && !currentMapping.standard_price) ||
-					(field === 'standard_price' && !currentMapping.list_price);
+				const missingPrice =
+					(field === 'list_price' || field === 'standard_price') &&
+					!currentMapping.list_price &&
+					!currentMapping.standard_price;
 				const wrap = document.createElement('label');
-				wrap.className = 'sg-import-map-field';
+				wrap.className = missingPrice
+					? 'sg-import-map-field is-required-missing'
+					: 'sg-import-map-field';
 				const select = document.createElement('select');
 				select.dataset.mapField = field;
 				select.className = 'sg-focus-ring';
@@ -234,30 +299,56 @@ const priceMappingFields = ['list_price', 'standard_price'];
 				for (const header of headers) {
 					const opt = document.createElement('option');
 					opt.value = header;
-					opt.textContent = header;
+					opt.textContent = header.startsWith('__col_')
+						? `Columna ${Number(header.slice(6)) + 1}`
+						: header;
 					if (currentMapping[field] === header) opt.selected = true;
 					select.appendChild(opt);
 				}
+				select.addEventListener('change', syncConfirmMappingButton);
 				const title = document.createElement('span');
-				title.textContent = isRequired && field !== 'standard_price' && field !== 'list_price'
-					? `${label} *`
-					: field === 'list_price' || field === 'standard_price'
-						? `${label} (al menos uno *)`
-						: label;
+				title.textContent =
+					field === 'name'
+						? `${label} *`
+						: field === 'list_price' || field === 'standard_price'
+							? `${label} (al menos uno *)`
+							: label;
 				wrap.appendChild(title);
 				wrap.appendChild(select);
 				mappingFieldsEl.appendChild(wrap);
 			}
 
+			if (fixedProveedorInput instanceof HTMLInputElement) {
+				fixedProveedorInput.value =
+					fixedProveedor || guessProveedorFromFilename(pendingFilename);
+			}
+
+			renderSample(headers, sampleRows);
+
 			if (mapMetaEl instanceof HTMLElement) {
-				const rowHint =
-					headerRowIndex > 0
-						? ` Encabezados detectados en la fila ${headerRowIndex + 1}.`
-						: '';
+				const parts = [`${rowCount} filas de datos`, `${headers.length} columnas`];
+				if (sheetName) parts.push(`hoja “${sheetName}”`);
+				if (headerRowIndex > 0) {
+					parts.push(`encabezados en fila ${headerRowIndex + 1}`);
+				}
 				mapMetaEl.hidden = false;
-				mapMetaEl.textContent = `${rowCount} filas de datos · ${headers.length} columnas.${rowHint}`;
+				mapMetaEl.textContent = parts.join(' · ');
 			}
 			showStep('mapping');
+			syncConfirmMappingButton();
+		}
+
+		function applyFixedProveedor(previewLines) {
+			const value =
+				fixedProveedorInput instanceof HTMLInputElement
+					? fixedProveedorInput.value.trim()
+					: fixedProveedor;
+			fixedProveedor = value;
+			if (!value) return previewLines;
+			return previewLines.map((line) => ({
+				...line,
+				proveedor: line.proveedor || value,
+			}));
 		}
 
 		async function requestPreview(filename, content, mapping) {
@@ -282,7 +373,9 @@ const priceMappingFields = ['list_price', 'standard_price'];
 			if (!response.ok) {
 				throw new Error(payload?.error?.message || 'No se pudo analizar');
 			}
-			renderPreview(payload.preview);
+			const preview = payload.preview || {};
+			preview.lines = applyFixedProveedor(preview.lines || []);
+			renderPreview(preview);
 			setStatus('Preview listo. Revisá y confirmá.', 'ok');
 			return true;
 		}
@@ -432,18 +525,18 @@ const priceMappingFields = ['list_price', 'standard_price'];
 
 				const analysis = payload.analysis || {};
 				if (analysis.needsMapping) {
-					renderMappingForm(
-						analysis.headers || [],
-						analysis.suggestedMapping || {},
-						analysis.rowCount || 0,
-						analysis.headerRowIndex || 0
+					renderMappingForm(analysis);
+					setStatus(
+						'Falta mapear el precio (u otra columna). Usá la muestra y los desplegables.',
+						'pending'
 					);
-					setStatus('Revisá el mapeo de columnas y continuá.', 'pending');
 					return;
 				}
 
+				fixedProveedor = guessProveedorFromFilename(file.name);
 				await requestPreview(file.name, content, analysis.suggestedMapping || {});
 			} catch (error) {
+				showStep('upload');
 				setStatus(error instanceof Error ? error.message : 'Error', 'error');
 			}
 		});
@@ -457,7 +550,7 @@ const priceMappingFields = ['list_price', 'standard_price'];
 			} catch (error) {
 				setStatus(error instanceof Error ? error.message : 'Error', 'error');
 			} finally {
-				confirmMappingBtn.disabled = false;
+				syncConfirmMappingButton();
 			}
 		});
 
@@ -592,13 +685,34 @@ const priceMappingFields = ['list_price', 'standard_price'];
 		font-weight: 600;
 		color: var(--sg-text-muted-dark);
 	}
-	.sg-import-map-field select {
+	.sg-import-map-field.is-required-missing span {
+		color: #ffb4a8;
+	}
+	.sg-import-map-field.is-required-missing select {
+		border-color: rgba(255, 180, 168, 0.55);
+	}
+	.sg-import-map-field select,
+	.sg-import-map-field input[type='text'] {
 		border: 1px solid var(--sg-glass-border);
 		border-radius: 0.65rem;
 		padding: 0.5rem 0.65rem;
 		background: rgba(0, 0, 0, 0.25);
 		color: var(--sg-text-on-dark);
 		font-size: 0.82rem;
+	}
+	.sg-import-fixed-proveedor {
+		max-width: 20rem;
+	}
+	.sg-import-sample-wrap {
+		display: grid;
+		gap: 0.45rem;
+	}
+	.sg-import-sample-title {
+		font-size: 0.8rem;
+		font-weight: 650;
+	}
+	.sg-import-sample-table {
+		max-height: 11rem;
 	}
 	.sg-import-status[data-state='error'] {
 		color: #ffb4a8;

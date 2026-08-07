@@ -320,6 +320,8 @@ export interface BackendClient {
     needsMapping: boolean;
     rowCount: number;
     headerRowIndex: number;
+    sampleRows: Record<string, string>[];
+    sheetName?: string;
   }>;
   previewPriceListImport(
     odooSessionId: string,

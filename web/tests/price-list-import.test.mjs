@@ -177,6 +177,60 @@ describe("price-list-import mapping", () => {
     assert.equal(analysis.needsMapping, true);
     assert.equal(analysis.suggestedMapping.list_price, "P.Venta");
   });
+
+  it("pads short header row to data width and infers Precio column", () => {
+    const matrix = [
+      ["Agrupación", "Código Artículo", "Descripción Artículo"],
+      ["ACCESORIOS", "3AB134", 'ABRAZADERA 1"', "Vigente", "", "$ 4021.30"],
+      ["ACCESORIOS", "024050", "ADAPTADOR", "Vigente", "", "$ 120.00"],
+      ["MERCADO", "26H00477", "ANILLO", "Vigente", "", "$ 55.50"],
+    ];
+    const b64 = workbookToBase64(matrix);
+    const parsed = parseTabularText("Orbis.xlsx", b64);
+    assert.equal(parsed.error, null);
+    assert.ok(parsed.rows.length >= 3);
+    assert.ok(parsed.headers.length >= 6);
+    assert.equal(parsed.suggestedMapping?.name, "Descripción Artículo");
+    assert.equal(parsed.suggestedMapping?.default_code, "Código Artículo");
+    assert.ok(parsed.suggestedMapping?.list_price);
+    assert.equal(isMappingComplete(parsed.suggestedMapping || {}), true);
+  });
+
+  it("picks the worksheet with real price data over an empty cover sheet", () => {
+    const cover = XLSX.utils.aoa_to_sheet([
+      ["Agrupación", "Código Artículo", "Descripción Artículo"],
+    ]);
+    const data = XLSX.utils.aoa_to_sheet([
+      [
+        "Agrupación",
+        "Código Artículo",
+        "Descripción Artículo",
+        "Estado Artículo",
+        "Reemplazado Por",
+        "Precio",
+      ],
+      ["ACCESORIOS", "3AB134", "ABRAZADERA", "Vigente", "", "$ 4021.30"],
+      ["ACCESORIOS", "024050", "ADAPTADOR", "Vigente", "", "$ 120.00"],
+    ]);
+    const book = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(book, cover, "Portada");
+    XLSX.utils.book_append_sheet(book, data, "Lista");
+    const b64 = XLSX.write(book, { type: "base64", bookType: "xlsx" });
+    const parsed = parseTabularText("Orbis.xlsx", b64);
+    assert.equal(parsed.error, null);
+    assert.ok(parsed.rows.length >= 2);
+    assert.equal(parsed.suggestedMapping?.list_price, "Precio");
+    assert.equal(isMappingComplete(parsed.suggestedMapping || {}), true);
+  });
+
+  it("analyze errors when there are headers but no data rows", () => {
+    const analysis = analyzeTabularFile(
+      "vacio.csv",
+      "Agrupación,Código Artículo,Descripción Artículo\n"
+    );
+    assert.ok("error" in analysis);
+    assert.match(analysis.error, /filas de datos/i);
+  });
 });
 
 describe("price-list-import parse", () => {
