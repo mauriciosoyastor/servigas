@@ -16,7 +16,8 @@
     "smoke:shell": "node scripts/smoke-shell-path.mjs",
     "e2e:install": "playwright install chromium",
     "e2e:shell": "node scripts/e2e-shell.mjs",
-    "purge:products": "node scripts/purge-product-catalog.mjs"
+    "purge:products": "node scripts/purge-product-catalog.mjs",
+    "build:favicon": "node scripts/build-favicon.mjs"
   },
   "dependencies": {
     "@astrojs/node": "^11.0.2",
